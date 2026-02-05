@@ -6,6 +6,8 @@
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MOKET 모켓 - 모두를 위한 공구마켓</title>
+    <link rel="preconnect" href="https://script.google.com">
+    <link rel="preconnect" href="https://drive.google.com">
     <link rel="stylesheet" as="style" crossorigin
         href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <script src="https://t1.kakaocdn.net/kakao_js_sdk/1.43.0/kakao.min.js"></script>
@@ -148,7 +150,58 @@
         .side-menu-header h2 {
             margin: 0;
             font-size: 1.5rem;
-            font-weight: 900;
+        }
+
+        /* [추가] 스켈레톤 로딩 스타일 */
+        .skeleton {
+            background: linear-gradient(90deg, #eee 25%, #f5f5f5 50%, #eee 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
+            border-radius: 8px;
+        }
+
+        @keyframes skeleton-loading {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        .skeleton-card {
+            padding: 15px;
+            background: #fff;
+            border-radius: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .skeleton-thumb {
+            width: 80px;
+            height: 80px;
+        }
+
+        .skeleton-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .skeleton-title {
+            width: 60%;
+            height: 20px;
+        }
+
+        .skeleton-price {
+            width: 40%;
+            height: 18px;
+        }
+
+        font-weight: 900;
         }
 
         .side-menu-header p {
@@ -1534,6 +1587,9 @@
                 } catch (e) {
                     console.error("캐시 로드 실패:", e);
                 }
+            } else {
+                // 캐시 없으면 스켈레톤 표시
+                showSkeleton();
             }
 
             try {
@@ -1575,6 +1631,23 @@
                         <span style="font-size:0.8rem; color:#999;">(${e.message})</span>
                     </div>`;
                 }
+            }
+        }
+
+        function showSkeleton() {
+            const container = document.getElementById('product-list');
+            container.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                const item = document.createElement('div');
+                item.className = 'skeleton-card';
+                item.innerHTML = `
+                    <div class="skeleton skeleton-thumb"></div>
+                    <div class="skeleton-info">
+                        <div class="skeleton skeleton-title"></div>
+                        <div class="skeleton skeleton-price"></div>
+                    </div>
+                `;
+                container.appendChild(item);
             }
         }
 
@@ -1907,12 +1980,16 @@
         }
 
 
-        window.onload = function () {
-            localStorage.removeItem('moket_order_history'); // 주문내역 데이터 삭제
+        // window.onload 대신 DOMContentLoaded 사용 (훨씬 빠름)
+        document.addEventListener('DOMContentLoaded', () => {
+            // 주문내역은 배경에서 삭제 (UI 안막음)
+            setTimeout(() => localStorage.removeItem('moket_order_history'), 100);
+
+            // 데이터 로드와 프로필 로드를 병렬로 시작
             loadData();
             loadProfile();
 
-            // [수정] 사용자 정보가 없으면 카카오 로그인 강제
+            // 사용자 정보 없으면 카카오 로그인 유도 (사용자 경험 저해하지 않게 약간의 지연)
             const name = localStorage.getItem('moket_user_name');
             if (!name || !name.trim()) {
                 setTimeout(() => {
@@ -1921,13 +1998,12 @@
                     document.getElementById('profile-modal-title').innerText = "카카오 로그인";
                     modal.style.display = 'flex';
                     checkScrollLock();
-                }, 500);
+                }, 400); // 500ms -> 400ms로 소폭 단축
             }
-        }
+        });
 
-            ;
+        ;
     </script>
 </body>
 
 </html>
-
