@@ -1450,11 +1450,12 @@
                 const itemDate = parseKRDate(item[currentSortBy]);
 
                 if (currentSortBy === 'timestamp') {
-                    // 주문일순: 과거 내역 필터링 (최근 24시간/7일/30일)
-                    const diffDays = (now - itemDate) / (1000 * 60 * 60 * 24);
-                    if (currentFilter === 'today') return diffDays < 1;
-                    if (currentFilter === 'week') return diffDays < 7;
-                    if (currentFilter === 'month') return diffDays < 30;
+                    // 주문일순: 과거 내역 필터링 (최근 24시간/7일/30일 -> 날짜 기준 수정)
+                    const isSameDay = (d1, d2) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+
+                    if (currentFilter === 'today') return isSameDay(now, itemDate);
+                    if (currentFilter === 'week') return (now - itemDate) / (1000 * 60 * 60 * 24) < 7;
+                    if (currentFilter === 'month') return (now - itemDate) / (1000 * 60 * 60 * 24) < 30;
                 } else {
                     // 픽업일순: 미래 일정 필터링 (오늘/7일 이내/30일 이내)
                     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
