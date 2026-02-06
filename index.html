@@ -355,21 +355,21 @@
         #history-modal .modal-content {
             width: 95%;
             max-width: 580px;
-            height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 55px);
-            /* 상단(45px) + 하단(10px) 여백 */
+            height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px);
+            /* 상단(10px) + 하단(10px) 여백 */
             padding: 0;
             display: flex;
             flex-direction: column;
-            margin-top: calc(45px + env(safe-area-inset-top));
-            /* 노치/아일랜드 가려짐 방지 */
+            margin-top: calc(10px + env(safe-area-inset-top));
+            /* 노치 가려짐 방지 및 대칭 여백 */
             margin-bottom: calc(10px + env(safe-area-inset-bottom));
             /* 하단 10px 여백 유지 */
         }
 
         .slider-wrapper {
             width: 100%;
-            aspect-ratio: 1 / 1;
-            /* 정방형(1:1)으로 고정 */
+            aspect-ratio: 1 / 0.7;
+            /* 높이를 30% 줄임 (기존 1:1) */
             position: relative;
             background: #f9f9f9;
             cursor: pointer;
@@ -514,7 +514,8 @@
         .card-top {
             display: flex;
             gap: 10px;
-            align-items: flex-start width: 100%;
+            align-items: flex-start;
+            width: 100%;
         }
 
         .thumb {
@@ -531,6 +532,13 @@
             color: #ccc;
             font-size: 0.9rem;
             font-weight: 700;
+        }
+
+        .thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: opacity 0.3s ease;
         }
 
         .slider-no-img {
@@ -945,9 +953,8 @@
                     style="height: 42px; font-size: 1.1rem; margin-top: 0;">닫기</button></div>
         </div>
     </div>
-    <div id="fullscreen-overlay">
-        <button class="fullscreen-close"
-            onclick="document.getElementById('fullscreen-overlay').style.display='none'; checkScrollLock();">&times;</button>
+    <div id="fullscreen-overlay" onclick="closeFullscreen()">
+        <button class="fullscreen-close" onclick="closeFullscreen()">&times;</button>
         <div class="fullscreen-slider" id="fullscreen-slider-area"></div>
     </div>
     <div id="confirm-overlay" class="modal-overlay">
@@ -1021,7 +1028,7 @@
             </div>
         </div>
     </div>
-    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbyVRPKSWi9pfy1NdcQnNCj78mztkvAPqGM3FdJynAnQJbmLsvW5x2XgEaz9VEzbBwmm/exec'
+    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbxkDVATKgn9gJsQNZeM3RdPgBs7HFn4MVwejp4s1lrVH13G3Y9N5j5BMuSnZQHnlHcM/exec'
 
         // [카카오 초기화]
         try {
@@ -1615,15 +1622,28 @@
             return `${d.getMonth() + 1}월${d.getDate()}일(${week[d.getDay()]})`;
         }
 
-        // [이미지] 드라이브 ID 처리 (전체 URL에서도 ID 추출 가능하게 강화)
+        // [이미지 캐시] 브라우저 기본 캐시 활용 (Preloading)
         function getImgUrl(input, size = 1000) {
             if (!input) return '';
             let id = input.toString().trim();
-            // 구글 드라이브 전체 URL(d/ID/view 등)에서 ID만 추출하는 정규식
             const driveMatch = id.match(/[-\w]{25,}/);
             if (driveMatch) id = driveMatch[0];
 
             return `https://drive.google.com/thumbnail?id=${id}&sz=w${size}`;
+        }
+
+        // [이미지] 배경에서 브라우저 캐시에 미리 저장 (CORS 문제 해결)
+        function startImageCaching(data) {
+            if (!data || data.length === 0) return;
+
+            console.log("이미지 프리로딩(브라우저 캐시) 시작...");
+            data.forEach(p => {
+                if (p.images && p.images[0]) {
+                    const url = getImgUrl(p.images[0], 300);
+                    const img = new Image();
+                    img.src = url; // 단순히 src에 대입하면 브라우저가 알아서 캐싱함
+                }
+            });
         }
 
         async function loadData() {
@@ -1640,10 +1660,12 @@
                     } catch (e) {
                         console.error("캐시 로드 실패:", e);
                     }
-                } else {
-                    // 캐시 없으면 스켈레톤 표시
-                    showSkeleton();
                 }
+            }
+
+            // 데이터도 없고 캐시도 없을 때만 스켈레톤 표시
+            if (productsData.length === 0) {
+                showSkeleton();
             }
 
             try {
@@ -1674,6 +1696,11 @@
                         localStorage.setItem('moket_products_cache_v2', JSON.stringify(productsData));
                         console.log("최신 데이터로 화면 업데이트");
                         processAndRender(productsData);
+                        // 최신 데이터로 이미지 캐싱 시작
+                        startImageCaching(productsData);
+                    } else {
+                        // 데이터가 같아도 이미지 캐싱은 체크 (빠진게 있을 수 있으니)
+                        startImageCaching(productsData);
                     }
                 }
             }
@@ -1881,11 +1908,15 @@
 
             fsOverlay.style.display = 'flex';
             checkScrollLock();
-
             // 현재 인덱스로 스크롤 이동
             setTimeout(() => {
                 fsSlider.scrollLeft = index * fsSlider.clientWidth;
             }, 10);
+        }
+
+        function closeFullscreen() {
+            document.getElementById('fullscreen-overlay').style.display = 'none';
+            checkScrollLock();
         }
 
         function openConfirm() {
@@ -2062,12 +2093,17 @@
                 setTimeout(() => closeModal('system-modal'), 1500);
 
                 // 2. 백그라운드 전송
+                // [수정] 원본 카카오 프로필 정보 항상 포함 (사용자 수동 변경과 관계없이 기록용)
+                const kakaoName = localStorage.getItem('kakao_user_name') || "";
+                const kakaoPhone = localStorage.getItem('kakao_user_phone') || "";
+
+                // 2. 서버 전송 데이터 구성
                 const payload = {
-                    header: "order",
+                    header: 'order',
                     name: name,
                     phone: phone,
-                    kakaoName: localStorage.getItem('kakao_nickname') || name,
-                    kakaoPhone: phone,
+                    kakaoName: kakaoName,
+                    kakaoPhone: kakaoPhone,
                     items: allItems,
                     timestamp: tempTimestamp // 동일 타임스탬프 사용 (삭제 시 매칭용)
                 };
