@@ -1043,7 +1043,7 @@
             </div>
         </div>
     </div>
-    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbxuky0-sz8Bl7GU7DMB4MfckHjyWN5wbdZTJN5efzTj55nS2q_ZePuc9VbwAFnWhh0r/exec'
+    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbxPx9Lsq_6iD706hKBzY5rC0eW2mpYA125DIrNfKBLLTrNTXVdi9s9icAXWLUjiUv3f/exec'
 
         // [카카오 초기화]
         try {
@@ -2283,15 +2283,20 @@
                         setTimeout(() => closeModal('system-modal'), 1500);
 
                         // 확실한 데이터 동기화를 위해 조용히 새로고침
-                        // [수정] 데이터 읽기 지연 (Google Sheets 갱신 시간 확보)
                         setTimeout(() => loadData(), 1500);
                     } else {
-                        throw new Error(result.message);
+                        // [에러 핸들링] 서버에서 재고 부족 등으로 거절한 경우
+                        throw new Error(result.message || "주문 처리 실패");
                     }
                 }).catch(err => {
                     console.error("주문 백그라운드 실패:", err);
                     document.getElementById('system-modal').style.display = 'none';
-                    showSystemModal("⚠️ 주문 처리가 서버에서 실패했습니다!\n관리자에게 문의해주세요.\n내용: " + err.message, 'alert');
+
+                    // [재고 동기화] 실패 시 최신 재고 상태를 다시 불러옴
+                    loadData();
+
+                    showSystemModal("⚠️ 주문 처리가 실패했습니다!\n" + err.message, 'alert');
+
                     // 실패 시 버튼 재활성화
                     if (submitBtn) {
                         submitBtn.disabled = false;
