@@ -1065,6 +1065,14 @@
         let cart = {}; // { 상품명: 수량 } 저장용 장바구니 상태
         let isHistoryProcessing = false; // 주문내역 처리 중 플래그 추가
 
+        /**
+         * [추가] 재고 동기화 이슈 해결을 위한 상태 잠금 (State Locking)
+         * { "matchKey|상품명": { stock: 수량, expire: 만료시간 } }
+         * 주문/취소 직후 서버 데이터가 늦게 갱신될 때 로컬 상태를 강제로 유지하는 용도
+         */
+        const pendingStockUpdates = {};
+        const STOCK_LOCK_DURATION = 15000; // 15초 동안 유지
+
         // [스크롤 방지]
         function checkScrollLock() {
             const modals = document.querySelectorAll('.modal-overlay');
@@ -1435,8 +1443,8 @@
 
                 if (Array.isArray(recentData)) {
                     // 데이터 병합 (기존 캐시와 합치거나 새로 만듦)
-                    const recentKeys = new Set(recentData.map(o => (o.timestamp + o.item).trim()));
-                    const others = (fullHistoryData || []).filter(o => !recentKeys.has((o.timestamp + o.item).trim()));
+                    const recentKeys = new Set(recentData.map(o => (o.timestamp + (o.matchKey || "") + o.item).trim()));
+                    const others = (fullHistoryData || []).filter(o => !recentKeys.has((o.timestamp + (o.matchKey || "") + o.item).trim()));
                     fullHistoryData = [...recentData, ...others];
                     renderHistory();
                 }
@@ -1524,8 +1532,8 @@
                 } else if (currentStatusFilter === 'stocked') {
                     if (isCancelled || isReceived) return false;
 
-                    if (currentSortBy === 'pickupDate' && currentFilter === 'today') {
-                        // 픽업일순 - 오늘 - 입고: 픽업일이 오늘인 것만
+                    if (currentFilter === 'today') {
+                        // 오늘 - 입고: 정렬 방식 무관하게 픽업일이 오늘인 것만
                         const pDate = parseKRDate(item.pickupDate);
                         const isSameDay = (d1, d2) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
                         if (!isSameDay(now, pDate)) return false;
@@ -1654,6 +1662,7 @@
                 // 1. 상태 전이: 처리 중으로 변경
                 const targetIdx = fullHistoryData.findIndex(d =>
                     String(d.timestamp).trim() === String(timestamp).trim() &&
+                    String(d.matchKey || "").trim() === String(order.matchKey || "").trim() && // matchKey 비교 추가
                     String(d.item).replace(/['"]/g, '').trim() === String(item).replace(/['"]/g, '').trim()
                 );
 
@@ -1667,7 +1676,8 @@
                     timestamp: String(timestamp).trim(),
                     name: String(name).trim(),
                     item: String(item).trim(),
-                    pickupDate: String(pickupDate).trim()
+                    pickupDate: String(pickupDate).trim(),
+                    matchKey: String(order.matchKey || "").trim() // matchKey 전송
                 };
 
                 fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) })
@@ -1694,8 +1704,16 @@
                                 localStorage.setItem(cacheKey, JSON.stringify(fullHistoryData));
 
                                 // 로컬 재고 복구 (서버는 이미 완료되었으므로 시각적 업데이트)
-                                const p = productsData.find(pd => pd.name === String(item).replace(/['"]/g, '').trim());
-                                if (p) p.stock = parseInt(p.stock || 0) + (parseInt(fullHistoryData[updatedIdx].qty) || 1);
+                                const itemKey = (order.matchKey || "") + "|" + String(item).replace(/['"]/g, '').trim();
+                                const p = productsData.find(pd => pd.matchKey === String(order.matchKey || "") && pd.name === String(item).replace(/['"]/g, '').trim());
+                                if (p) {
+                                    p.stock = parseInt(p.stock || 0) + (parseInt(fullHistoryData[updatedIdx].qty) || 1);
+                                    // [상태 잠금] 15초 동안 이 수량을 보호 (loadData가 덮어쓰지 못하도록)
+                                    pendingStockUpdates[itemKey] = {
+                                        stock: p.stock,
+                                        expire: Date.now() + STOCK_LOCK_DURATION
+                                    };
+                                }
                             }
                             showSystemModal("주문이 취소되었습니다.\n목록이 정렬되었습니다.", 'alert');
                             renderHistory();
@@ -1794,13 +1812,28 @@
                 }
 
                 // 매핑 처리
-                const freshData = rawData.map(p => ({
+                let freshData = rawData.map(p => ({
                     ...p,
                     name: p.name || "",
                     matchKey: p.matchKey || "",
                     displayDate: formatDateWithDay(p.date),
                     images: Array.isArray(p.images) ? p.images : []
                 })).filter(p => p.name && p.matchKey);
+
+                // [상태 잠금 적용] 최근 주문/취소된 품목 보호
+                const now = Date.now();
+                for (let key in pendingStockUpdates) {
+                    if (pendingStockUpdates[key].expire < now) {
+                        delete pendingStockUpdates[key];
+                        continue;
+                    }
+                    const [mKey, name] = key.split("|");
+                    const target = freshData.find(pd => pd.matchKey === mKey && pd.name === name);
+                    if (target) {
+                        console.log(`[상태 보호] ${name} (${mKey}) 재고를 로컬 상태(${pendingStockUpdates[key].stock})로 강제 유지합니다.`);
+                        target.stock = pendingStockUpdates[key].stock;
+                    }
+                }
 
                 if (freshData.length > 0) {
                     // 데이터가 바뀌었을 때만 렌더링 업데이트 (화면 깜빡임 방지)
@@ -2147,9 +2180,15 @@
                 // 1. UI 즉시 반영 (블로커 없이 진행)
                 // 로컬 데이터 재고 차감 (가짜 반영)
                 allItems.forEach(it => {
-                    const p = productsData.find(pd => pd.name === it.name && pd.date === (it.date || "no-date"));
+                    const p = productsData.find(pd => pd.name === it.name && pd.matchKey === it.date);
                     if (p) {
                         p.stock = Math.max(0, p.stock - it.qty); // 재고 차감
+                        // [상태 잠금] 15초 동안 이 수량을 보호 (loadData가 덮어쓰지 못하도록)
+                        const itemKey = (p.matchKey || "") + "|" + p.name;
+                        pendingStockUpdates[itemKey] = {
+                            stock: p.stock,
+                            expire: Date.now() + STOCK_LOCK_DURATION
+                        };
                     }
                 });
 
@@ -2196,7 +2235,8 @@
                     pickupDate: jsFormatPickup(it.date), // 즉시 포맷팅 적용
                     received: false,
                     name: name,
-                    rawTimestamp: tempTimestamp
+                    rawTimestamp: tempTimestamp,
+                    matchKey: it.date // matchKey 추가 (동일 상품 구분용)
                 }));
 
                 // 3. 전역 변수에 추가 (맨 앞에)
