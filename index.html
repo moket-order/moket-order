@@ -818,6 +818,12 @@
             line-height: 1.4;
         }
 
+        /* [추가] 주문자명 변경 메뉴로 진입 시 카카오 로그인 버튼 숨김 */
+        #profile-modal:not(.login-forced) #kakao-login-prompt,
+        #profile-modal:not(.login-forced) #btn-kakao-login {
+            display: none !important;
+        }
+
         /* 장바구니 버튼 */
         .cart-btn {
             justify-self: end;
