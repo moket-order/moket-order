@@ -1524,7 +1524,11 @@
             });
 
             filtered.forEach(order => {
-                const isCancelled = (order.item && order.item.includes('[취소]')) || (order.note && order.note.includes('[취소]')) || order.received === "canceled";
+                const isCancelled = (order.item && order.item.includes('[취소]')) ||
+                    (order.note && order.note.includes('[취소]')) ||
+                    order.received === "canceled" ||
+                    order.received === "취소완료" ||
+                    order.received === "canceled";
                 const isProcessing = order.isProcessing === true;
 
                 const orderDiv = document.createElement('div');
@@ -1550,7 +1554,7 @@
                 const isOrderToday = parseKRDate(orderTimeFull).toDateString() === new Date().toDateString();
                 const canDelete = isOrderToday && !isCancelled && !isReceived && !isProcessing;
 
-                let statusText = isReceived ? '수령완료' : (isCancelled ? '취소됨' : '미수령');
+                let statusText = isReceived ? '픽업완료' : (isCancelled ? '취소완료' : '미픽업');
                 let statusColor = isReceived ? '#4CAF50' : (isCancelled ? '#999' : '#FF6D00');
 
                 if (isProcessing) {
@@ -1621,8 +1625,14 @@
                                 if (!fullHistoryData[updatedIdx].item.includes('[취소]')) {
                                     fullHistoryData[updatedIdx].item = "[취소] " + fullHistoryData[updatedIdx].item;
                                 }
-                                fullHistoryData[updatedIdx].received = "canceled";
+                                fullHistoryData[updatedIdx].received = "취소완료";
                                 fullHistoryData[updatedIdx].isProcessing = false;
+
+                                // 로컬 캐시 즉시 업데이트 (사용자별)
+                                const name = document.getElementById('input-name').value;
+                                const phone = document.getElementById('input-phone').value;
+                                const cacheKey = `history_cache_${name}_${phone}`;
+                                localStorage.setItem(cacheKey, JSON.stringify(fullHistoryData));
 
                                 // 로컬 재고 복구 (서버는 이미 완료되었으므로 시각적 업데이트)
                                 const p = productsData.find(pd => pd.name === String(item).replace(/['"]/g, '').trim());
