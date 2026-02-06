@@ -1034,7 +1034,7 @@
             </div>
         </div>
     </div>
-    <script>const API_URL = 'https://script.google.com/macros/s/AKfycby3FBUU_1G3l4jNFJQrzn_op516DEvxfJe9F6oxQGBWgjpy8AwN5q_arPXRe2rRQxY5/exec'
+    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbwyiX1A-bU0KUBL0Epze5Bhwv_qnL5UQPo--wNQcVEbR0_Y9W0sIZFNFOkI1rCHjO_f/exec'
 
         // [카카오 초기화]
         try {
@@ -1524,13 +1524,17 @@
             });
 
             filtered.forEach(order => {
-                const isCancelled = (order.item && order.item.includes('[취소]')) || (order.note && order.note.includes('[취소]'));
+                const isCancelled = (order.item && order.item.includes('[취소]')) || (order.note && order.note.includes('[취소]')) || order.received === "canceled";
+                const isProcessing = order.isProcessing === true;
+
                 const orderDiv = document.createElement('div');
                 orderDiv.style.borderBottom = '1px solid #eee';
                 orderDiv.style.padding = '12px 0';
                 if (isCancelled) {
                     orderDiv.style.opacity = '0.6';
                     orderDiv.style.textDecoration = 'line-through';
+                } else if (isProcessing) {
+                    orderDiv.style.opacity = '0.7';
                 }
 
                 // [수정] 화면에는 날짜만 표시하고, 기능(취소 등)에는 전체 타임스탬프 사용
@@ -1544,7 +1548,15 @@
 
                 // [수정] 주문일이 오늘인 경우 항상 취소 버튼 표시 (전체/오늘/1주일 필터 상관없이)
                 const isOrderToday = parseKRDate(orderTimeFull).toDateString() === new Date().toDateString();
-                const canDelete = isOrderToday && !isCancelled && !isReceived;
+                const canDelete = isOrderToday && !isCancelled && !isReceived && !isProcessing;
+
+                let statusText = isReceived ? '수령완료' : (isCancelled ? '취소됨' : '미수령');
+                let statusColor = isReceived ? '#4CAF50' : (isCancelled ? '#999' : '#FF6D00');
+
+                if (isProcessing) {
+                    statusText = '취소중...';
+                    statusColor = '#666';
+                }
 
                 orderDiv.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
@@ -1557,11 +1569,10 @@
                         </div>
                         <div style="text-align:right; min-width:90px; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
                             <div style="font-size:0.85rem; color:#455464; font-weight:700;">${order.qty}개 / ${parseInt(order.total || 0).toLocaleString()}원</div>
-                            <div style="font-size:0.95rem; font-weight:800; color:${isReceived ? '#4CAF50' : (isCancelled ? '#999' : '#FF6D00')};">
-                                ${isReceived ? '수령완료' : (isCancelled ? '취소됨' : '미수령')}
-                            </div>
+                            <div style="font-size:0.95rem; font-weight:800; color:${statusColor};">${statusText}</div>
                             ${canDelete ? `<button onclick="deleteOrderServer('${orderTimeFull}', '${order.name}', '${order.item}', '${order.pickupDate}')" 
                                  style="margin-top:4px; width:100%; height:28px; background:#eff2f5; color:#666; border:none; border-radius:6px; font-size:0.75rem; font-weight:700; cursor:pointer;">주문취소</button>` : ''}
+                            ${isProcessing ? `<div style="margin-top:4px; width:100%; height:28px; display:flex; align-items:center; justify-content:center; background:#f5f5f5; color:#999; border-radius:6px; font-size:0.75rem; font-weight:700;">대기중</div>` : ''}
                         </div>
                     </div>
                 `;
@@ -1574,39 +1585,19 @@
 
             const displayItem = item.replace(/['"]/g, '');
             showSystemModal(`[${displayItem}]\n주문을 취소하시겠습니까?`, 'confirm', async (btnYes, btnNo) => {
-                // [Optimistic UI] 즉시 취소 처리
-                // 1. UI 즉시 반영 (모달 닫기)
                 document.getElementById('system-modal').style.display = 'none';
                 checkScrollLock();
 
-                // 2. 로컬 재고 복구 (가짜 반영)
-                const targetName = String(item).replace(/['"]/g, '').trim();
-                const p = productsData.find(pd => pd.name === targetName);
-                if (p) {
-                    p.stock = parseInt(p.stock || 0) + 1; // 단순 1개 복구 (정확하진 않으나 시각적용)
-                }
-
-                // 3. [수정] 데이터 기반 Optimistic Update (정렬 및 스타일 자동 적용)
-                // 기존의 불안정한 DOM 조작 대신 데이터를 직접 수정하고 렌더링
+                // 1. 상태 전이: 처리 중으로 변경
                 const targetIdx = fullHistoryData.findIndex(d =>
                     String(d.timestamp).trim() === String(timestamp).trim() &&
                     String(d.item).replace(/['"]/g, '').trim() === String(item).replace(/['"]/g, '').trim()
                 );
 
                 if (targetIdx !== -1) {
-                    // 취소 표시 추가 (정렬 로직에서 인식함)
-                    if (!fullHistoryData[targetIdx].item.includes('[취소]')) {
-                        fullHistoryData[targetIdx].item = "[취소] " + fullHistoryData[targetIdx].item;
-                    }
-                    // 상태 업데이트
-                    fullHistoryData[targetIdx].received = "canceled";
-
-                    // 즉시 재렌더링 (취소된 건은 맨 아래로 정렬됨)
+                    fullHistoryData[targetIdx].isProcessing = true;
                     renderHistory();
                 }
-
-                showSystemModal("주문이 취소되었습니다.", 'alert');
-                setTimeout(() => closeModal('system-modal'), 1000);
 
                 const payload = {
                     header: 'delete',
@@ -1619,17 +1610,40 @@
                 fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) })
                     .then(res => res.json())
                     .then(result => {
+                        const updatedIdx = fullHistoryData.findIndex(d =>
+                            String(d.timestamp).trim() === String(timestamp).trim() &&
+                            String(d.item).replace(/['"]/g, '').trim() === String(item).replace(/['"]/g, '').trim()
+                        );
+
                         if (result.result === 'success') {
-                            console.log("취소 백그라운드 완료");
-                            // 실제 데이터 갱신 (조용히)
-                            setTimeout(() => loadData(), 1500);
+                            if (updatedIdx !== -1) {
+                                // 2. 서버 성공 후 취소 상태로 확정
+                                if (!fullHistoryData[updatedIdx].item.includes('[취소]')) {
+                                    fullHistoryData[updatedIdx].item = "[취소] " + fullHistoryData[updatedIdx].item;
+                                }
+                                fullHistoryData[updatedIdx].received = "canceled";
+                                fullHistoryData[updatedIdx].isProcessing = false;
+
+                                // 로컬 재고 복구 (서버는 이미 완료되었으므로 시각적 업데이트)
+                                const p = productsData.find(pd => pd.name === String(item).replace(/['"]/g, '').trim());
+                                if (p) p.stock = parseInt(p.stock || 0) + (parseInt(fullHistoryData[updatedIdx].qty) || 1);
+                            }
+                            showSystemModal("주문이 취소되었습니다.\n목록이 정렬되었습니다.", 'alert');
+                            renderHistory();
+                            setTimeout(() => loadData(), 2000); // 실제 데이터 싱크
                         } else {
-                            console.error("취소 실패:", result.message);
+                            if (updatedIdx !== -1) fullHistoryData[updatedIdx].isProcessing = false;
+                            renderHistory();
                             showSystemModal("취소 처리에 실패했습니다.\n잠시 후 다시 시도해 주세요.", 'alert');
-                            loadData(); // 실패 시 롤백을 위해 새로고침
                         }
                     })
                     .catch(e => {
+                        const errIdx = fullHistoryData.findIndex(d =>
+                            String(d.timestamp).trim() === String(timestamp).trim() &&
+                            String(d.item).replace(/['"]/g, '').trim() === String(item).replace(/['"]/g, '').trim()
+                        );
+                        if (errIdx !== -1) fullHistoryData[errIdx].isProcessing = false;
+                        renderHistory();
                         console.error(e);
                     });
 
