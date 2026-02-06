@@ -2024,6 +2024,11 @@
             const submitBtn = document.getElementById('btn-submit-order');
             if (submitBtn.disabled) return; // 이미 처리 중이면 중단
 
+            // 버튼 즉시 비활성화 (중복 클릭 방지)
+            submitBtn.disabled = true;
+            submitBtn.innerText = "처리 중...";
+            submitBtn.style.opacity = "0.7";
+
             const name = document.getElementById('input-name').value;
             const phone = document.getElementById('input-phone').value;
             const allItems = [];
@@ -2045,6 +2050,9 @@
 
             if (allItems.length === 0) {
                 showSystemModal("주문할 상품이 없습니다.", 'alert');
+                submitBtn.disabled = false;
+                submitBtn.innerText = "주문확정";
+                submitBtn.style.opacity = "1";
                 return;
             }
 
@@ -2053,8 +2061,17 @@
                     closeModal('confirm-overlay');
                     document.getElementById('profile-modal').style.display = 'flex';
                 });
+                submitBtn.disabled = false;
+                submitBtn.innerText = "주문확정";
+                submitBtn.style.opacity = "1";
                 return;
             }
+
+            // 모달 닫기
+            closeModal('confirm-overlay');
+            closeModal('detail-overlay');
+
+            const tempTimestamp = new Date().toISOString();
 
             // 픽업일(date)별로 아이템 그룹화
             const groups = allItems.reduce((acc, item) => {
@@ -2111,7 +2128,6 @@
                 };
 
                 // 2. 새로운 히스토리 아이템 생성
-                const tempTimestamp = new Date().toISOString();
                 const newHistoryItems = allItems.map(it => ({
                     timestamp: jsFormatDate(new Date(tempTimestamp)),
                     item: it.name,
@@ -2126,27 +2142,23 @@
 
                 // 3. 전역 변수에 추가 (맨 앞에)
                 // [수정] 기존 데이터가 없으면 캐시에서 먼저 로드 (덮어쓰기 방지)
-                const cacheKey = `history_cache_${name}_${phone}`;
+                const cacheKey_hist = `history_cache_${name}_${phone}`;
                 if (!fullHistoryData || fullHistoryData.length === 0) {
-                    const cached = localStorage.getItem(cacheKey);
+                    const cached = localStorage.getItem(cacheKey_hist);
                     if (cached) fullHistoryData = JSON.parse(cached);
                 }
 
                 if (typeof fullHistoryData !== 'undefined' && Array.isArray(fullHistoryData)) {
                     fullHistoryData = [...newHistoryItems, ...fullHistoryData];
                     // [최적화] 로컬 스토리지 즉시 갱신 (역사 창 열 때 서버 대기 없이 바로 뜨게 함)
-                    localStorage.setItem(cacheKey, JSON.stringify(fullHistoryData));
+                    localStorage.setItem(cacheKey_hist, JSON.stringify(fullHistoryData));
                 }
 
-                // 모달 닫기
-                closeModal('confirm-overlay');
-                closeModal('detail-overlay');
+                // 성공 메시지 (기존 Optimistic UI용 모달 제거 또는 변경)
+                // 대신 '주문 확인 중' 모달을 띄우고 서버 응답 후 완료 모달로 전환
+                showSystemModal("주문 확인 중입니다.\n잠시만 기다려 주세요...", 'loading');
 
-                // 성공 메시지
-                showSystemModal("주문이 접수되었습니다!", 'alert');
-                setTimeout(() => closeModal('system-modal'), 1500);
-
-                // 2. 백그라운드 전송
+                // 2. 백그라운드 전송 -> 이제 응답을 기다림 (await)
                 // [수정] 원본 카카오 프로필 정보 항상 포함 (사용자 수동 변경과 관계없이 기록용)
                 const kakaoName = localStorage.getItem('kakao_original_name') || "";
                 const kakaoPhone = localStorage.getItem('kakao_original_phone') || "";
@@ -2162,7 +2174,7 @@
                     timestamp: tempTimestamp // 동일 타임스탬프 사용 (삭제 시 매칭용)
                 };
 
-                // 비동기 실행 (결과 기다리지 않고 진행)
+                // 비동기 실행 (결과를 기다려야 하므로 await 사용 또는 then 체이닝 유지)
                 fetch(API_URL, {
                     method: 'POST',
                     redirect: 'follow',
@@ -2173,6 +2185,11 @@
                 }).then(result => {
                     if (result.result === 'success') {
                         console.log("주문 백그라운드 처리 완료");
+                        // 로딩 모달을 닫고 완료 모달 표시
+                        document.getElementById('system-modal').style.display = 'none';
+                        showSystemModal("주문이 완료되었습니다!", 'alert');
+                        setTimeout(() => closeModal('system-modal'), 1500);
+
                         // 확실한 데이터 동기화를 위해 조용히 새로고침
                         // [수정] 데이터 읽기 지연 (Google Sheets 갱신 시간 확보)
                         setTimeout(() => loadData(), 1500);
@@ -2181,13 +2198,24 @@
                     }
                 }).catch(err => {
                     console.error("주문 백그라운드 실패:", err);
-                    alert("⚠️ 주문 처리가 서버에서 실패했습니다!\n관리자에게 문의해주세요.\n내용: " + err.message);
-                    // 실패 시 롤백 로직이 복잡하므로 여기선 알림만 수행 (V1)
+                    document.getElementById('system-modal').style.display = 'none';
+                    showSystemModal("⚠️ 주문 처리가 서버에서 실패했습니다!\n관리자에게 문의해주세요.\n내용: " + err.message, 'alert');
+                    // 실패 시 버튼 재활성화
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = "주문확정 (재시도)";
+                        submitBtn.style.opacity = "1";
+                    }
                 });
 
             } catch (err) {
                 console.error(err);
+                document.getElementById('system-modal').style.display = 'none';
                 alert("주문 처리 중 오류가 발생했습니다.\n내용: " + err.message);
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = "주문확정 (재시도)";
+                }
             }
         }
 
