@@ -5,7 +5,26 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- [추가] 브라우저 캐시 방지 설정 -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
     <title>MOKET 모켓 - 모두를 위한 공구마켓</title>
+
+    <!-- [추가] 자동 업데이트 체크: 새 버전 배포 시 모바일에서 즉시 반영되도록 강제 새로고침 -->
+    <script>
+        (function () {
+            var APP_VERSION = "20260207_v2"; // 업데이트 시 이 값을 변경하면 사용자가 자동 새로고침됨
+            var savedVersion = localStorage.getItem("moket_app_version");
+            if (savedVersion !== APP_VERSION) {
+                localStorage.setItem("moket_app_version", APP_VERSION);
+                // 캐시 파괴 파라미터(v=시간)를 붙여서 페이지를 다시 불러옴
+                var separator = window.location.href.indexOf('?') !== -1 ? '&' : '?';
+                window.location.replace(window.location.href.split('#')[0].split('?')[0] + separator + "v=" + Date.now());
+            }
+        })();
+    </script>
     <link rel="preconnect" href="https://script.google.com">
     <link rel="preconnect" href="https://drive.google.com">
     <link rel="stylesheet" as="style" crossorigin
@@ -1035,7 +1054,7 @@
             </div>
         </div>
     </div>
-    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbxh3MK0x10jAPyJDqF8WOf2seMuJJtBj6H0dJ5AlTK7v4dIw5VNJxS5Spb9pXum4Hb-/exec'
+    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbwEX8U197lXXrlx3DxDNcu6z_YhRVjClJ2KZk9TCUy_CHOCw7hcUD_Ze191h84ixb5F/exec'
 
         // [카카오 초기화]
         try {
@@ -1668,14 +1687,25 @@
         }
 
         async function deleteOrderServer(timestamp, name, item, pickupDate, matchKey) {
-            if (isHistoryProcessing) return;
+            // [추가] 중복 취소 방지 체크
+            if (isHistoryProcessing) {
+                showSystemModal("이전 주문 취소 처리중입니다.\n잠시만 기다려 주세요.", 'alert');
+                return;
+            }
 
             const displayItem = item.replace(/['"]/g, '');
             showSystemModal(`[${displayItem}]\n주문을 취소하시겠습니까?`, 'confirm', async (btnYes, btnNo) => {
+                // 한 번 더 체크 (모달 떠있는 동안 다른 취소가 시작되었을 수 있음)
+                if (isHistoryProcessing) {
+                    showSystemModal("이전 주문 취소 처리중입니다.\n잠시만 기다려 주세요.", 'alert');
+                    return;
+                }
+
                 document.getElementById('system-modal').style.display = 'none';
                 checkScrollLock();
 
                 // 1. 상태 전이: 처리 중으로 변경
+                isHistoryProcessing = true; // [추가] 글로벌 플래그 설정
                 const targetIdx = fullHistoryData.findIndex(d =>
                     String(d.timestamp).trim() === String(timestamp).trim() &&
                     String(d.matchKey || "").trim() === String(matchKey || "").trim() && // matchKey 비교 수정
@@ -1699,6 +1729,7 @@
                 fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) })
                     .then(res => res.json())
                     .then(result => {
+                        isHistoryProcessing = false; // [추가] 완료 시 해제
                         const updatedIdx = fullHistoryData.findIndex(d =>
                             String(d.timestamp).trim() === String(timestamp).trim() &&
                             String(d.matchKey || "").trim() === String(matchKey || "").trim() && // matchKey 비교 추가
@@ -1753,10 +1784,11 @@
                         } else {
                             if (updatedIdx !== -1) fullHistoryData[updatedIdx].isProcessing = false;
                             renderHistory();
-                            showSystemModal("취소 처리에 실패했습니다.잠시 후 다시 시도해 주세요.", 'alert');
+                            showSystemModal("취소에 실패했습니다.잠시 후 다시 시도해 주세요.", 'alert');
                         }
                     })
                     .catch(e => {
+                        isHistoryProcessing = false; // [추가] 에러 시 해제
                         const errIdx = fullHistoryData.findIndex(d =>
                             String(d.timestamp).trim() === String(timestamp).trim() &&
                             String(d.matchKey || "").trim() === String(matchKey || "").trim() && // matchKey 비교 추가
@@ -2146,8 +2178,17 @@
         }
 
         async function completeOrder() {
+            // [추가] 중복 처리 방지 (데이터 꼬임 방지)
+            if (isHistoryProcessing) {
+                showSystemModal("이전 주문 확인 중입니다.\n잠시만 기다려 주세요.", 'alert');
+                return;
+            }
+
             const submitBtn = document.getElementById('btn-submit-order');
             if (submitBtn.disabled) return; // 이미 처리 중이면 중단
+
+            // 처리 시작 플래그 설정
+            isHistoryProcessing = true;
 
             // 버튼 즉시 비활성화 (중복 클릭 방지)
             submitBtn.disabled = true;
@@ -2298,6 +2339,7 @@
                     if (!res.ok) throw new Error("전송 실패");
                     return res.json();
                 }).then(result => {
+                    isHistoryProcessing = false; // [추가] 처리 완료
                     if (result.result === 'success') {
                         console.log("주문 백그라운드 처리 완료");
                         // 로딩 모달을 닫고 완료 모달 표시
@@ -2332,6 +2374,7 @@
                     }
                 }).catch(err => {
                     console.error("주문 백그라운드 실패:", err);
+                    isHistoryProcessing = false; // [추가] 에러 발생 시 처리 완료로 변경
                     document.getElementById('system-modal').style.display = 'none';
 
                     // [재고 동기화] 실패 시 최신 재고 상태를 다시 불러옴
@@ -2385,9 +2428,6 @@
                     checkScrollLock();
                 }, 400); // 500ms -> 400ms로 소폭 단축
             }
-
-            // [추가] 미픽업 상품 알림 체크 (페이지 로드 후 1초 뒤 실행하여 안정성 확보)
-            setTimeout(checkUnpickedOrders, 1000);
         });
 
         // [속도 개선] 사용자가 다른 탭(스프레드시트 등)에 갔다가 돌아오면 자동으로 최신 데이터 갱신
@@ -2404,36 +2444,6 @@
             loadData(true);
         }
 
-        // [추가] 미픽업 상품 알림 체크 함수
-        let hasCheckedUnpicked = false;
-        async function checkUnpickedOrders() {
-            if (hasCheckedUnpicked) return;
-            const name = localStorage.getItem('moket_user_name');
-            const phone = localStorage.getItem('moket_user_phone');
-            if (!name || !phone || !name.trim() || !phone.trim()) return;
-
-            try {
-                const url = `${API_URL}?header=history&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&scope=recent`;
-                const res = await fetch(url);
-                const data = await res.json();
-
-                if (Array.isArray(data)) {
-                    // 취소되지 않은 주문 중 received가 false이거나 'false' 문자열인 항목이 있는지 확인
-                    const unpicked = data.find(o => {
-                        const isCanceled = String(o.item || "").includes('[취소]');
-                        const isNotReceived = (o.received === false || String(o.received).toLowerCase() === 'false' || o.received === "");
-                        return !isCanceled && isNotReceived;
-                    });
-
-                    if (unpicked) {
-                        showSystemModal(`${name}님\n\n아직 픽업하지 않은 상품이 있습니다.\n주문내역을 확인해 주세요.`, 'alert');
-                        hasCheckedUnpicked = true;
-                    }
-                }
-            } catch (e) {
-                console.error("미픽업 확인 에러:", e);
-            }
-        }
     </script>
 </body>
 
