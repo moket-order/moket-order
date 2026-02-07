@@ -33,15 +33,11 @@
             font-family: var(--font-main);
             background: #f4f6f8;
             margin: 0;
-            padding-bottom: calc(20px + env(safe-area-inset-bottom));
+            padding-bottom: calc(150px + env(safe-area-inset-bottom));
+            /* 푸터 높이 고려하여 여백 고정 */
             letter-spacing: -0.02em;
             -webkit-font-smoothing: antialiased;
             word-break: keep-all;
-            transition: padding-bottom 0.3s ease;
-        }
-
-        body.has-selection {
-            padding-bottom: calc(140px + env(safe-area-inset-bottom));
         }
 
         /* 헤더: 햄버거 메뉴를 위해 정렬만 추가 */
@@ -704,7 +700,8 @@
         /* 푸터 */
         .footer {
             position: fixed;
-            bottom: -160px;
+            bottom: 0;
+            /* 상시 노출 */
             width: 100%;
             background: var(--white);
             padding: 12px 20px calc(15px + env(safe-area-inset-bottom)) 20px;
@@ -714,11 +711,6 @@
             max-width: 600px;
             left: 50%;
             transform: translateX(-50%);
-            transition: bottom 0.4s ease;
-        }
-
-        .footer.visible {
-            bottom: 0;
         }
 
         .main-submit-btn {
@@ -845,7 +837,7 @@
             <div class="menu-icons"><span></span><span></span><span></span></div>
             <span class="btn-label">메뉴</span>
         </div>
-        <div class="header-center" onclick="location.reload()">
+        <div class="header-center">
             <div class="slogan">모두를 위한 공구마켓</div>
             <div class="logo-en">MOKET</div>
             <div class="logo-ko">모켓</div>
@@ -975,7 +967,7 @@
                     class="btn-common btn-primary" onclick="completeOrder()">주문확정</button></div>
             <div
                 style="font-size:0.85rem; color:#455464; margin-top:15px; font-weight:800; text-align:center; word-break:keep-all;">
-                수량변경 및 주문취소는 주문당일 24시까지 가능합니다</div>
+                주문취소는 주문당일 24시까지 가능합니다</div>
         </div>
     </div>
     <div class="footer" id="main-footer">
@@ -1043,7 +1035,7 @@
             </div>
         </div>
     </div>
-    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbxPx9Lsq_6iD706hKBzY5rC0eW2mpYA125DIrNfKBLLTrNTXVdi9s9icAXWLUjiUv3f/exec'
+    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbxh3MK0x10jAPyJDqF8WOf2seMuJJtBj6H0dJ5AlTK7v4dIw5VNJxS5Spb9pXum4Hb-/exec'
 
         // [카카오 초기화]
         try {
@@ -1094,7 +1086,9 @@
             const msgDiv = document.getElementById('sys-modal-msg');
             const btnDiv = document.getElementById('sys-modal-btns');
 
-            msgDiv.innerText = msg;
+            msgDiv.innerHTML = msg; // innerText 대신 innerHTML 사용하여 스타일 적용 허용
+            msgDiv.style.textAlign = 'center'; // 전체 문구 중앙 정렬 적용
+            msgDiv.style.whiteSpace = 'pre-wrap'; // \n 줄바꿈 지원
             btnDiv.innerHTML = '';
 
             if (type === 'confirm') {
@@ -1108,9 +1102,7 @@
                     modal.style.display = 'none';
                     checkScrollLock();
                     if (noCallback) noCallback();
-                }
-
-                    ;
+                };
 
                 const btnYes = document.createElement('button');
                 btnYes.className = 'btn-common btn-primary';
@@ -1120,22 +1112,16 @@
 
                 btnYes.onclick = async () => {
                     if (yesCallback) {
-                        // yesCallback이 true를 반환하면 모달을 자동으로 닫지 않음
                         const preventClose = await yesCallback(btnYes, btnNo);
                         if (preventClose === true) return;
                     }
                     modal.style.display = 'none';
                     checkScrollLock();
-                }
-
-                    ;
+                };
 
                 btnDiv.appendChild(btnNo);
                 btnDiv.appendChild(btnYes);
-            }
-
-            else {
-                // alert
+            } else if (type === 'alert') {
                 const btnOk = document.createElement('button');
                 btnOk.className = 'btn-common btn-primary';
                 btnOk.style.height = '48px';
@@ -1146,11 +1132,25 @@
                     modal.style.display = 'none';
                     checkScrollLock();
                     if (yesCallback) yesCallback();
-                }
+                };
+                btnDiv.appendChild(btnOk);
+            } else if (type === 'loading') {
+                // [수정] 주문 확인 중 모달에도 확인 버튼 추가
+                const btnOk = document.createElement('button');
+                btnOk.className = 'btn-common btn-primary';
+                btnOk.style.height = '48px';
+                btnOk.style.fontSize = '1rem';
+                btnOk.innerText = '확인';
 
-                    ;
+                btnOk.onclick = () => {
+                    modal.style.display = 'none';
+                    checkScrollLock();
+                };
                 btnDiv.appendChild(btnOk);
             }
+
+            // 버튼 영역 항상 노출
+            btnDiv.style.display = 'flex';
 
             modal.style.display = 'flex';
             checkScrollLock();
@@ -1613,12 +1613,14 @@
                 let statusText = isReceived ? '픽업완료' : (isCancelled ? '취소완료' : '입고(미픽업)');
                 let statusColor = isReceived ? '#4CAF50' : (isCancelled ? '#999' : '#FF6D00');
 
-                // [추가] 픽업일이 아직 도래하지 않은 경우 '미입고' 처리
+                // [추가] 픽업일 오후 1시(13:00)가 아직 도래하지 않은 경우 '미입고' 처리
                 if (!isReceived && !isCancelled && !isProcessing) {
                     const pDate = parseKRDate(order.pickupDate);
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0); // 오늘 자정
-                    if (pDate > today) {
+                    const cutoff = new Date(pDate);
+                    cutoff.setHours(13, 0, 0, 0); // 오후 1시 설정
+
+                    const now = new Date();
+                    if (now < cutoff) {
                         statusText = '미입고';
                         statusColor = '#999'; // 회색
                     }
@@ -1643,7 +1645,7 @@
                             ${(true || isProcessing) ? `<div style="font-size:0.95rem; font-weight:800; color:${statusColor};">${statusText}</div>` : ''}
                             ${canDelete ? `<button onclick="deleteOrderServer('${orderTimeFull}', '${order.name}', '${order.item}', '${order.pickupDate}', '${order.matchKey || ''}')" 
                                  style="margin-top:4px; width:100%; height:28px; background:#eff2f5; color:#666; border:none; border-radius:6px; font-size:0.75rem; font-weight:700; cursor:pointer;">주문취소</button>` : ''}
-                            ${isProcessing ? `<div style="margin-top:4px; width:100%; height:28px; display:flex; align-items:center; justify-content:center; background:#f5f5f5; color:#999; border-radius:6px; font-size:0.75rem; font-weight:700;">대기중</div>` : ''}
+                            ${isProcessing ? `<div style="margin-top:4px; width:100%; height:28px; display:flex; align-items:center; justify-content:center; background:#f5f5f5; color:#999; border-radius:6px; font-size:0.75rem; font-weight:700;">취소중</div>` : ''}
                         </div>
                     </div>
                 `;
@@ -1719,8 +1721,15 @@
                                 localStorage.setItem(cacheKey, JSON.stringify(fullHistoryData));
 
                                 // 로컬 재고 복구 (서버는 이미 완료되었으므로 시각적 업데이트)
-                                const itemKey = (matchKey || "") + "|" + String(item).replace(/['"]/g, '').trim();
-                                const p = productsData.find(pd => pd.matchKey === String(matchKey || "") && pd.name === String(item).replace(/['"]/g, '').trim());
+                                const mKey = matchKey || "no-date";
+                                const itemKey = mKey + "|" + String(item).replace(/['"]/g, '').trim();
+
+                                // 이름과 matchKey(또는 픽업일)로 상품 찾기
+                                const p = productsData.find(pd =>
+                                    pd.name === String(item).replace(/['"]/g, '').trim() &&
+                                    (pd.matchKey === mKey || pd.displayDate === String(pickupDate).trim())
+                                );
+
                                 if (p) {
                                     p.stock = parseInt(p.stock || 0) + (parseInt(fullHistoryData[updatedIdx].qty) || 1);
                                     // [상태 잠금] 15초 동안 이 수량을 보호 (loadData가 덮어쓰지 못하도록)
@@ -1728,15 +1737,23 @@
                                         stock: p.stock,
                                         expire: Date.now() + STOCK_LOCK_DURATION
                                     };
+
+                                    // 만약 예전 주문으로 인한 다른 형태의 키가 있다면 그것도 업데이트/삭제하여 덮어쓰기 방지
+                                    const altKey = (mKey === "no-date" ? "" : "no-date") + "|" + p.name;
+                                    if (pendingStockUpdates[altKey]) delete pendingStockUpdates[altKey];
+
+                                    // [UI 갱신] 변경된 재고 데이터로 메인 리스트 즉시 다시 그리기
+                                    const activeBtn = document.querySelector('.date-btn.active');
+                                    if (activeBtn) renderList(activeBtn.dataset.date);
                                 }
                             }
-                            showSystemModal("주문이 취소되었습니다.\\n목록이 정렬되었습니다.", 'alert');
+                            showSystemModal("주문이 취소되었습니다.", 'alert');
                             renderHistory();
                             setTimeout(() => loadData(), 2000); // 실제 데이터 싱크
                         } else {
                             if (updatedIdx !== -1) fullHistoryData[updatedIdx].isProcessing = false;
                             renderHistory();
-                            showSystemModal("취소 처리에 실패했습니다.\\n잠시 후 다시 시도해 주세요.", 'alert');
+                            showSystemModal("취소 처리에 실패했습니다.잠시 후 다시 시도해 주세요.", 'alert');
                         }
                     })
                     .catch(e => {
@@ -1793,8 +1810,14 @@
             });
         }
 
-        async function loadData() {
+        async function loadData(force = false) {
             const productArea = document.getElementById('product-list');
+
+            // [상태 잠금 강제 해제] 수동 새로고침 시에는 모든 잠금을 풀고 서버 데이터를 신뢰함
+            if (force) {
+                pendingStockUpdates = {};
+                console.log("새로고침: 모든 재고 잠금을 해제합니다.");
+            }
 
             // 1. [로컬 캐시] 메모리에 데이터가 없을 때만 즉시 렌더링 (깜빡임 최소화)
             if (productsData.length === 0) {
@@ -2009,20 +2032,8 @@
             }
 
             const footer = document.getElementById('main-footer');
-
-            if (tQ > 0) {
-                footer.classList.add('visible');
-                document.body.classList.add('has-selection');
-
-                document.getElementById('total-qty-text').innerText = `총 ${tQ}개 선택`;
-
-                document.getElementById('total-price-text').innerText = `${tP.toLocaleString()}원`;
-            }
-
-            else {
-                footer.classList.remove('visible');
-                document.body.classList.remove('has-selection');
-            }
+            document.getElementById('total-qty-text').innerText = `총 ${tQ}개 선택`;
+            document.getElementById('total-price-text').innerText = `${tP.toLocaleString()}원`;
         }
 
         function openDetail(name) {
@@ -2082,6 +2093,12 @@
         }
 
         function openConfirm() {
+            // [추가] 장바구니 비어있음 체크
+            if (Object.keys(cart).length === 0) {
+                showSystemModal("상품이 없습니다. 상품을 선택해 주세요.", 'alert');
+                return;
+            }
+
             const name = document.getElementById('input-name').value || "입력되지 않음";
             const phone = document.getElementById('input-phone').value || "입력되지 않음";
 
@@ -2197,6 +2214,10 @@
                 cart = {};
                 updateFooter();
 
+                // [UI 갱신] 장바구니가 비워졌으므로 리스트도 다시 그려서 수량 0으로 초기화
+                const activeBtn = document.querySelector('.date-btn.active');
+                if (activeBtn) renderList(activeBtn.dataset.date);
+
                 // 1. 날짜 포맷팅 헬퍼 정의 (JS용)
                 const jsFormatDate = (d) => {
                     const y = d.getFullYear();
@@ -2281,11 +2302,30 @@
                         console.log("주문 백그라운드 처리 완료");
                         // 로딩 모달을 닫고 완료 모달 표시
                         document.getElementById('system-modal').style.display = 'none';
+
+                        // [재고 즉시 반영] 서버 성공 시 로컬 데이터를 즉시 갱신하여 체감 속도 향상
+                        allItems.forEach(it => {
+                            const p = productsData.find(pd => pd.matchKey === it.date && pd.name === it.name);
+                            if (p) {
+                                p.stock = parseInt(p.stock || 0) - (parseInt(it.qty) || 0);
+                                // [상태 잠금] 15초 동안 이 수량을 보호 (loadData가 덮어쓰지 못하도록)
+                                const itemKey = (it.date || "") + "|" + it.name;
+                                pendingStockUpdates[itemKey] = {
+                                    stock: p.stock,
+                                    expire: Date.now() + (typeof STOCK_LOCK_DURATION !== 'undefined' ? STOCK_LOCK_DURATION : 15000)
+                                };
+                            }
+                        });
+
+                        // [UI 갱신] 변경된 재고 데이터로 리스트 즉시 다시 그리기
+                        const activeBtn = document.querySelector('.date-btn.active');
+                        if (activeBtn) renderList(activeBtn.dataset.date);
+
                         showSystemModal("주문이 완료되었습니다!", 'alert');
                         setTimeout(() => closeModal('system-modal'), 1500);
 
                         // 확실한 데이터 동기화를 위해 조용히 새로고침
-                        setTimeout(() => loadData(), 1500);
+                        setTimeout(() => loadData(), 2000);
                     } else {
                         // [에러 핸들링] 서버에서 재고 부족 등으로 거절한 경우
                         throw new Error(result.message || "주문 처리 실패");
@@ -2297,7 +2337,7 @@
                     // [재고 동기화] 실패 시 최신 재고 상태를 다시 불러옴
                     loadData();
 
-                    showSystemModal("⚠️ 주문 처리가 실패했습니다!\n" + err.message, 'alert');
+                    showSystemModal("⚠️ 주문이 실패했습니다! ⚠️\n" + err.message, 'alert');
 
                     // 실패 시 버튼 재활성화
                     if (submitBtn) {
@@ -2345,6 +2385,9 @@
                     checkScrollLock();
                 }, 400); // 500ms -> 400ms로 소폭 단축
             }
+
+            // [추가] 미픽업 상품 알림 체크 (페이지 로드 후 1초 뒤 실행하여 안정성 확보)
+            setTimeout(checkUnpickedOrders, 1000);
         });
 
         // [속도 개선] 사용자가 다른 탭(스프레드시트 등)에 갔다가 돌아오면 자동으로 최신 데이터 갱신
@@ -2354,6 +2397,43 @@
                 loadData();
             }
         });
+
+        // [수동 새로고침] 로고 클릭 또는 새로고침 버튼 클릭 시 실행
+        function forceRefresh() {
+            console.log("Manual refresh triggered...");
+            loadData(true);
+        }
+
+        // [추가] 미픽업 상품 알림 체크 함수
+        let hasCheckedUnpicked = false;
+        async function checkUnpickedOrders() {
+            if (hasCheckedUnpicked) return;
+            const name = localStorage.getItem('moket_user_name');
+            const phone = localStorage.getItem('moket_user_phone');
+            if (!name || !phone || !name.trim() || !phone.trim()) return;
+
+            try {
+                const url = `${API_URL}?header=history&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&scope=recent`;
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (Array.isArray(data)) {
+                    // 취소되지 않은 주문 중 received가 false이거나 'false' 문자열인 항목이 있는지 확인
+                    const unpicked = data.find(o => {
+                        const isCanceled = String(o.item || "").includes('[취소]');
+                        const isNotReceived = (o.received === false || String(o.received).toLowerCase() === 'false' || o.received === "");
+                        return !isCanceled && isNotReceived;
+                    });
+
+                    if (unpicked) {
+                        showSystemModal(`${name}님\n\n아직 픽업하지 않은 상품이 있습니다.\n주문내역을 확인해 주세요.`, 'alert');
+                        hasCheckedUnpicked = true;
+                    }
+                }
+            } catch (e) {
+                console.error("미픽업 확인 에러:", e);
+            }
+        }
     </script>
 </body>
 
