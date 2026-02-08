@@ -33,7 +33,7 @@
     <style>
         /* [1] 원본 주문서2.html 스타일 변수 및 레이아웃 완벽 보존 */
         :root {
-            --moket-green: #4CAF50;
+            --moket-green: #4CAF20;
             --white: #FFFFFF;
             --font-main: 'Pretendard', sans-serif;
             --common-radius: 26px;
@@ -93,7 +93,7 @@
 
         .logo-ko {
             color: var(--white);
-            font-size: 15px;
+            font-size: 18px;
             font-weight: 800;
             letter-spacing: 0.45em;
             text-indent: 0.45em;
@@ -893,9 +893,9 @@
     <div id="side-menu" class="side-menu">
         <div class="side-menu-header" style="text-align: center;">
             <div onclick="loadData(true); toggleMenu();" style="cursor: pointer;">
-                <div class="slogan" style="font-size: 0.83rem; color: rgba(255,255,255,0.85);">모두를 위한 공구마켓</div>
-                <div class="logo-en" style="font-size: 2.45rem;">MOKET</div>
-                <div class="logo-ko" style="font-size: 0.88rem; letter-spacing: 0.35em; text-indent: 0.35em;">모켓</div>
+                <div class="slogan" style="font-size: 13px; color: rgba(255,255,255,0.85);">모두를 위한 공구마켓</div>
+                <div class="logo-en" style="font-size: 40px;">MOKET</div>
+                <div class="logo-ko" style="font-size: 16px; letter-spacing: 0.35em; text-indent: 0.35em;">모켓</div>
             </div>
         </div>
         <p id="menu-greeting"><span class="name-badge">주문자</span>님 반갑습니다</p>
@@ -1415,6 +1415,12 @@
 
         // [추가] 미픽업 주문 확인 및 알림 모달
         async function checkUnpickedOrders() {
+            // [세션당 1회 제한] 한 번 확인했다면 이번 접속(세션)에서는 다시 띄우지 않음
+            if (sessionStorage.getItem('moket_unpicked_checked') === 'true') {
+                console.log("[미픽업 확인] 이번 세션에서 이미 확인했습니다.");
+                return;
+            }
+
             const name = (localStorage.getItem('moket_user_name') || "").trim();
             const phone = (localStorage.getItem('moket_user_phone') || "").trim();
 
@@ -1422,6 +1428,9 @@
                 console.log("[미픽업 확인] 사용자 정보(이름/번호)가 입력되지 않아 확인을 중단합니다.");
                 return;
             }
+
+            // 확인 표시 저장 (세션 종료 전까지 유지)
+            sessionStorage.setItem('moket_unpicked_checked', 'true');
 
             try {
                 console.log(`[미픽업 확인] ${name} (${phone}) 님의 내역을 서버에서 조회합니다...`);
