@@ -166,7 +166,7 @@
 
         .side-menu-header h2 {
             margin: 0;
-            font-size: 20px;
+            font-size: 18px;
 
         }
 
@@ -241,7 +241,7 @@
             margin: 0;
             padding: 20px 25px;
             /* 상하좌우 여백 균등 조정 */
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 700;
             display: flex;
             align-items: center;
@@ -271,7 +271,7 @@
 
         .menu-list li {
             padding: 18px 0;
-            font-size: 18px;
+            font-size: 15px;
             font-weight: 700;
             border-bottom: 1px solid #f5f5f5;
             color: var(--item-black);
@@ -1003,7 +1003,7 @@
                     id="btn-submit-order" class="btn-common btn-primary" onclick="completeOrder()"
                     style="margin-top: 0;">주문확정</button></div>
             <div
-                style="font-size:0.85rem; color:#455464; margin-top:15px; font-weight:800; text-align:center; word-break:keep-all;">
+                style="font-size:13px; color:#455464; margin-top:15px; font-weight:800; text-align:center; word-break:keep-all;">
                 주문취소는 주문당일 24시까지 가능합니다</div>
         </div>
     </div>
@@ -1081,7 +1081,7 @@
             </div>
         </div>
     </div>
-    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbwEX8U197lXXrlx3DxDNcu6z_YhRVjClJ2KZk9TCUy_CHOCw7hcUD_Ze191h84ixb5F/exec'
+    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbzrFF86lUJ8kEunC6e9DYAFzw_L9ggGwteUo8211qH9mmIbSI8KQSKNjkQJgGm4MFWs/exec'
 
         // [카카오 초기화]
         try {
@@ -1413,6 +1413,81 @@
             return `${y}-${m}-${day} (${dayOfWeek})`;
         }
 
+        // [추가] 미픽업 주문 확인 및 알림 모달
+        async function checkUnpickedOrders() {
+            const name = (localStorage.getItem('moket_user_name') || "").trim();
+            const phone = (localStorage.getItem('moket_user_phone') || "").trim();
+
+            if (!name || !phone) {
+                console.log("[미픽업 확인] 사용자 정보(이름/번호)가 입력되지 않아 확인을 중단합니다.");
+                return;
+            }
+
+            try {
+                console.log(`[미픽업 확인] ${name} (${phone}) 님의 내역을 서버에서 조회합니다...`);
+                // 사용자의 최근 주문 내역 가져오기 (캐시 방지 + 월별 검색 범위 확인용)
+                const historyUrl = `${API_URL}?header=history&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&scope=recent&t=${Date.now()}`;
+
+                const response = await fetch(historyUrl);
+                if (!response.ok) {
+                    console.error("[미픽업 확인] 서버 응답 오류:", response.status);
+                    return;
+                }
+
+                const historyData = await response.json();
+                console.log("[미픽업 확인] 서버 수신 데이터:", historyData);
+
+                if (!Array.isArray(historyData)) {
+                    if (historyData.result === "error") {
+                        console.error("[미픽업 확인] 서버 에러:", historyData.message);
+                    }
+                    return;
+                }
+
+                if (historyData.length === 0) {
+                    console.log("[미픽업 확인] 최근 주문(이번 달/지난 달) 내역이 없습니다. (조회 URL: " + historyUrl + ")");
+                    return;
+                }
+
+                // [판별] '수령완료', '취소', '미입고'가 아닌 것 + 오늘 포함 이전 날짜인 것만 알림
+                const now = new Date();
+                const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+                const unpickedItems = historyData.filter(order => {
+                    const itemName = String(order.item || "");
+                    const receivedStatus = String(order.received || "").trim();
+
+                    // 날짜 비교 로직 (order.pickupDate: "2026년 2월 8일 (일)" -> "2026-02-08")
+                    const dateNums = (order.pickupDate || "").match(/\d+/g);
+                    let isTodayOrPast = true;
+                    if (dateNums && dateNums.length >= 3) {
+                        const orderDateStr = `${dateNums[0]}-${dateNums[1].padStart(2, '0')}-${dateNums[2].padStart(2, '0')}`;
+                        isTodayOrPast = (orderDateStr <= todayStr);
+                    }
+
+                    const isCanceled = itemName.includes("[취소]") || receivedStatus === "취소완료";
+                    const isReceived = (order.received === true || receivedStatus === "수령완료");
+                    const isNotStocked = receivedStatus === "미입고";
+
+                    const result = !isReceived && !isCanceled && !isNotStocked && isTodayOrPast;
+                    if (result) {
+                        console.log(`[미픽업 판별] 상품: ${itemName}, 날짜: ${order.pickupDate}, 상태: ${receivedStatus} -> 알림 대상`);
+                    }
+                    return result;
+                });
+
+                console.log("[미픽업 확인] 최종 미픽업 항목 수:", unpickedItems.length);
+
+                if (unpickedItems.length > 0) {
+                    console.log("[미픽업 확인] 알림 모달을 띄웁니다.");
+                    const styledName = `<span class="name-badge" style="margin-right:0;">${name}</span>`;
+                    showSystemModal(`반갑습니다, ${styledName}님!<br><br>아직 픽업하지 않은 상품이 있습니다.<br>주문내역을 확인 해 주세요.`, 'alert');
+                }
+            } catch (e) {
+                console.error("[미픽업 확인] 실행 도중 오류 발생:", e);
+            }
+        }
+
         let fullHistoryData = []; // 서버에서 가져온 전체 데이터 저장
         let currentSortBy = 'pickupDate'; // 'pickupDate' (픽업일) 기본값
         let currentSortDir = 'asc'; // 픽업일 기준은 오름차순(오늘->미래)이 기본
@@ -1462,7 +1537,7 @@
 
             // 타이틀 동적 변경 (상단 여백 확보, 이름표 오렌지색)
             const displayName = name.trim() || "주문자";
-            title.style.fontSize = "20px";
+            title.style.fontSize = "18px";
             title.innerHTML = `<span style="background:var(--white); color:var(--nego-orange); padding:2px 10px; border-radius:15px; margin-right:5px; font-weight:900;">${displayName}</span>님의 주문내역`;
 
             modal.style.display = 'flex';
@@ -2203,11 +2278,11 @@
 
             const list = document.getElementById('confirm-item-list');
             list.innerHTML = `
-                <div style="font-size:1.15rem; font-weight:900; color:var(--item-black); margin-bottom:12px; text-align:center;">주문 내용을 확인해주세요</div>
+                <div style="font-size:18px; font-weight:900; color:var(--item-black); margin-bottom:12px; text-align:center;">주문 내용을 확인해주세요</div>
                 <div style="margin-bottom:15px; border-bottom:1px solid #ddd; padding-bottom:12px;">
-                    <div style="font-size:1rem; font-weight:800; color:var(--item-black); margin-bottom:5px;">주문자 정보</div>
-                    <div style="font-size:0.95rem; color:#000;">주문자명: <span style="font-weight:700; color:var(--nego-orange);">${name}</span></div>
-                    <div style="font-size:0.95rem; color:#000;">연락처: <span style="font-weight:700; color:var(--nego-orange);">${phone}</span></div>
+                    <div style="font-size:16px; font-weight:800; color:var(--item-black); margin-bottom:5px;">주문자 정보</div>
+                    <div style="font-size:15px; color:#000;">주문자명: <span style="font-weight:700; color:var(--nego-orange);">${name}</span></div>
+                    <div style="font-size:15px; color:#000;">연락처: <span style="font-weight:700; color:var(--nego-orange);">${phone}</span></div>
                 </div>
             `;
             let total = 0;
@@ -2220,10 +2295,10 @@
                     const sub = q * parseInt(product.price || 0);
                     total += sub;
                     list.innerHTML += `
-                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.95rem; margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:15px; margin-bottom:8px;">
                             <span style="color:var(--item-black); font-weight:800; flex:1; padding-right:6px; word-break:keep-all; line-height:1.2;">${name}</span>
                             <div style="display:flex; align-items:center; min-width:90px; justify-content:flex-end; flex-shrink:0;">
-                                <span style="color:#455464; font-size:0.85rem; font-weight:700; text-align:right;">${q}개</span>
+                                <span style="color:#455464; font-size:15px; font-weight:700; text-align:right;">${q}개</span>
                                 <span style="color:#ccc; font-size:0.75rem; margin:0 4px;">/</span>
                                 <span style="color:var(--item-black); font-weight:800; text-align:right;">${sub.toLocaleString()}원</span>
                             </div>
@@ -2494,6 +2569,9 @@
                     modal.style.display = 'flex';
                     checkScrollLock();
                 }, 400); // 500ms -> 400ms로 소폭 단축
+            } else {
+                // 사용자 정보가 있으면 미픽업 주문 확인 자동 실행
+                setTimeout(checkUnpickedOrders, 1000); // UI 안정화 후 실행
             }
         });
 
