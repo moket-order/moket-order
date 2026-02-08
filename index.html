@@ -44,7 +44,7 @@
             --btn-radius: 12px;
             --nego-orange: #FF6D00;
             --item-black: #1a1a1a;
-            --btn-font-size: 1.05rem;
+            --btn-font-size: 15px;
             --btn-font-weight: 800;
         }
 
@@ -52,8 +52,8 @@
             font-family: var(--font-main);
             background: #f4f6f8;
             margin: 0;
-            padding-bottom: calc(150px + env(safe-area-inset-bottom));
-            /* 푸터 높이 고려하여 여백 고정 */
+            padding-bottom: calc(120px + env(safe-area-inset-bottom));
+            /* 푸터 높이 고려하여 여백 고정 (기존 150px에서 20% 축소) */
             letter-spacing: -0.02em;
             -webkit-font-smoothing: antialiased;
             word-break: keep-all;
@@ -65,8 +65,7 @@
             padding: calc(20px + env(safe-area-inset-top)) 20px 20px 20px;
             display: grid;
             grid-template-columns: 70px 1fr 70px;
-            align-items: end;
-            /* 바닥(한글 텍스트) 기준 정렬 */
+            align-items: center;
             justify-items: center;
         }
 
@@ -77,7 +76,7 @@
 
         .slogan {
             color: rgba(255, 255, 255, 0.9);
-            font-size: 1rem;
+            font-size: 15px;
             font-weight: 800;
             letter-spacing: 0.2em;
             margin-bottom: 3px;
@@ -94,7 +93,7 @@
 
         .logo-ko {
             color: var(--white);
-            font-size: 1rem;
+            font-size: 15px;
             font-weight: 800;
             letter-spacing: 0.45em;
             text-indent: 0.45em;
@@ -129,7 +128,7 @@
         }
 
         .btn-label {
-            font-size: 1rem;
+            font-size: 15px;
             font-weight: 800;
             color: var(--white);
             line-height: 1;
@@ -157,8 +156,8 @@
 
         .side-menu-header {
             background: var(--moket-green);
-            /* 상하 패딩 합(57px)을 동일하게 배분하여 정중앙 배치 (28.5px + 28.5px) */
-            padding: calc(28.5px + env(safe-area-inset-top)) 20px 28.5px 20px;
+            /* 타이틀 확대에 맞춰 상하 패딩을 약 5px씩 줄여 전체 높이 보존 (23.5px + 23.5px) */
+            padding: calc(23.5px + env(safe-area-inset-top)) 20px 23.5px 20px;
             color: var(--white);
             display: flex;
             flex-direction: column;
@@ -167,7 +166,7 @@
 
         .side-menu-header h2 {
             margin: 0;
-            font-size: 1.5rem;
+            font-size: 20px;
 
         }
 
@@ -222,7 +221,7 @@
 
         .side-menu-header p {
             margin: 10px 0 0 0;
-            font-size: 1rem;
+            font-size: 15px;
             font-weight: 600;
             display: flex;
             align-items: center;
@@ -240,11 +239,14 @@
 
         #menu-greeting {
             margin: 0;
-            padding: 20px 25px 10px 25px;
-            font-size: 1.05rem;
+            padding: 20px 25px;
+            /* 상하좌우 여백 균등 조정 */
+            font-size: 20px;
             font-weight: 700;
             display: flex;
             align-items: center;
+            justify-content: center;
+            /* 가로 중앙 정렬 추가 */
             color: var(--item-black);
             border-bottom: 1px solid #f5f5f5;
         }
@@ -269,7 +271,7 @@
 
         .menu-list li {
             padding: 18px 0;
-            font-size: 1.1rem;
+            font-size: 18px;
             font-weight: 700;
             border-bottom: 1px solid #f5f5f5;
             color: var(--item-black);
@@ -282,10 +284,12 @@
         /* 공통 버튼 시스템 (닫기 버튼 통일) */
         .btn-common {
             width: 100%;
-            height: 60px;
+            height: 48px;
+            /* 전체 버튼 높이 통일 */
             border-radius: 16px;
             font-weight: 900;
-            font-size: 1.25rem;
+            font-size: 18px;
+            /* 전체 버튼 폰트 통일 */
             border: none;
             cursor: pointer;
             display: flex;
@@ -328,7 +332,7 @@
             display: none;
             text-align: center;
             margin-bottom: 20px;
-            font-size: 0.95rem;
+            font-size: 15px;
             color: #455464;
             line-height: 1.5;
         }
@@ -434,7 +438,7 @@
             color: #fff;
             padding: 5px 12px;
             border-radius: 20px;
-            font-size: 0.8rem;
+            font-size: 13px;
             pointer-events: none;
         }
 
@@ -455,7 +459,7 @@
 
         .date-section-title {
             padding: 8px 20px 4px 20px;
-            font-size: 0.98rem;
+            font-size: 16px;
             font-weight: 900;
             color: var(--item-black);
             text-align: center;
@@ -482,7 +486,7 @@
             border-radius: var(--btn-radius);
             background: #fafafa;
             color: #455464;
-            font-size: 0.98rem;
+            font-size: 15px;
             font-weight: 800;
             border: 1.5px solid #eee;
             cursor: pointer;
@@ -629,14 +633,15 @@
         }
 
         .stock-status {
-            font-size: 0.9rem;
+            font-size: 15px;
             font-weight: 800;
             letter-spacing: -0.03em;
         }
 
         .item-name {
             font-weight: 800;
-            font-size: 1.35rem;
+            font-size: 18px;
+            margin-top: 10px;
             /* Slightly larger in vertical layout */
             color: var(--item-black);
             line-height: 1.4;
@@ -648,7 +653,7 @@
         .item-price-val {
             color: var(--nego-orange);
             font-weight: 900;
-            font-size: 1.25rem;
+            font-size: 18px;
         }
 
         .qty-controls {
@@ -712,7 +717,7 @@
             border: none;
             background: none;
             font-weight: 800;
-            font-size: 1.1rem;
+            font-size: 18px;
             color: var(--moket-green);
         }
 
@@ -720,26 +725,39 @@
         .footer {
             position: fixed;
             bottom: 0;
-            /* 상시 노출 */
             width: 100%;
             background: var(--white);
-            padding: 12px 20px calc(15px + env(safe-area-inset-bottom)) 20px;
+            padding: 8px 20px calc(10px + env(safe-area-inset-bottom)) 20px;
             box-sizing: border-box;
             box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.12);
             z-index: 100;
             max-width: 600px;
             left: 50%;
-            transform: translateX(-50%);
+            transform: translateX(-50%) translateY(100%);
+            /* 아래로 숨김 */
+            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.4s;
+            /* 부드러운 슬라이딩 및 보임 유지 */
+            visibility: hidden;
+            /* 클릭 방지 */
+        }
+
+        .footer.visible {
+            transform: translateX(-50%) translateY(0);
+            visibility: visible;
         }
 
         .main-submit-btn {
             width: 100%;
-            height: 54px;
+            height: 48px;
+            /* 디자인 통일 (기존 44px) */
+            line-height: 48px;
+            padding: 0;
             background: var(--moket-green);
             color: var(--white);
             border: none;
             border-radius: 18px;
-            font-size: 1.2rem;
+            font-size: 18px;
+            /* 디자인 통일 (기존 15px) */
             font-weight: 800;
             cursor: pointer;
         }
@@ -817,13 +835,13 @@
             border-radius: 12px;
             padding: 0 15px;
             box-sizing: border-box;
-            font-size: 1rem;
+            font-size: 15px;
             margin-top: 8px;
             outline: none;
         }
 
         .input-hint {
-            font-size: 0.85rem;
+            font-size: 13px;
             color: #455464;
             margin-top: 6px;
             line-height: 1.4;
@@ -856,7 +874,7 @@
             <div class="menu-icons"><span></span><span></span><span></span></div>
             <span class="btn-label">메뉴</span>
         </div>
-        <div class="header-center">
+        <div class="header-center" onclick="loadData(true)" style="cursor: pointer;">
             <div class="slogan">모두를 위한 공구마켓</div>
             <div class="logo-en">MOKET</div>
             <div class="logo-ko">모켓</div>
@@ -874,10 +892,10 @@
     <div id="side-menu-overlay" class="side-menu-overlay" onclick="toggleMenu()"></div>
     <div id="side-menu" class="side-menu">
         <div class="side-menu-header" style="text-align: center;">
-            <div onclick="location.reload()" style="cursor: pointer;">
-                <div class="slogan" style="font-size: 0.75rem; color: rgba(255,255,255,0.85);">모두를 위한 공구마켓</div>
-                <div class="logo-en" style="font-size: 2.2rem;">MOKET</div>
-                <div class="logo-ko" style="font-size: 0.8rem; letter-spacing: 0.35em; text-indent: 0.35em;">모켓</div>
+            <div onclick="loadData(true); toggleMenu();" style="cursor: pointer;">
+                <div class="slogan" style="font-size: 0.83rem; color: rgba(255,255,255,0.85);">모두를 위한 공구마켓</div>
+                <div class="logo-en" style="font-size: 2.45rem;">MOKET</div>
+                <div class="logo-ko" style="font-size: 0.88rem; letter-spacing: 0.35em; text-indent: 0.35em;">모켓</div>
             </div>
         </div>
         <p id="menu-greeting"><span class="name-badge">주문자</span>님 반갑습니다</p>
@@ -885,15 +903,15 @@
             <li onclick="openSideModal('profile-modal')">주문자명 변경</li>
             <li onclick="openSideModal('location-modal')">매장위치</li>
             <li onclick="openSideModal('hours-modal')">영업시간</li>
-            <li onclick="window.open('https://open.kakao.com/o/sglJC2ei')">카카오톡 1:1 문의하기</li>
+            <li onclick="window.open('https://open.kakao.com/o/sglJC2ei')">카카오톡 문의하기</li>
         </ul>
     </div>
     <div id="profile-modal" class="modal-overlay">
         <div class="modal-content">
             <div
                 style="background:var(--moket-green); padding: 25px 20px 25px 20px; border-radius: 12px 12px 0 0; margin: -25px -25px 18px -25px; text-align: center;">
-                <h3 id="profile-modal-title"
-                    style="margin: 0; font-weight: 900; color: var(--white); font-size: 1.35rem;">주문자 정보</h3>
+                <h3 id="profile-modal-title" style="margin: 0; font-weight: 900; color: var(--white); font-size: 20px;">
+                    주문자 정보</h3>
             </div>
             <div class="login-msg" id="kakao-login-prompt">
                 모켓에 오신 고객님 반갑습니다!<br>서비스를 이용하시려면 <b>카카오 로그인</b>이 필요합니다.
@@ -928,7 +946,7 @@
                 style="background:var(--moket-green); padding: 25px 20px 25px 20px; border-radius: 12px 12px 0 0; margin: -25px -25px 18px -25px; text-align: center;">
                 <h3 style="margin: 0; font-weight: 900; color: var(--white); font-size: 1.35rem;">매장 위치</h3>
             </div>
-            <p style="font-size:1.1rem; font-weight:700; margin:20px 0; line-height:1.5;">서울시 용산구 한강대로 405</p><a
+            <p style="font-size:15px; font-weight:700; margin:20px 0; line-height:1.5;">서울시 용산구 한강대로 405</p><a
                 href="https://map.naver.com/v5/search/서울시 용산구 한강대로 405" target="_blank" class="btn-common btn-naver">네이버
                 지도로 보기</a><button class="btn-common btn-close" onclick="closeModal('location-modal')">닫기</button>
         </div>
@@ -940,7 +958,7 @@
                 <h3 style="margin: 0; font-weight: 900; color: var(--white); font-size: 1.35rem;">영업시간 안내</h3>
             </div>
             <div
-                style="line-height:2.2; font-weight:700; font-size:1rem; margin-bottom:10px; text-align: left; padding-left: 10%;">
+                style="line-height:2.2; font-weight:700; font-size:15px; margin-bottom:10px; text-align: left; padding-left: 10%;">
                 • 평일:
                 10:00 - 19:00<br>• 토요일: 11:00 - 17:00<br>• 일요일/공휴일: 휴무 </div><button class="btn-common btn-close"
                 onclick="closeModal('hours-modal')">닫기</button>
@@ -958,16 +976,15 @@
                 <div class="touch-guide">탭하여 확대보기</div>
             </div>
             <div class="detail-body">
-                <h2 id="detail-title" style="margin:0; font-size:1.6rem; font-weight:900; color:var(--item-black);">
+                <h2 id="detail-title" style="margin:0; font-size:20px; font-weight:900; color:var(--item-black);">
                 </h2>
                 <div id="detail-price"
-                    style="color:var(--nego-orange); font-weight:900; font-size:1.5rem; margin:10px 0;"></div>
-                <div id="detail-desc" style="white-space:pre-wrap; color:#455464; font-size:1.05rem; line-height:1.6;">
+                    style="color:var(--nego-orange); font-weight:900; font-size:20px; margin:10px 0;"></div>
+                <div id="detail-desc" style="white-space:pre-wrap; color:#455464; font-size:15px; line-height:1.6;">
                 </div>
             </div>
             <div style="padding: 12px 20px; border-top: 1px solid #f5f5f5;"><button class="btn-common btn-close"
-                    onclick="closeModal('detail-overlay')"
-                    style="height: 42px; font-size: 1.1rem; margin-top: 0;">닫기</button></div>
+                    onclick="closeModal('detail-overlay')" style="margin-top: 0;">닫기</button></div>
         </div>
     </div>
     <div id="fullscreen-overlay" onclick="closeFullscreen()">
@@ -977,13 +994,14 @@
     <div id="confirm-overlay" class="modal-overlay">
         <div class="modal-content" style="text-align:center; padding: 25px 15px;">
             <div id="confirm-item-list"
-                style="text-align:left; background:#f5f5f5; padding: 15px 8px; border-radius:18px; margin:10px 0 20px 0; font-size:1rem; line-height:1.7; max-height:350px; overflow-y:auto;">
+                style="text-align:left; background:#f5f5f5; padding: 15px 8px; border-radius:18px; margin:10px 0 20px 0; font-size:15px; line-height:1.7; max-height:350px; overflow-y:auto;">
             </div>
-            <div style="font-weight:900; font-size:1.35rem; margin-bottom:15px;">총 합계: <span id="confirm-total-price"
+            <div style="font-weight:900; font-size:20px; margin-bottom:15px;">총 합계: <span id="confirm-total-price"
                     style="color:var(--nego-orange);">0원</span></div>
             <div style="display:flex; gap:10px;"><button class="btn-common btn-close"
-                    onclick="closeModal('confirm-overlay')">취소</button><button id="btn-submit-order"
-                    class="btn-common btn-primary" onclick="completeOrder()">주문확정</button></div>
+                    onclick="closeModal('confirm-overlay')" style="margin-top: 0;">취소</button><button
+                    id="btn-submit-order" class="btn-common btn-primary" onclick="completeOrder()"
+                    style="margin-top: 0;">주문확정</button></div>
             <div
                 style="font-size:0.85rem; color:#455464; margin-top:15px; font-weight:800; text-align:center; word-break:keep-all;">
                 주문취소는 주문당일 24시까지 가능합니다</div>
@@ -991,15 +1009,15 @@
     </div>
     <div class="footer" id="main-footer">
         <div
-            style="display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; font-weight:800;">
+            style="display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; font-weight:800; font-size: 18px;">
             <span id="total-qty-text">총 0개 선택</span><span id="total-price-text"
-                style="color:var(--nego-orange); font-size:1.35rem;">0원</span>
+                style="color:var(--nego-orange); font-size:20px;">0원</span>
         </div><button class="main-submit-btn" onclick="openConfirm()">주문하기</button>
     </div>
     <div id="system-modal" class="modal-overlay" style="z-index: 9999;">
         <div class="modal-content" style="text-align: center; width: 85%; max-width: 350px; padding: 25px 20px;">
             <div id="sys-modal-msg"
-                style="margin: 10px 0 25px; font-weight: 700; font-size: 1.05rem; line-height: 1.5; color: var(--item-black); white-space: pre-wrap;">
+                style="margin: 10px 0 25px; font-weight: 700; font-size: 18px; line-height: 1.5; color: var(--item-black); white-space: pre-wrap;">
             </div>
             <div id="sys-modal-btns" style="display: flex; gap: 10px; justify-content: center;"></div>
         </div>
@@ -1009,39 +1027,48 @@
         <div class="modal-content">
             <div
                 style="background:var(--moket-green); padding: 45px 20px 25px 20px; border-radius: 12px 12px 0 0; margin: -20px -20px 8px -20px; text-align: center;">
-                <h3 id="history-modal-title"
-                    style="margin: 0; font-weight: 900; color: var(--white); font-size: 1.35rem;">주문내역</h3>
+                <h3 id="history-modal-title" style="margin: 0; font-weight: 900; color: var(--white); font-size: 18px;">
+                    주문내역</h3>
             </div>
             <div style="padding: 0 20px 0 20px; flex-shrink: 0;">
                 <div
                     style="display: flex; justify-content: center; gap: 6px; margin-bottom: 8px; border-bottom: 1.5px solid #eee; padding-bottom: 8px;">
                     <button class="date-btn active" id="status-order" onclick="filterStatus('order')"
-                        style="height:42px; font-size:1.0rem; flex:1; padding:0; font-weight:900;">전체</button>
+                        style="height:42px; font-size:15px; flex:1; padding:0; font-weight:900;">전체</button>
                     <button class="date-btn" id="status-stocked" onclick="filterStatus('stocked')"
-                        style="height:42px; font-size:1.0rem; flex:1; padding:0; font-weight:900;">입고</button>
+                        style="height:42px; font-size:15px; flex:1; padding:0; font-weight:900;">입고</button>
                     <button class="date-btn" id="status-pickup" onclick="filterStatus('pickup')"
-                        style="height:42px; font-size:1.0rem; flex:1; padding:0; font-weight:900;">픽업</button>
+                        style="height:42px; font-size:15px; flex:1; padding:0; font-weight:900;">픽업</button>
                     <button class="date-btn" id="status-cancel" onclick="filterStatus('cancel')"
-                        style="height:42px; font-size:1.0rem; flex:1; padding:0; font-weight:900;">취소</button>
+                        style="height:42px; font-size:15px; flex:1; padding:0; font-weight:900;">취소</button>
                 </div>
                 <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 8px;">
+                    <button class="date-btn" id="filter-all" onclick="filterHistory('all')"
+                        style="height:32px; font-size:15px; flex:1; padding:0;">전체</button>
                     <button class="date-btn active" id="filter-today" onclick="filterHistory('today')"
-                        style="height:32px; font-size:0.9rem; flex:1; padding:0;">오늘</button>
+                        style="height:32px; font-size:15px; flex:1; padding:0;">오늘</button>
                     <button class="date-btn" id="filter-week" onclick="filterHistory('week')"
-                        style="height:32px; font-size:0.9rem; flex:1; padding:0;">1주일</button>
+                        style="height:32px; font-size:15px; flex:1; padding:0;">1주일</button>
                     <button class="date-btn" id="filter-month" onclick="filterHistory('month')"
-                        style="height:32px; font-size:0.9rem; flex:1; padding:0;">1개월</button>
+                        style="height:32px; font-size:15px; flex:1; padding:0;">1개월</button>
                 </div>
                 <div
                     style="display: flex; justify-content: center; gap: 8px; margin-bottom: 0; border-top: 1.5px solid #eee; padding-top: 8px;">
                     <button class="date-btn active" id="btn-sort-pickup" onclick="changeSortMode('pickupDate')"
-                        style="height:30px; font-size:0.85rem; flex:1;">픽업순</button>
+                        style="height:34px; font-size:15px; flex:2;">픽업순</button>
                     <button class="date-btn" id="btn-sort-order" onclick="changeSortMode('timestamp')"
-                        style="height:30px; font-size:0.85rem; flex:1;">주문순</button>
-                </div>
-                <div style="display: flex; justify-content: flex-end; padding: 0; margin-top: 2px;">
+                        style="height:34px; font-size:15px; flex:2;">주문순</button>
                     <button id="btn-sort-dir" onclick="toggleSortDir()"
-                        style="height: 24px; width: 32px; padding: 0; background: none; border: none; color: #999; display: flex; align-items: center; justify-content: center; cursor: pointer; outline: none; margin-right: -4px;">
+                        style="height: 34px; width: 34px; padding: 0; background: #fafafa; border: 1.5px solid #eee; border-radius: 8px; color: #455464; display: flex; align-items: center; justify-content: center; cursor: pointer; outline: none;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="4" y1="6" x2="13" y2="6"></line>
+                            <line x1="4" y1="10" x2="11" y2="10"></line>
+                            <line x1="4" y1="14" x2="9" y2="14"></line>
+                            <line x1="4" y1="18" x2="7" y2="18"></line>
+                            <polyline points="15 15 18 18 21 15"></polyline>
+                            <line x1="18" y1="6" x2="18" y2="18"></line>
+                        </svg>
                     </button>
                 </div>
             </div>
@@ -1079,7 +1106,7 @@
          * { "matchKey|상품명": { stock: 수량, expire: 만료시간 } }
          * 주문/취소 직후 서버 데이터가 늦게 갱신될 때 로컬 상태를 강제로 유지하는 용도
          */
-        const pendingStockUpdates = {};
+        let pendingStockUpdates = {};
         const STOCK_LOCK_DURATION = 15000; // 15초 동안 유지
 
         // [스크롤 방지]
@@ -1408,17 +1435,18 @@
                 return;
             }
 
-            // [추가] 모달을 열 때마다 기본값으로 초기화 (픽업일순, 오늘)
+            // [수정] 모달을 열 때마다 기본값으로 초기화 (전체-전체-픽업순 내림차순)
             currentSortBy = 'pickupDate';
-            currentFilter = 'today';
+            currentFilter = 'all';
             currentStatusFilter = 'order';
-            currentSortDir = 'asc'; // 오름차순으로 초기화 (오늘 항목이 위로)
+            currentSortDir = 'desc'; // 최신순(내림차순)으로 초기화
             currentHistoryLimit = 10; // 초기화
 
             // 버튼 UI 초기화
             document.getElementById('btn-sort-order').classList.remove('active');
             document.getElementById('btn-sort-pickup').classList.add('active');
-            document.getElementById('filter-today').classList.add('active');
+            document.getElementById('filter-all').classList.add('active');
+            document.getElementById('filter-today').classList.remove('active');
             document.getElementById('filter-week').classList.remove('active');
             document.getElementById('filter-month').classList.remove('active');
 
@@ -1432,9 +1460,9 @@
             const list = document.getElementById('history-list');
             const title = document.getElementById('history-modal-title');
 
-            // 타이틀 동적 변경 (상단 여백 확보, 이름표 오렌지색, 폰트 15% 확대 적용)
+            // 타이틀 동적 변경 (상단 여백 확보, 이름표 오렌지색)
             const displayName = name.trim() || "주문자";
-            title.style.fontSize = "1.35rem";
+            title.style.fontSize = "20px";
             title.innerHTML = `<span style="background:var(--white); color:var(--nego-orange); padding:2px 10px; border-radius:15px; margin-right:5px; font-weight:900;">${displayName}</span>님의 주문내역`;
 
             modal.style.display = 'flex';
@@ -1490,7 +1518,7 @@
             currentSortBy = mode;
             currentHistoryLimit = 10; // 초기화
             // 모드 변경 시 적절한 기본 정렬 방향 설정
-            currentSortDir = (mode === 'timestamp') ? 'desc' : 'asc';
+            currentSortDir = 'desc';
 
             document.getElementById('btn-sort-order').classList.toggle('active', mode === 'timestamp');
             document.getElementById('btn-sort-pickup').classList.toggle('active', mode === 'pickupDate');
@@ -1500,6 +1528,7 @@
         function filterHistory(type) {
             currentFilter = type;
             currentHistoryLimit = 10; // 초기화
+            currentSortDir = 'desc'; // [추가] 필터 변경 시 내림차순 기본 적용
             // 버튼 활성화 처리
             const buttons = ['all', 'today', 'week', 'month'];
             buttons.forEach(b => {
@@ -1512,6 +1541,7 @@
         function filterStatus(status) {
             currentStatusFilter = status;
             currentHistoryLimit = 10; // 초기화
+            currentSortDir = 'desc'; // [추가] 상태 변경 시 내림차순 기본 적용
             // 버튼 활성화 처리
             const statuses = ['order', 'cancel', 'stocked', 'pickup'];
             statuses.forEach(s => {
@@ -1524,6 +1554,16 @@
         function renderHistory() {
             const list = document.getElementById('history-list');
             list.innerHTML = '';
+
+            // [추가] 정렬 방향 버튼 UI 업데이트 (커스텀 SVG 적용)
+            const sortDirBtn = document.getElementById('btn-sort-dir');
+            if (sortDirBtn) {
+                if (currentSortDir === 'desc') {
+                    sortDirBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="13" y2="6"></line><line x1="4" y1="10" x2="11" y2="10"></line><line x1="4" y1="14" x2="9" y2="14"></line><line x1="4" y1="18" x2="7" y2="18"></line><polyline points="15 15 18 18 21 15"></polyline><line x1="18" y1="6" x2="18" y2="18"></line></svg>`;
+                } else {
+                    sortDirBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="7" y2="6"></line><line x1="4" y1="10" x2="9" y2="10"></line><line x1="4" y1="14" x2="11" y2="14"></line><line x1="4" y1="18" x2="13" y2="18"></line><polyline points="15 9 18 6 21 9"></polyline><line x1="18" y1="6" x2="18" y2="18"></line></svg>`;
+                }
+            }
 
             if (!fullHistoryData || fullHistoryData.length === 0) {
                 list.innerHTML = '<div style="text-align:center; color:#455464; padding:50px 0;">주문내역이 없습니다.</div>';
@@ -1573,6 +1613,9 @@
                 if (currentFilter === 'week') return diffDays >= 0 && diffDays <= 7;
                 if (currentFilter === 'month') return diffDays >= 0 && diffDays <= 30;
 
+                // 3. '전체' 필터
+                if (currentFilter === 'all') return true;
+
                 return false;
             });
 
@@ -1581,13 +1624,16 @@
                 return;
             }
 
-            // 정렬 로직 (취소된 항목은 무조건 최하단으로, 그 외에는 선택한 기준에 따라 정렬)
+            // 정렬 로직 (취소된 항목은 무조건 최하단으로 보내지만, 전체 기간 + 전체 상태 필터일 때는 날짜순으로만 정렬)
             filtered.sort((a, b) => {
                 const isACancelled = (a.item && a.item.includes('[취소]')) || (a.note && a.note.includes('[취소]'));
                 const isBCancelled = (b.item && b.item.includes('[취소]')) || (b.note && b.note.includes('[취소]'));
 
-                if (isACancelled !== isBCancelled) {
-                    return isACancelled ? 1 : -1; // 취소된 건을 뒤로(1) 보냄
+                // [수정] '전체-전체' 필터일 때는 취소 그룹화 무시
+                if (!(currentStatusFilter === 'order' && currentFilter === 'all')) {
+                    if (isACancelled !== isBCancelled) {
+                        return isACancelled ? 1 : -1; // 취소된 건을 뒤로(1) 보냄
+                    }
                 }
 
                 const valA = parseKRDate(a[currentSortBy]);
@@ -1653,18 +1699,18 @@
                 orderDiv.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                         <div style="flex:1; padding-right:10px;">
-                            <div style="font-size:1.1rem; font-weight:800; color:var(--item-black); line-height:1.2; margin-bottom:6px;">${order.item}</div>
-                            <div style="font-size:0.75rem; display:flex; flex-direction:column; gap:2px;">
+                            <div style="font-size:16px; font-weight:800; color:var(--item-black); line-height:1.2; margin-bottom:6px;">${order.item}</div>
+                            <div style="font-size:12px; display:flex; flex-direction:column; gap:2px;">
                                 <div style="${orderDateStyle}">주문일: ${orderTime}</div>
                                 <div style="${pickupDateStyle}">픽업일: ${pickupDisp}</div>
                             </div>
                         </div>
                         <div style="text-align:right; min-width:90px; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-                            <div style="font-size:0.85rem; color:#455464; font-weight:700;">${order.qty}개 / ${parseInt(order.total || 0).toLocaleString()}원</div>
-                            ${(true || isProcessing) ? `<div style="font-size:0.95rem; font-weight:800; color:${statusColor};">${statusText}</div>` : ''}
+                            <div style="font-size:13px; color:#455464; font-weight:700;">${order.qty}개 / ${parseInt(order.total || 0).toLocaleString()}원</div>
+                            ${(true || isProcessing) ? `<div style="font-size:15px; font-weight:800; color:${statusColor};">${statusText}</div>` : ''}
                             ${canDelete ? `<button onclick="deleteOrderServer('${orderTimeFull}', '${order.name}', '${order.item}', '${order.pickupDate}', '${order.matchKey || ''}')" 
-                                 style="margin-top:4px; width:100%; height:28px; background:#eff2f5; color:#666; border:none; border-radius:6px; font-size:0.75rem; font-weight:700; cursor:pointer;">주문취소</button>` : ''}
-                            ${isProcessing ? `<div style="margin-top:4px; width:100%; height:28px; display:flex; align-items:center; justify-content:center; background:#f5f5f5; color:#999; border-radius:6px; font-size:0.75rem; font-weight:700;">취소중</div>` : ''}
+                                 style="margin-top:4px; width:100%; height:28px; background:#eff2f5; color:#666; border:none; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer;">주문취소</button>` : ''}
+                            ${isProcessing ? `<div style="margin-top:4px; width:100%; height:28px; display:flex; align-items:center; justify-content:center; background:#f5f5f5; color:#999; border-radius:6px; font-size:12px; font-weight:700;">취소중</div>` : ''}
                         </div>
                     </div>
                 `;
@@ -2009,8 +2055,8 @@
                 card.innerHTML = `<div class="card-top">` +
                     `<div class="thumb">${imgId ? `<img src="${getImgUrl(imgId, 300)}" loading="lazy" style="width:100%; height:100%; object-fit:contain;">` : 'No Image'}</div>` +
                     `<div class="item-info-top">` +
-                    `<div class="item-name" style="font-size:1.1rem; margin-bottom:2px;">${p.name}</div>` +
-                    `<div class="item-price-val" style="font-size:1.25rem;">${parseInt(p.price || 0).toLocaleString()}원</div>` +
+                    `<div class="item-name" style="margin-bottom:2px;">${p.name}</div>` +
+                    `<div class="item-price-val">${parseInt(p.price || 0).toLocaleString()}원</div>` +
                     `</div></div>` +
                     `<div class="item-controls-bottom-v">` +
                     `<button class="btn-detail" onclick="openDetail('${p.name.replace(/'/g, "\\'")}')">상세보기</button>` +
@@ -2047,6 +2093,21 @@
             else controls.classList.remove('selected');
 
             updateFooter();
+
+            // [추가] 푸터가 올라오면서 버튼을 가리는지 체크하여 자동 스크롤
+            if (change > 0) {
+                setTimeout(() => {
+                    const footer = document.getElementById('main-footer');
+                    const footerRect = footer.getBoundingClientRect();
+                    const controlsRect = controls.getBoundingClientRect();
+
+                    // 푸터가 활성화된 상태이고, 수량 조절 바가 푸터 영역에 닿거나 가려지면
+                    if (footer.classList.contains('visible') && controlsRect.bottom > footerRect.top - 10) {
+                        const scrollAmount = controlsRect.bottom - footerRect.top + 70; // 70px 정도 여유있게 올림
+                        window.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+                    }
+                }, 350); // 푸터 애니메이션 시간(0.4s)에 맞춰 약간 일찍 실행
+            }
         }
 
         function updateFooter() {
@@ -2064,6 +2125,12 @@
             }
 
             const footer = document.getElementById('main-footer');
+            if (tQ > 0) {
+                footer.classList.add('visible');
+            } else {
+                footer.classList.remove('visible');
+            }
+
             document.getElementById('total-qty-text').innerText = `총 ${tQ}개 선택`;
             document.getElementById('total-price-text').innerText = `${tP.toLocaleString()}원`;
         }
@@ -2430,12 +2497,27 @@
             }
         });
 
-        // [속도 개선] 사용자가 다른 탭(스프레드시트 등)에 갔다가 돌아오면 자동으로 최신 데이터 갱신
+        // [속도 개선] 사용자가 앱에 다시 들어오거나 다른 탭에서 돌아오면 자동으로 최신 데이터 갱신
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
-                console.log("Tab focused, refreshing data from spreadsheet...");
+                console.log("Tab focused (visibility), refreshing data...");
                 loadData();
             }
+        });
+
+        // [추가] 브라우저의 '뒤로가기/앞으로가기' 캐시(bfcache)에서 복구될 때 대응
+        window.addEventListener('pageshow', (event) => {
+            // event.persisted가 true면 캐시된 페이지가 다시 활성화된 것
+            if (event.persisted) {
+                console.log("Page restored from bfcache, refreshing data...");
+                loadData(true);
+            }
+        });
+
+        // [추가] 포커스를 얻었을 때도 갱신 (일부 모바일 환경 대응)
+        window.addEventListener('focus', () => {
+            console.log("Window focused, checking for updates...");
+            loadData();
         });
 
         // [수동 새로고침] 로고 클릭 또는 새로고침 버튼 클릭 시 실행
@@ -2448,4 +2530,3 @@
 </body>
 
 </html>
-
