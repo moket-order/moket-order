@@ -78,7 +78,8 @@
             color: rgba(255, 255, 255, 0.9);
             font-size: 13px;
             font-weight: 800;
-            letter-spacing: 0.2em;
+            /* ExtraBold */
+            letter-spacing: 1px;
             margin-bottom: 3px;
         }
 
@@ -86,7 +87,8 @@
             color: var(--white);
             font-size: 2.8rem;
             font-weight: 900;
-            letter-spacing: 0.05em;
+            /* Black */
+            letter-spacing: 1px;
             line-height: 0.8;
             margin-bottom: 3px;
         }
@@ -95,8 +97,9 @@
             color: var(--white);
             font-size: 18px;
             font-weight: 800;
-            letter-spacing: 0.45em;
-            text-indent: 0.45em;
+            /* ExtraBold */
+            letter-spacing: 1px;
+            text-indent: 1px;
             line-height: 1;
         }
 
@@ -242,7 +245,8 @@
             padding: 20px 25px;
             /* 상하좌우 여백 균등 조정 */
             font-size: 18px;
-            font-weight: 700;
+            font-weight: 800;
+            letter-spacing: 1px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -460,7 +464,8 @@
         .date-section-title {
             padding: 8px 20px 4px 20px;
             font-size: 16px;
-            font-weight: 900;
+            font-weight: 800;
+            letter-spacing: 1px;
             color: var(--item-black);
             text-align: center;
         }
@@ -874,7 +879,7 @@
             <div class="menu-icons"><span></span><span></span><span></span></div>
             <span class="btn-label">메뉴</span>
         </div>
-        <div class="header-center" onclick="loadData(true)" style="cursor: pointer;">
+        <div class="header-center" onclick="refreshAllData()" style="cursor: pointer;">
             <div class="slogan">모두를 위한 공동구매 마켓</div>
             <div class="logo-en">MOKET</div>
             <div class="logo-ko">모켓</div>
@@ -895,7 +900,7 @@
             <div onclick="loadData(true); toggleMenu();" style="cursor: pointer;">
                 <div class="slogan" style="font-size: 11.5px; color: rgba(255,255,255,0.85);">모두를 위한 공동구매 마켓</div>
                 <div class="logo-en" style="font-size: 40px;">MOKET</div>
-                <div class="logo-ko" style="font-size: 16px; letter-spacing: 0.35em; text-indent: 0.35em;">모켓</div>
+                <div class="logo-ko" style="font-size: 16px; letter-spacing: 1px; text-indent: 1px;">모켓</div>
             </div>
         </div>
         <p id="menu-greeting"><span class="name-badge">주문자</span>님 반갑습니다</p>
@@ -910,7 +915,8 @@
         <div class="modal-content">
             <div
                 style="background:var(--moket-green); padding: 25px 20px 25px 20px; border-radius: 12px 12px 0 0; margin: -25px -25px 18px -25px; text-align: center;">
-                <h3 id="profile-modal-title" style="margin: 0; font-weight: 900; color: var(--white); font-size: 20px;">
+                <h3 id="profile-modal-title"
+                    style="margin: 0; font-weight: 800; color: var(--white); font-size: 20px; letter-spacing: 1px;">
                     주문자 정보</h3>
             </div>
             <div class="login-msg" id="kakao-login-prompt">
@@ -944,7 +950,8 @@
         <div class="modal-content" style="text-align: center;">
             <div
                 style="background:var(--moket-green); padding: 25px 20px 25px 20px; border-radius: 12px 12px 0 0; margin: -25px -25px 18px -25px; text-align: center;">
-                <h3 style="margin: 0; font-weight: 900; color: var(--white); font-size: 1.35rem;">매장 위치</h3>
+                <h3 style="margin: 0; font-weight: 800; color: var(--white); font-size: 1.35rem; letter-spacing: 1px;">
+                    매장 위치</h3>
             </div>
             <p style="font-size:15px; font-weight:700; margin:20px 0; line-height:1.5;">서울시 용산구 한강대로 405</p><a
                 href="https://map.naver.com/v5/search/서울시 용산구 한강대로 405" target="_blank" class="btn-common btn-naver">네이버
@@ -955,7 +962,8 @@
         <div class="modal-content">
             <div
                 style="background:var(--moket-green); padding: 25px 20px 25px 20px; border-radius: 12px 12px 0 0; margin: -25px -25px 18px -25px; text-align: center;">
-                <h3 style="margin: 0; font-weight: 900; color: var(--white); font-size: 1.35rem;">영업시간 안내</h3>
+                <h3 style="margin: 0; font-weight: 800; color: var(--white); font-size: 1.35rem; letter-spacing: 1px;">
+                    영업시간 안내</h3>
             </div>
             <div
                 style="line-height:2.2; font-weight:700; font-size:15px; margin-bottom:10px; text-align: left; padding-left: 10%;">
@@ -976,7 +984,8 @@
                 <div class="touch-guide">탭하여 확대보기</div>
             </div>
             <div class="detail-body">
-                <h2 id="detail-title" style="margin:0; font-size:20px; font-weight:900; color:var(--item-black);">
+                <h2 id="detail-title"
+                    style="margin:0; font-size:20px; font-weight:800; letter-spacing: 1px; color:var(--item-black);">
                 </h2>
                 <div id="detail-price"
                     style="color:var(--nego-orange); font-weight:900; font-size:20px; margin:10px 0;"></div>
@@ -998,13 +1007,23 @@
             </div>
             <div style="font-weight:900; font-size:20px; margin-bottom:15px;">총 합계: <span id="confirm-total-price"
                     style="color:var(--nego-orange);">0원</span></div>
+            <div
+                style="text-align:left; font-size:14px; margin: 15px 0 10px 0; color:#455464; line-height:1.6; padding:0 5px; font-weight:700;">
+                <div>✅ 주문취소는 주문당일 24시까지 가능합니다.</div>
+                <div>✅ 픽업기간은 입고일 포함 3일(휴무일 제외)입니다.</div>
+                <div>✅ 픽업기간 이후에는 현장판매로 전환됩니다.</div>
+                <div>✅ 픽업기간 이후 수령은 카카오톡으로 문의바랍니다.</div>
+            </div>
+            <div
+                style="margin-bottom:20px; font-weight:700; font-size:14px; color:#455464; display:flex; align-items:center; justify-content:center; gap:6px;">
+                <input type="checkbox" id="confirm-notice-check"
+                    style="width:18px; height:18px; accent-color:var(--moket-green); margin:0;">
+                <label for="confirm-notice-check" style="cursor:pointer;">위 내용을 확인하였습니다.</label>
+            </div>
             <div style="display:flex; gap:10px;"><button class="btn-common btn-close"
                     onclick="closeModal('confirm-overlay')" style="margin-top: 0;">취소</button><button
                     id="btn-submit-order" class="btn-common btn-primary" onclick="completeOrder()"
                     style="margin-top: 0;">주문확정</button></div>
-            <div
-                style="font-size:13px; color:#455464; margin-top:15px; font-weight:800; text-align:center; word-break:keep-all;">
-                주문취소는 주문당일 24시까지 가능합니다</div>
         </div>
     </div>
     <div class="footer" id="main-footer">
@@ -1027,7 +1046,8 @@
         <div class="modal-content">
             <div
                 style="background:var(--moket-green); padding: 45px 20px 25px 20px; border-radius: 12px 12px 0 0; margin: -20px -20px 8px -20px; text-align: center;">
-                <h3 id="history-modal-title" style="margin: 0; font-weight: 900; color: var(--white); font-size: 18px;">
+                <h3 id="history-modal-title"
+                    style="margin: 0; font-weight: 800; color: var(--white); font-size: 18px; letter-spacing: 1px;">
                     주문내역</h3>
             </div>
             <div style="padding: 0 20px 0 20px; flex-shrink: 0;">
@@ -1081,7 +1101,7 @@
             </div>
         </div>
     </div>
-    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbzrFF86lUJ8kEunC6e9DYAFzw_L9ggGwteUo8211qH9mmIbSI8KQSKNjkQJgGm4MFWs/exec'
+    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbwr33FPRUs6i1kiL6QoS65SPMDya79vett-6Qin37nHq1eNzozJa3qkIQrsfQUI2xc/exec'
 
         // [카카오 초기화]
         try {
@@ -1490,7 +1510,7 @@
                 if (unpickedItems.length > 0) {
                     console.log("[미픽업 확인] 알림 모달을 띄웁니다.");
                     const styledName = `<span class="name-badge" style="margin-right:0;">${name}</span>`;
-                    showSystemModal(`반갑습니다, ${styledName}님!<br><br>아직 픽업하지 않은 상품이 있습니다.<br>주문내역을 확인 해 주세요.`, 'alert');
+                    showSystemModal(`반갑습니다, ${styledName}님!<div style="margin-bottom:5px;"></div>아직 픽업하지 않은 상품이 있습니다.<br>주문내역을 확인 해 주세요.`, 'alert');
                 }
             } catch (e) {
                 console.error("[미픽업 확인] 실행 도중 오류 발생:", e);
@@ -1509,6 +1529,18 @@
         }
 
         let currentHistoryLimit = 10;
+
+        // [추가] 데이터 전체 새로고침 (헤더 클릭 시)
+        function refreshAllData() {
+            // 1. 주문내역 캐시 삭제 (다음 조회 시 서버에서 가져오도록 유도)
+            const name = (localStorage.getItem('moket_user_name') || "").trim();
+            const phone = (localStorage.getItem('moket_user_phone') || "").trim();
+            if (name && phone) {
+                localStorage.removeItem(`history_cache_${name}_${phone}`);
+            }
+            // 2. 재고 데이터 새로고침
+            loadData(true);
+        }
 
         async function openHistoryModal() {
             const name = document.getElementById('input-name').value;
@@ -1559,6 +1591,7 @@
             const cached = localStorage.getItem(cacheKey);
             if (cached) {
                 fullHistoryData = JSON.parse(cached);
+                // [복구] 빠른 로딩을 위해 캐시 즉시 렌더링
                 renderHistory();
             } else {
                 list.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:50px 0; color:#999;"><div class="loading-spinner" style="margin-bottom:15px;"></div>내역을 조회 중입니다...</div>';
@@ -1576,17 +1609,25 @@
                     // 데이터 병합 (기존 캐시와 합치거나 새로 만듦)
                     const recentKeys = new Set(recentData.map(o => (o.timestamp + (o.matchKey || "") + o.item).trim()));
                     const others = (fullHistoryData || []).filter(o => !recentKeys.has((o.timestamp + (o.matchKey || "") + o.item).trim()));
-                    fullHistoryData = [...recentData, ...others];
-                    renderHistory();
+                    const newData = [...recentData, ...others];
+
+                    // [스마트 렌더링] 데이터가 변경된 경우에만 UI 갱신 (불필요한 깜빡임 방지)
+                    if (JSON.stringify(newData) !== JSON.stringify(fullHistoryData)) {
+                        fullHistoryData = newData;
+                        renderHistory();
+                    }
                 }
 
                 // 3. [2단계 로딩] 전체 내역 배경에서 천천히 가져오기
                 const allUrl = `${API_URL}?header=history&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&scope=all`;
                 fetch(allUrl).then(res => res.json()).then(allData => {
                     if (Array.isArray(allData)) {
+                        // [스마트 렌더링] 전체 데이터도 변경점이 있을 때만 갱신
+                        const isChanged = JSON.stringify(allData) !== JSON.stringify(fullHistoryData);
                         fullHistoryData = allData;
                         localStorage.setItem(cacheKey, JSON.stringify(fullHistoryData));
-                        renderHistory();
+
+                        if (isChanged) renderHistory();
                     }
                 }).catch(err => console.error("전체 내역 로드 실패:", err));
 
@@ -1744,9 +1785,13 @@
                     order.received === "취소완료";
                 const isProcessing = order.isProcessing === true;
 
-                // [수정] 화면에는 날짜만 표시하고, 기능(취소 등)에는 전체 타임스탬프 사용
-                const orderTimeFull = order.timestamp;
-                const orderTime = orderTimeFull.replace(/\s\d{2}:\d{2}:\d{2}$/, ''); // HH:mm:ss 제거
+                // [안전장치] 데이터 형식이 예전과 다를 경우(예: timestamp가 없는 경우)를 보호
+                let orderTime = '정보없음';
+                let orderTimeFull = '';
+                try {
+                    orderTimeFull = order.timestamp || '';
+                    orderTime = (typeof orderTimeFull === 'string') ? orderTimeFull.replace(/\s\d{2}:\d{2}:\d{2}$/, '') : String(orderTimeFull);
+                } catch (e) { console.error("날짜 형식 도중 오류:", e, order); }
                 const isReceived = (order.received === true || order.received === "TRUE");
                 const pickupDisp = order.pickupDate || '정보없음';
 
@@ -1756,7 +1801,7 @@
                 const isOrderToday = parseKRDate(orderTimeFull).toDateString() === new Date().toDateString();
                 const canDelete = isOrderToday && !isCancelled && !isReceived && !isProcessing;
 
-                let statusText = isReceived ? '픽업완료' : (isCancelled ? '취소완료' : '입고(미픽업)');
+                let statusText = isReceived ? '픽업완료' : (isCancelled ? '취소완료' : '입고완료');
                 let statusColor = isReceived ? '#4CAF50' : (isCancelled ? '#999' : '#FF6D00');
 
                 if (!isReceived && !isCancelled && !isProcessing) {
@@ -1786,7 +1831,7 @@
                             </div>
                             <div style="text-align:right; min-width:90px; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
                                 <div style="font-size:13px; color:#455464; font-weight:700;">${order.qty}개 / ${parseInt(order.total || 0).toLocaleString()}원</div>
-                                <div style="font-size:15px; font-weight:800; color:${statusColor};">${statusText}</div>
+                                ${order.onSite ? `<div style="font-size:14px; font-weight:800; color:var(--nego-orange); margin-bottom:-2px;">현장판매</div>` : `<div style="font-size:15px; font-weight:800; color:${statusColor};">${statusText}</div>`}
                                 ${canDelete ? `<button onclick="deleteOrderServer('${orderTimeFull}', '${order.name}', '${order.item}', '${order.pickupDate}', '${order.matchKey || ''}')" 
                                      style="margin-top:4px; width:100%; height:28px; background:#eff2f5; color:#666; border:none; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer;">주문취소</button>` : ''}
                                 ${isProcessing ? `<div style="margin-top:4px; width:100%; height:28px; display:flex; align-items:center; justify-content:center; background:#f5f5f5; color:#999; border-radius:6px; font-size:12px; font-weight:700;">취소중</div>` : ''}
@@ -2326,6 +2371,13 @@
         }
 
         async function completeOrder() {
+            // [추가] 안내사항 확인 체크 여부 검사
+            const noticeCheck = document.getElementById('confirm-notice-check');
+            if (noticeCheck && !noticeCheck.checked) {
+                showSystemModal("안내 내용을 확인하고 동의해주세요.", 'alert');
+                return;
+            }
+
             // [추가] 중복 처리 방지 (데이터 꼬임 방지)
             if (isHistoryProcessing) {
                 showSystemModal("이전 주문 확인 중입니다.\n잠시만 기다려 주세요.", 'alert');
