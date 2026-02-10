@@ -2208,7 +2208,7 @@
                 const currentQty = cart[p.name] || 0;
                 const stock = p.stock !== undefined && p.stock !== "" ? parseInt(p.stock) : Infinity;
                 const isSoldOut = stock <= 0;
-                const stockText = isFinite(stock) ? (isSoldOut ? "품절" : (stock < 10 ? `주문가능수량 <span style="color:var(--nego-orange);">${stock}</span>개` : "")) : "";
+                const stockText = isFinite(stock) ? (isSoldOut ? "품절" : `주문가능수량 <span style="color:var(--nego-orange);">${stock}</span>개`) : "";
 
                 card.innerHTML = `<div class="card-top">` +
                     `<div class="thumb">${imgId ? `<img src="${getImgUrl(imgId, 300)}" loading="lazy" style="width:100%; height:100%; object-fit:contain;">` : 'No Image'}</div>` +
