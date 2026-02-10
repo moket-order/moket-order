@@ -1757,8 +1757,8 @@
 
                 // 1. '오늘' 필터
                 if (currentFilter === 'today') {
-                    // [수정] '입고' 탭일 때는 '픽업일' 기준 (지금 시간 이전인 건만), 그 외엔 '주문일' 기준
-                    if (currentStatusFilter === 'stocked') {
+                    // [수정] '입고' 또는 '픽업' 탭일 때는 '픽업일' 기준 (지금 시간 이전인 건만), 그 외엔 '주문일' 기준
+                    if (currentStatusFilter === 'stocked' || currentStatusFilter === 'pickup') {
                         const pDate = parseKRDate(item.pickupDate);
                         return pDate <= now;
                     }
