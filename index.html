@@ -551,11 +551,10 @@
         }
 
         .date-filter-container {
-            padding: 4px 0 8px 0;
+            padding: 4px 20px 8px 20px;
             display: flex;
             gap: 6px;
             overflow-x: auto;
-            padding-left: 20px;
             -webkit-overflow-scrolling: touch;
         }
 
@@ -1207,7 +1206,7 @@
         </div>
     </div>
 
-    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbxS8_XA9SnBGEPNL1_LC_E2e3kIEGKYKauhBdBxoX_WRNVO8IWI0zovb5mdMFtaMo7T/exec'
+    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbyG_Glta-unkj2Ti4hAYFQ4MSubtmN9S2jjSFa-fKOHNK2BbS9tue6Py06Jgn1R0t5w/exec'
 
         // [카카오 초기화]
         try {
@@ -2293,9 +2292,15 @@
                         processAndRender(productsData);
                         // 최신 데이터로 이미지 캐싱 시작
                         startImageCaching(productsData);
+
+                        // [추가] 메인 화면이 떴으니, 사용자가 클릭하기 전에 미리 모든 사진 가져오기 시작!
+                        preloadAllProductImages();
                     } else {
                         // 데이터가 같아도 이미지 캐싱은 체크 (빠진게 있을 수 있으니)
                         startImageCaching(productsData);
+
+                        // 데이터가 같더라도 아직 안불러온 상세 이미지가 있다면 프리로드 시도
+                        preloadAllProductImages();
                     }
                 }
             }
@@ -2310,6 +2315,46 @@
                 }
             }
         }
+
+        // [추가] 배경에서 몰래 모든 상품 이미지를 가져오는 함수 (Preloading)
+        let isPreloading = false;
+        async function preloadAllProductImages() {
+            if (isPreloading) return;
+            isPreloading = true;
+            console.log("이미지 데이터 및 파일 배경 로드 시작...");
+
+            // 재고가 있는 상품부터 순차적으로 로드 (서버 부하 방지를 위해 하나씩 완주)
+            for (const p of productsData) {
+                // 이미 1장보다 많으면 이미 불러온 것이니 건너뜀
+                if (p.images && p.images.length === 1) {
+                    try {
+                        const res = await fetch(`${API_URL}?action=fetchProductImages&name=${encodeURIComponent(p.name)}`);
+                        const allImages = await res.json();
+
+                        if (Array.isArray(allImages) && allImages.length > 1) {
+                            p.images = allImages; // 메모리에 ID 저장
+
+                            // [핵심] 실제 '이미지 파일'을 브라우저 캐시에 미리 꽂아넣음
+                            allImages.forEach(id => {
+                                const img = new Image();
+                                // 상세보기에서 사용하는 sz=w1000 사이즈와 동일하게 요청하여 캐시 적중률 높임
+                                img.src = getImgUrl(id, 1000);
+                            });
+
+                            console.log(`[프리로드 완료] ${p.name} (이미지 ${allImages.length}장)`);
+                        }
+                    } catch (e) {
+                        console.error(`[프리로드 실패] ${p.name}:`, e);
+                    }
+                    // 서버에 너무 무리가지 않게 0.3초씩 쉬면서 다음 상품 진행
+                    await new Promise(r => setTimeout(r, 300));
+                }
+            }
+            isPreloading = false;
+            console.log("모든 이미지 파일 배경 로드 완료.");
+        }
+
+
 
         function showSkeleton() {
             const container = document.getElementById('product-list');
@@ -2362,11 +2407,20 @@
                     document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                     renderList(date);
+                    // [추가] 클릭한 버튼이 화면 밖으로 나갔다면 중앙으로 슬라이드 (사용자 요청)
+                    btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                 };
                 filterArea.appendChild(btn);
             });
 
-            if (activeDate && uniqueDates.includes(activeDate)) renderList(activeDate);
+            if (activeDate && uniqueDates.includes(activeDate)) {
+                renderList(activeDate);
+                // [추가] 초기 로딩 시에도 활성 버튼이 보이지 않는다면 위치 조정
+                setTimeout(() => {
+                    const target = filterArea.querySelector(`[data-date="${activeDate}"]`);
+                    if (target) target.scrollIntoView({ inline: 'center', block: 'nearest' });
+                }, 100);
+            }
             else if (uniqueDates.length > 0) renderList(uniqueDates[0]);
             else {
                 document.getElementById('product-list').innerHTML = '<div style="text-align:center; padding:50px 0; color:#999;">현재 주문 가능한 상품이 없습니다.</div>';
@@ -2472,7 +2526,7 @@
             document.getElementById('total-price-text').innerText = `${tP.toLocaleString()}원`;
         }
 
-        function openDetail(name) {
+        async function openDetail(name) {
             const p = productsData.find(i => i.name === name);
             if (!p) return;
             document.getElementById('detail-title').innerText = p.name;
@@ -2481,11 +2535,10 @@
             document.getElementById('detail-desc').innerText = p.desc || "상세 설명이 없습니다.";
             const slider = document.getElementById('slider-area');
 
+            // 1. 우선 현재 있는 이미지들(보통 1장)을 먼저 표시
             if (p.images && p.images.length > 0 && p.images[0]) {
                 slider.innerHTML = p.images.map(id => `<img src="${getImgUrl(id)}" >`).join('');
-            }
-
-            else {
+            } else {
                 slider.innerHTML = `<div class="slider-no-img">No Image</div>`;
             }
 
@@ -2494,7 +2547,24 @@
             slider.scrollLeft = 0;
             const detailBody = document.querySelector('.detail-body');
             if (detailBody) detailBody.scrollTop = 0;
+
+            // 2. [추가] 이미지가 1장뿐이라면 서버에 전체 이미지를 추가로 요청 (Lazy Loading)
+            if (p.images && p.images.length === 1) {
+                try {
+                    const res = await fetch(`${API_URL}?action=fetchProductImages&name=${encodeURIComponent(p.name)}`);
+                    const allImages = await res.json();
+
+                    if (Array.isArray(allImages) && allImages.length > 1) {
+                        // 데이터 캐싱 및 슬라이더 업데이트 (부드러운 전환을 위해 innerHTML 직접 업데이트)
+                        p.images = allImages;
+                        slider.innerHTML = allImages.map(id => `<img src="${getImgUrl(id)}" >`).join('');
+                    }
+                } catch (e) {
+                    console.error("추가 이미지 로드 실패:", e);
+                }
+            }
         }
+
 
         function openFullscreen() {
             const slider = document.getElementById('slider-area');
