@@ -1185,9 +1185,9 @@
                 <div
                     style="display: flex; justify-content: center; gap: 8px; margin-bottom: 0; border-top: 1.5px solid #eee; padding-top: 8px;">
                     <button class="date-btn active" id="btn-sort-pickup" onclick="changeSortMode('pickupDate')"
-                        style="height:32px; font-size:15px; flex:2;">픽업순</button>
+                        style="height:32px; font-size:15px; flex:1.5;">픽업순</button>
                     <button class="date-btn" id="btn-sort-order" onclick="changeSortMode('timestamp')"
-                        style="height:32px; font-size:15px; flex:2;">주문순</button>
+                        style="height:32px; font-size:15px; flex:1.5;">주문순</button>
                     <button id="btn-sort-dir" onclick="toggleSortDir()"
                         style="height: 32px; width: 32px; padding: 0; background: #fafafa; border: 1.5px solid #eee; border-radius: 0; color: #455464; display: flex; align-items: center; justify-content: center; cursor: pointer; outline: none;">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1198,6 +1198,15 @@
                             <line x1="4" y1="18" x2="7" y2="18"></line>
                             <polyline points="15 15 18 18 21 15"></polyline>
                             <line x1="18" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                    <button id="btn-refresh-history" onclick="openHistoryModal(true)"
+                        style="height: 32px; width: 32px; padding: 0; background: #fafafa; border: 1.5px solid #eee; border-radius: 0; color: #455464; display: flex; align-items: center; justify-content: center; cursor: pointer; outline: none;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                         </svg>
                     </button>
                 </div>
@@ -1212,7 +1221,7 @@
         </div>
     </div>
 
-    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbyG_Glta-unkj2Ti4hAYFQ4MSubtmN9S2jjSFa-fKOHNK2BbS9tue6Py06Jgn1R0t5w/exec'
+    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbzMN-qhzBkjICb2vuXaknJH9qgeFdEZ4EyYXCnoOpYlCQfLXRFe-1Mz-BvAYTQQUjbh/exec'
 
         // [카카오 초기화]
         try {
@@ -1711,17 +1720,12 @@
 
         // [추가] 데이터 전체 새로고침 (헤더 클릭 시)
         function refreshAllData() {
-            // 1. 주문내역 캐시 삭제 (다음 조회 시 서버에서 가져오도록 유도)
-            const name = (localStorage.getItem('moket_user_name') || "").trim();
-            const phone = (localStorage.getItem('moket_user_phone') || "").trim();
-            if (name && phone) {
-                localStorage.removeItem(`history_cache_${name}_${phone}`);
-            }
-            // 2. 재고 데이터 새로고침
+            // [수정] 강제로 캐시를 삭제하지 않고, loadData만 실시간으로 돌림
+            // 이렇게 해야 다음 번에 역사 창을 열었을 때 사라지지 않고 즉시 보임 (배경에서 업데이트됨)
             loadData(true);
         }
 
-        async function openHistoryModal() {
+        async function openHistoryModal(isRefresh = false) {
             const name = document.getElementById('input-name').value;
             const phone = document.getElementById('input-phone').value;
 
@@ -1730,10 +1734,19 @@
                 return;
             }
 
-            // [수정] 기본값 변경: 전체(기간) - 전체(상태) - 주문순(정렬)
+            // [수정] 이전에는 무조건 초기화(fullHistoryData=[])했지만, 
+            // 이제는 동일 사용자라면 기존 데이터를 유지하여 '사라졌다 나타나는' 현상 방지
+            const cacheKey = `history_cache_${name}_${phone}`;
+            const cached = localStorage.getItem(cacheKey);
+
+            if (cached && fullHistoryData.length === 0) {
+                fullHistoryData = JSON.parse(cached);
+            }
+
+            // 기본 필터/정렬 설정
             currentSortBy = 'timestamp';
             currentFilter = 'all';
-            currentStatusFilter = 'order'; // "전체" 버튼
+            currentStatusFilter = 'order';
             currentSortDir = 'desc';
             currentHistoryLimit = 10;
 
@@ -1765,11 +1778,13 @@
             checkScrollLock();
 
             // 1. [로컬 캐시] 이전에 불러온 내역이 있다면 즉시 표시 (사용자별 구분)
-            const cacheKey = `history_cache_${name}_${phone}`;
-            fullHistoryData = []; // [중요] 이전 사용자의 데이터 잔상을 제거하기 위해 무조건 초기화
+            // (cacheKey와 cached는 상단에서 이미 선언됨)
+            // fullHistoryData = []; // [삭제] 기존 데이터를 유지하여 깜빡임 방지
 
-            const cached = localStorage.getItem(cacheKey);
-            if (cached) {
+            if (isRefresh) {
+                // [추가] 새로고침 시에는 명시적인 로딩 표시
+                list.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:50px 0; color:#999;"><div class="loading-spinner" style="margin-bottom:15px;"></div>주문내역을 조회 중입니다...</div>';
+            } else if (cached) {
                 fullHistoryData = JSON.parse(cached);
                 // [복구] 빠른 로딩을 위해 캐시 즉시 렌더링
                 renderHistory();
@@ -1786,18 +1801,32 @@
                 if (recentData && recentData.result === 'error') throw new Error(recentData.message);
 
                 if (Array.isArray(recentData)) {
-                    // 데이터 병합 (기존 캐시와 합치거나 새로 만듦)
+                    // [핵심] 처리 중인 상태 보존을 위한 병합 로직
                     const genKey = (o) => {
                         const d = parseKRDate(o.timestamp);
-                        d.setSeconds(0, 0); // 초 단위 차이 무시 (서버/로컬 포맷 불일치 해결)
-                        return d.getTime() + "|" + (o.matchKey || "") + "|" + String(o.item).trim();
+                        d.setSeconds(0, 0);
+                        const cleanItem = String(o.item || "").replace("[취소] ", "").trim();
+                        return d.getTime() + "|" + (o.matchKey || "") + "|" + cleanItem;
                     };
-                    const recentKeys = new Set(recentData.map(genKey));
-                    const others = (fullHistoryData || []).filter(o => !recentKeys.has(genKey(o)));
-                    const newData = [...recentData, ...others];
 
-                    // [스마트 렌더링] 데이터가 변경되었거나, 로딩 중(캐시 없음)이었다면 UI 갱신
-                    if (JSON.stringify(newData) !== JSON.stringify(fullHistoryData) || !cached) {
+                    const prevMap = new Map();
+                    (fullHistoryData || []).forEach(item => prevMap.set(genKey(item), item));
+
+                    const mergedRecent = recentData.map(fresh => {
+                        const key = genKey(fresh);
+                        const prev = prevMap.get(key);
+                        // [수정] 앱에서 '취소 중'일 때만 보호하고, 그 외에는 서버 데이터를 우선함 (매뉴얼 해제 대응)
+                        if (prev && prev.isProcessing) {
+                            return { ...fresh, isProcessing: prev.isProcessing, received: prev.received, item: prev.item };
+                        }
+                        return fresh;
+                    });
+
+                    const recentKeys = new Set(mergedRecent.map(genKey));
+                    const others = (fullHistoryData || []).filter(o => !recentKeys.has(genKey(o)));
+                    const newData = [...mergedRecent, ...others];
+
+                    if (JSON.stringify(newData) !== JSON.stringify(fullHistoryData) || !cached || isRefresh) {
                         fullHistoryData = newData;
                         renderHistory();
                     }
@@ -1807,9 +1836,27 @@
                 const allUrl = `${API_URL}?header=history&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&scope=all`;
                 fetch(allUrl).then(res => res.json()).then(allData => {
                     if (Array.isArray(allData)) {
-                        // [스마트 렌더링] 데이터가 변경되었거나, 로딩 중(캐시 없음)이었다면 UI 갱신
-                        const isChanged = JSON.stringify(allData) !== JSON.stringify(fullHistoryData);
-                        fullHistoryData = allData;
+                        const genKey = (o) => {
+                            const d = parseKRDate(o.timestamp);
+                            d.setSeconds(0, 0);
+                            const cleanItem = String(o.item || "").replace("[취소] ", "").trim();
+                            return d.getTime() + "|" + (o.matchKey || "") + "|" + cleanItem;
+                        };
+                        const prevMap = new Map();
+                        (fullHistoryData || []).forEach(item => prevMap.set(genKey(item), item));
+
+                        const mergedAll = allData.map(fresh => {
+                            const key = genKey(fresh);
+                            const prev = prevMap.get(key);
+                            // [수정] 앱에서 '취소 중'일 때만 보호하고, 그 외에는 서버 데이터를 우선함 (매뉴얼 해제 대응)
+                            if (prev && prev.isProcessing) {
+                                return { ...fresh, isProcessing: prev.isProcessing, received: prev.received, item: prev.item };
+                            }
+                            return fresh;
+                        });
+
+                        const isChanged = JSON.stringify(mergedAll) !== JSON.stringify(fullHistoryData);
+                        fullHistoryData = mergedAll;
                         localStorage.setItem(cacheKey, JSON.stringify(fullHistoryData));
 
                         if (isChanged || !cached) renderHistory();
@@ -1883,7 +1930,8 @@
             const now = new Date();
             const filtered = fullHistoryData.filter(item => {
                 const isCancelled = (item.item && item.item.includes('[취소]')) ||
-                    (item.received === "canceled" || item.received === "취소완료");
+                    (item.received === "canceled" || item.received === "취소완료") ||
+                    (item.canceled === true || item.canceled === "TRUE");
                 const isReceived = (item.received === true || item.received === "TRUE");
 
                 // [하위 분류 필터 적용]
@@ -1933,8 +1981,8 @@
 
             // 정렬 로직 (취소된 항목은 무조건 최하단으로 보내지만, 전체 기간 + 전체 상태 필터일 때는 날짜순으로만 정렬)
             filtered.sort((a, b) => {
-                const isACancelled = (a.item && a.item.includes('[취소]')) || (a.note && a.note.includes('[취소]'));
-                const isBCancelled = (b.item && b.item.includes('[취소]')) || (b.note && b.note.includes('[취소]'));
+                const isACancelled = (a.item && a.item.includes('[취소]')) || (a.note && a.note.includes('[취소]')) || (a.canceled === true || a.canceled === "TRUE");
+                const isBCancelled = (b.item && b.item.includes('[취소]')) || (b.note && b.note.includes('[취소]')) || (b.canceled === true || b.canceled === "TRUE");
 
                 // [수정] '전체-전체' 필터일 때는 취소 그룹화 무시
                 if (!(currentStatusFilter === 'order' && currentFilter === 'all')) {
@@ -1964,7 +2012,8 @@
                 const isCancelled = (order.item && order.item.includes('[취소]')) ||
                     (order.note && order.note.includes('[취소]')) ||
                     order.received === "canceled" ||
-                    order.received === "취소완료";
+                    order.received === "취소완료" ||
+                    (order.canceled === true || order.canceled === "TRUE");
                 const isProcessing = order.isProcessing === true;
 
                 // [안전장치] 데이터 형식이 예전과 다를 경우(예: timestamp가 없는 경우)를 보호
@@ -2202,13 +2251,15 @@
         }
 
         // [이미지 캐시] 브라우저 기본 캐시 활용 (Preloading)
-        function getImgUrl(input, size = 1000) {
+        function getImgUrl(input, size = 1000, retry = false) {
             if (!input) return '';
             let id = input.toString().trim();
             const driveMatch = id.match(/[-\w]{25,}/);
             if (driveMatch) id = driveMatch[0];
 
-            return `https://drive.google.com/thumbnail?id=${id}&sz=w${size}`;
+            let url = `https://drive.google.com/thumbnail?id=${id}&sz=w${size}`;
+            if (retry) url += `&t=${Date.now()}`; // 재시도 시 캐시 무시
+            return url;
         }
 
         // [이미지] 배경에서 브라우저 캐시에 미리 저장 (CORS 문제 해결)
@@ -2306,10 +2357,10 @@
                         console.log("최신 데이터로 화면 업데이트 (상세 이미지 보존됨)");
                         processAndRender(productsData);
                         startImageCaching(productsData);
-                        preloadAllProductImages();
+                        setTimeout(preloadAllProductImages, 2000); // 2초 뒤에 배경 프리로드 시작 (메인 이미지 우선)
                     } else {
                         startImageCaching(productsData);
-                        preloadAllProductImages();
+                        setTimeout(preloadAllProductImages, 1000);
                     }
                 }
             }
@@ -2345,36 +2396,42 @@
             console.log(`이미지 배경 로드 시작 (총 ${sortPriority.length}개 항목, 날짜순 우선순위 적용)`);
 
             for (const p of sortPriority) {
-                // 아직 폴더 이미지를 다 불러오지 않은 상품만 대상
                 if (!p.isFullLoaded) {
                     try {
                         const res = await fetch(`${API_URL}?action=fetchProductImages&name=${encodeURIComponent(p.name)}`);
                         const allImages = await res.json();
 
-                        // 결과가 있으면 (비어있더라도 '체크완료'로 간주하여 무한 반복 방지)
                         if (Array.isArray(allImages)) {
                             const target = productsData.find(pd => pd.name === p.name && pd.matchKey === p.matchKey);
                             if (target) {
-                                // 폴더에 이미지가 1장이라도 있으면 시트 ID 대신 폴더 이미지로 교체
-                                if (allImages.length > 0) {
-                                    target.images = allImages;
-                                }
-                                target.isFullLoaded = true; // 폴더 체크 완료 마킹
-
+                                if (allImages.length > 0) target.images = allImages;
+                                target.isFullLoaded = true;
                                 localStorage.setItem('moket_products_cache_v2', JSON.stringify(productsData));
 
-                                // 캐시 강제 주입
-                                allImages.forEach(id => {
-                                    const img = new Image();
-                                    img.src = getImgUrl(id, 1000);
-                                });
-                                console.log(`[우선순위 로드 완료] ${p.name} (${allImages.length}장)`);
+                                // [핵심 수정] 한꺼번에 로드하지 않고 하나씩 간격을 두고 로드
+                                for (const id of allImages) {
+                                    await new Promise(resolve => {
+                                        const img = new Image();
+                                        img.onload = resolve;
+                                        img.onerror = () => {
+                                            // 실패 시 1회 재시도
+                                            setTimeout(() => {
+                                                const retryImg = new Image();
+                                                retryImg.src = getImgUrl(id, 1000, true);
+                                                resolve();
+                                            }, 1000);
+                                        };
+                                        img.src = getImgUrl(id, 1000);
+                                    });
+                                    await new Promise(r => setTimeout(r, 200)); // 이미지 한 장당 0.2초 휴식
+                                }
+                                console.log(`[프리로드 완료] ${p.name} (${allImages.length}장)`);
                             }
                         }
                     } catch (e) {
                         console.error(`[프리로드 실패] ${p.name}:`, e);
                     }
-                    await new Promise(r => setTimeout(r, 300));
+                    await new Promise(r => setTimeout(r, 800)); // 상품 하나당 0.8초 휴식 (안정성 확보)
                 }
             }
             isPreloading = false;
