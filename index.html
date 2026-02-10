@@ -17,13 +17,13 @@
     <!-- [추가] 자동 업데이트 체크: 새 버전 배포 시 모바일에서 즉시 반영되도록 강제 새로고침 -->
     <script>
         (function () {
-            var APP_VERSION = "20260207_v2"; // 업데이트 시 이 값을 변경하면 사용자가 자동 새로고침됨
-            var savedVersion = localStorage.getItem("moket_app_version");
-            if (savedVersion !== APP_VERSION) {
-                localStorage.setItem("moket_app_version", APP_VERSION);
-                // 캐시 파괴 파라미터(v=시간)를 붙여서 페이지를 다시 불러옴
+            var now = Date.now();
+            var version = new URLSearchParams(window.location.search).get('v');
+            // 1분(60초) 이상 지난 'v' 파라미터가 있거나 없으면 강제 리로드
+            if (!version || (now - parseInt(version)) > 60000) {
                 var separator = window.location.href.indexOf('?') !== -1 ? '&' : '?';
-                window.location.replace(window.location.href.split('#')[0].split('?')[0] + separator + "v=" + Date.now());
+                var newUrl = window.location.href.split('#')[0].split('?')[0] + "?v=" + now;
+                window.location.replace(newUrl);
             }
         })();
     </script>
