@@ -36,12 +36,12 @@
             --moket-green: #4CAF20;
             --white: #FFFFFF;
             --font-main: 'Pretendard', sans-serif;
-            --common-radius: 26px;
+            --common-radius: 0;
             --target-height: 42px;
             /* 상세보기 버튼 높이 (기존 원복) */
             --qty-height: 35px;
             /* 수량 조절바 전용 높이 (새로 생성) */
-            --btn-radius: 12px;
+            --btn-radius: 0;
             --nego-orange: #FF6D00;
             --item-black: #1a1a1a;
             --btn-font-size: 15px;
@@ -62,7 +62,7 @@
         /* 헤더: 햄버거 메뉴를 위해 정렬만 추가 */
         .header {
             background: var(--moket-green);
-            padding: calc(20px + env(safe-area-inset-top)) 20px 20px 20px;
+            padding: calc(25px + env(safe-area-inset-top)) 20px 20px 20px;
             display: grid;
             grid-template-columns: 70px 1fr 70px;
             align-items: center;
@@ -80,17 +80,17 @@
             font-weight: 800;
             /* ExtraBold */
             letter-spacing: 1px;
-            margin-bottom: 3px;
+            margin-bottom: 1px;
         }
 
         .logo-en {
             color: var(--white);
-            font-size: 2.8rem;
+            font-size: 45px;
             font-weight: 900;
             /* Black */
             letter-spacing: 1px;
             line-height: 0.8;
-            margin-bottom: 3px;
+            margin-bottom: 1px;
         }
 
         .logo-ko {
@@ -127,7 +127,7 @@
             width: 24px;
             height: 3px;
             background-color: var(--white);
-            border-radius: 2px;
+            border-radius: 0;
         }
 
         .btn-label {
@@ -159,8 +159,8 @@
 
         .side-menu-header {
             background: var(--moket-green);
-            /* 타이틀 확대에 맞춰 상하 패딩을 약 5px씩 줄여 전체 높이 보존 (23.5px + 23.5px) */
-            padding: calc(23.5px + env(safe-area-inset-top)) 20px 23.5px 20px;
+            /* 타이틀 확대에 맞춰 상하 패딩 조정 */
+            padding: calc(24.5px + env(safe-area-inset-top)) 20px 25px 20px;
             color: var(--white);
             display: flex;
             flex-direction: column;
@@ -178,7 +178,7 @@
             background: linear-gradient(90deg, #eee 25%, #f5f5f5 50%, #eee 75%);
             background-size: 200% 100%;
             animation: skeleton-loading 1.5s infinite;
-            border-radius: 8px;
+            border-radius: 0;
         }
 
         @keyframes skeleton-loading {
@@ -194,7 +194,7 @@
         .skeleton-card {
             padding: 15px;
             background: #fff;
-            border-radius: 16px;
+            border-radius: 0;
             margin-bottom: 12px;
             display: flex;
             gap: 15px;
@@ -234,7 +234,7 @@
             background: #fdf2e9;
             color: var(--nego-orange);
             padding: 4px 12px;
-            border-radius: 20px;
+            border-radius: 0;
             margin-right: 6px;
             font-weight: 900;
             display: inline-block;
@@ -244,7 +244,7 @@
             margin: 0;
             padding: 20px 25px;
             /* 상하좌우 여백 균등 조정 */
-            font-size: 18px;
+            font-size: 17px;
             font-weight: 800;
             letter-spacing: 1px;
             display: flex;
@@ -290,7 +290,7 @@
             width: 100%;
             height: 48px;
             /* 전체 버튼 높이 통일 */
-            border-radius: 16px;
+            border-radius: 0;
             font-weight: 900;
             font-size: 18px;
             /* 전체 버튼 폰트 통일 */
@@ -363,7 +363,7 @@
 
         .modal-content {
             background: #ffffff !important;
-            border-radius: 28px;
+            border-radius: 0;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             position: relative;
             width: 95%;
@@ -429,7 +429,7 @@
             height: 30px;
             border: 3px solid #f3f3f3;
             border-top: 3px solid var(--moket-green);
-            border-radius: 50%;
+            border-radius: 0;
             animation: spin 1s linear infinite;
         }
 
@@ -441,7 +441,7 @@
             background: rgba(0, 0, 0, 0.5);
             color: #fff;
             padding: 5px 12px;
-            border-radius: 20px;
+            border-radius: 0;
             font-size: 13px;
             pointer-events: none;
         }
@@ -513,12 +513,12 @@
             background: var(--white);
             border-radius: var(--common-radius);
             padding: 10px;
-            margin-bottom: 15px;
+            /* Reverted to 10px as requested */
+            margin-bottom: 10px;
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
             display: flex;
             flex-direction: column;
             align-items: stretch;
-            /* Ensure children fill width */
             gap: 0px;
             box-sizing: border-box;
             transition: transform 0.2s ease;
@@ -546,7 +546,7 @@
             width: 125px;
             height: 125px;
             flex-shrink: 0;
-            border-radius: 18px;
+            border-radius: 0;
             background-color: #f9f9f9;
             overflow: hidden;
             border: 1px solid rgba(0, 0, 0, 0.05);
@@ -579,7 +579,7 @@
 
         .btn-detail {
             flex: 1;
-            /* Independent width control (change to adjust size relative to quantity) */
+            /* Independent width control */
             height: 40px;
             /* Independent height control */
             border: 1.5px solid #eee;
@@ -600,7 +600,6 @@
             flex-direction: column;
             gap: 12px;
             min-width: 0;
-            /* Fix for text wrapping in flex */
         }
 
         .item-info-top {
@@ -616,10 +615,13 @@
         .item-controls-bottom-v {
             display: flex;
             align-items: flex-end;
+            /* Revert to flex-end (fixed button position) */
             gap: 5px;
             width: 100%;
-            margin-top: 5px;
+            margin-top: -10px;
+            /* Pull up slightly to reduce gap to thumbnail/name */
         }
+
 
         .action-group {
             display: flex;
@@ -645,7 +647,7 @@
 
         .item-name {
             font-weight: 800;
-            font-size: 18px;
+            font-size: 17px;
             margin-top: 10px;
             /* Slightly larger in vertical layout */
             color: var(--item-black);
@@ -658,7 +660,7 @@
         .item-price-val {
             color: var(--nego-orange);
             font-weight: 900;
-            font-size: 18px;
+            font-size: 17px;
         }
 
         .qty-controls {
@@ -667,7 +669,7 @@
             justify-content: space-between;
             background: #fafafa;
             padding: 0 8px;
-            border-radius: 12px;
+            border-radius: 0;
             height: 40px;
             /* 전용 변수 사용 */
             border: 1.5px solid #eee;
@@ -760,7 +762,7 @@
             background: var(--moket-green);
             color: var(--white);
             border: none;
-            border-radius: 18px;
+            border-radius: 0;
             font-size: 18px;
             /* 디자인 통일 (기존 15px) */
             font-weight: 800;
@@ -817,7 +819,7 @@
             background: rgba(255, 255, 255, 0.2);
             color: white;
             border: none;
-            border-radius: 50%;
+            border-radius: 0;
             font-size: 24px;
             z-index: 7101;
             display: flex;
@@ -837,7 +839,7 @@
             width: 100%;
             height: 50px;
             border: 1.5px solid #eee;
-            border-radius: 12px;
+            border-radius: 0;
             padding: 0 15px;
             box-sizing: border-box;
             font-size: 15px;
@@ -914,7 +916,7 @@
     <div id="profile-modal" class="modal-overlay">
         <div class="modal-content">
             <div
-                style="background:var(--moket-green); padding: 25px 20px 25px 20px; border-radius: 12px 12px 0 0; margin: -25px -25px 18px -25px; text-align: center;">
+                style="background:var(--moket-green); padding: 25px 20px 25px 20px; border-radius: 0; margin: -25px -25px 10px -25px; text-align: center;">
                 <h3 id="profile-modal-title"
                     style="margin: 0; font-weight: 800; color: var(--white); font-size: 20px; letter-spacing: 1px;">
                     주문자 정보</h3>
@@ -949,7 +951,7 @@
     <div id="location-modal" class="modal-overlay">
         <div class="modal-content" style="text-align: center;">
             <div
-                style="background:var(--moket-green); padding: 25px 20px 25px 20px; border-radius: 12px 12px 0 0; margin: -25px -25px 18px -25px; text-align: center;">
+                style="background:var(--moket-green); padding: 25px 20px 25px 20px; border-radius: 0; margin: -25px -25px 10px -25px; text-align: center;">
                 <h3 style="margin: 0; font-weight: 800; color: var(--white); font-size: 1.35rem; letter-spacing: 1px;">
                     매장 위치</h3>
             </div>
@@ -961,7 +963,7 @@
     <div id="hours-modal" class="modal-overlay">
         <div class="modal-content">
             <div
-                style="background:var(--moket-green); padding: 25px 20px 25px 20px; border-radius: 12px 12px 0 0; margin: -25px -25px 18px -25px; text-align: center;">
+                style="background:var(--moket-green); padding: 25px 20px 25px 20px; border-radius: 0; margin: -25px -25px 10px -25px; text-align: center;">
                 <h3 style="margin: 0; font-weight: 800; color: var(--white); font-size: 1.35rem; letter-spacing: 1px;">
                     영업시간 안내</h3>
             </div>
@@ -1003,19 +1005,19 @@
     <div id="confirm-overlay" class="modal-overlay">
         <div class="modal-content" style="text-align:center; padding: 25px 15px;">
             <div id="confirm-item-list"
-                style="text-align:left; background:#f5f5f5; padding: 15px 8px; border-radius:18px; margin:10px 0 20px 0; font-size:15px; line-height:1.7; max-height:350px; overflow-y:auto;">
+                style="text-align:left; background:#f5f5f5; padding: 15px 8px; border-radius:0; margin:10px 0 20px 0; font-size:15px; line-height:1.7; max-height:350px; overflow-y:auto;">
             </div>
-            <div style="font-weight:900; font-size:20px; margin-bottom:15px;">총 합계: <span id="confirm-total-price"
+            <div style="font-weight:900; font-size:17px; margin-bottom:15px;">총 합계: <span id="confirm-total-price"
                     style="color:var(--nego-orange);">0원</span></div>
             <div
-                style="text-align:left; font-size:14px; margin: 15px 0 10px 0; color:#455464; line-height:1.6; padding:0 5px; font-weight:700;">
+                style="text-align:left; font-size:13px; margin: 15px -10px 10px 0; color:#455464; line-height:1.6; padding:0; font-weight:700;">
                 <div>✅ 주문취소는 주문당일 24시까지 가능합니다.</div>
                 <div>✅ 픽업기간은 입고일 포함 3일(휴무일 제외)입니다.</div>
-                <div>✅ 픽업기간 이후에는 현장판매로 전환됩니다.</div>
-                <div>✅ 픽업기간 이후 수령은 카카오톡으로 문의바랍니다.</div>
+                <div>✅ 픽업기간 이후에는 원칙적으로 픽업이 불가능합니다.</div>
+                <div>✅ 픽업기간 이후 수령을 원하시면 카카오톡으로 문의바랍니다.</div>
             </div>
             <div
-                style="margin-bottom:20px; font-weight:700; font-size:14px; color:#455464; display:flex; align-items:center; justify-content:center; gap:6px;">
+                style="margin-bottom:20px; font-weight:700; font-size:13px; color:#455464; display:flex; align-items:center; justify-content:center; gap:6px;">
                 <input type="checkbox" id="confirm-notice-check"
                     style="width:18px; height:18px; accent-color:var(--moket-green); margin:0;">
                 <label for="confirm-notice-check" style="cursor:pointer;">위 내용을 확인하였습니다.</label>
@@ -1028,9 +1030,9 @@
     </div>
     <div class="footer" id="main-footer">
         <div
-            style="display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; font-weight:800; font-size: 18px;">
+            style="display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; font-weight:800; font-size: 17px;">
             <span id="total-qty-text">총 0개 선택</span><span id="total-price-text"
-                style="color:var(--nego-orange); font-size:20px;">0원</span>
+                style="color:var(--nego-orange); font-size:18px;">0원</span>
         </div><button class="main-submit-btn" onclick="openConfirm()">주문하기</button>
     </div>
     <div id="system-modal" class="modal-overlay" style="z-index: 9999;">
@@ -1045,22 +1047,22 @@
     <div id="history-modal" class="modal-overlay">
         <div class="modal-content">
             <div
-                style="background:var(--moket-green); padding: 45px 20px 25px 20px; border-radius: 12px 12px 0 0; margin: -20px -20px 8px -20px; text-align: center;">
+                style="background:var(--moket-green); padding: 30px 20px 25px 20px; border-radius: 0; margin: 0 0 10px 0; text-align: center;">
                 <h3 id="history-modal-title"
-                    style="margin: 0; font-weight: 800; color: var(--white); font-size: 18px; letter-spacing: 1px;">
+                    style="margin: 0; font-weight: 800; color: var(--white); font-size: 17px; letter-spacing: 1px;">
                     주문내역</h3>
             </div>
             <div style="padding: 0 20px 0 20px; flex-shrink: 0;">
                 <div
                     style="display: flex; justify-content: center; gap: 6px; margin-bottom: 8px; border-bottom: 1.5px solid #eee; padding-bottom: 8px;">
                     <button class="date-btn active" id="status-order" onclick="filterStatus('order')"
-                        style="height:42px; font-size:15px; flex:1; padding:0; font-weight:900;">전체</button>
+                        style="height:32px; font-size:15px; flex:1; padding:0; font-weight:900;">전체</button>
                     <button class="date-btn" id="status-stocked" onclick="filterStatus('stocked')"
-                        style="height:42px; font-size:15px; flex:1; padding:0; font-weight:900;">입고</button>
+                        style="height:32px; font-size:15px; flex:1; padding:0; font-weight:900;">입고</button>
                     <button class="date-btn" id="status-pickup" onclick="filterStatus('pickup')"
-                        style="height:42px; font-size:15px; flex:1; padding:0; font-weight:900;">픽업</button>
+                        style="height:32px; font-size:15px; flex:1; padding:0; font-weight:900;">픽업</button>
                     <button class="date-btn" id="status-cancel" onclick="filterStatus('cancel')"
-                        style="height:42px; font-size:15px; flex:1; padding:0; font-weight:900;">취소</button>
+                        style="height:32px; font-size:15px; flex:1; padding:0; font-weight:900;">취소</button>
                 </div>
                 <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 8px;">
                     <button class="date-btn" id="filter-all" onclick="filterHistory('all')"
@@ -1075,11 +1077,11 @@
                 <div
                     style="display: flex; justify-content: center; gap: 8px; margin-bottom: 0; border-top: 1.5px solid #eee; padding-top: 8px;">
                     <button class="date-btn active" id="btn-sort-pickup" onclick="changeSortMode('pickupDate')"
-                        style="height:34px; font-size:15px; flex:2;">픽업순</button>
+                        style="height:32px; font-size:15px; flex:2;">픽업순</button>
                     <button class="date-btn" id="btn-sort-order" onclick="changeSortMode('timestamp')"
-                        style="height:34px; font-size:15px; flex:2;">주문순</button>
+                        style="height:32px; font-size:15px; flex:2;">주문순</button>
                     <button id="btn-sort-dir" onclick="toggleSortDir()"
-                        style="height: 34px; width: 34px; padding: 0; background: #fafafa; border: 1.5px solid #eee; border-radius: 8px; color: #455464; display: flex; align-items: center; justify-content: center; cursor: pointer; outline: none;">
+                        style="height: 32px; width: 32px; padding: 0; background: #fafafa; border: 1.5px solid #eee; border-radius: 0; color: #455464; display: flex; align-items: center; justify-content: center; cursor: pointer; outline: none;">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="4" y1="6" x2="13" y2="6"></line>
@@ -1101,7 +1103,7 @@
             </div>
         </div>
     </div>
-    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbzWPCVgDsrbrtKfJ-A-yf9qg0WWqoxWhVeT0kALApbzQT0wf5cs7ocffKAfFrn0VIqB/exec'
+    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbwkRqYwVO5sh17BXD0MqJ3x3dsE42aHPVG2sREqakmUzEz1xMHFUQv5nAKhIRuNr_TT/exec'
 
         // [카카오 초기화]
         try {
@@ -1432,6 +1434,13 @@
             const dayOfWeek = week[d.getDay()];
             return `${y}-${m}-${day} (${dayOfWeek})`;
         }
+        // 한글 날짜 문자열 파싱 유틸리티
+        const parseKRDate = (str) => {
+            if (!str) return new Date(0);
+            const matches = str.match(/\d+/g);
+            if (!matches || matches.length < 3) return new Date(0);
+            return new Date(matches[0], matches[1] - 1, matches[2], matches[3] || 0, matches[4] || 0, matches[5] || 0);
+        };
 
         // [추가] 미픽업 주문 확인 및 알림 모달
         async function checkUnpickedOrders() {
@@ -1496,7 +1505,13 @@
 
                     const isCanceled = itemName.includes("[취소]") || receivedStatus === "취소완료";
                     const isReceived = (order.received === true || receivedStatus === "수령완료");
-                    const isNotStocked = receivedStatus === "미입고";
+
+                    // [수정] 미입고 기준: 스프레드시트에 써있거나, 픽업일 낮 12시 이전인 경우 (배경 색상/상태와 동기화)
+                    const pDate_notify = parseKRDate(order.pickupDate);
+                    const cutoff_notify = new Date(pDate_notify);
+                    cutoff_notify.setHours(12, 0, 0, 0);
+                    const isDynNotStocked = (new Date() < cutoff_notify) && !isReceived && !isCanceled;
+                    const isNotStocked = (receivedStatus === "미입고") || isDynNotStocked;
 
                     const result = !isReceived && !isCanceled && !isNotStocked && isTodayOrPast;
                     if (result) {
@@ -1578,8 +1593,8 @@
 
             // 타이틀 동적 변경 (상단 여백 확보, 이름표 오렌지색)
             const displayName = name.trim() || "주문자";
-            title.style.fontSize = "18px";
-            title.innerHTML = `<span style="background:var(--white); color:var(--nego-orange); padding:2px 10px; border-radius:15px; margin-right:5px; font-weight:900;">${displayName}</span>님의 주문내역`;
+            title.style.fontSize = "20px";
+            title.innerHTML = `<span style="background:#fdf2e9; color:var(--nego-orange); padding:2px 10px; border-radius:0; margin-right:5px; font-weight:900;">${displayName}</span>님의 주문내역`;
 
             modal.style.display = 'flex';
             checkScrollLock();
@@ -1695,14 +1710,6 @@
                 return;
             }
 
-            // 한글 날짜 문자열 파싱 유틸리티
-            const parseKRDate = (str) => {
-                if (!str) return new Date(0);
-                const matches = str.match(/\d+/g);
-                if (!matches || matches.length < 3) return new Date(0);
-                return new Date(matches[0], matches[1] - 1, matches[2], matches[3] || 0, matches[4] || 0, matches[5] || 0);
-            };
-
             const now = new Date();
             const filtered = fullHistoryData.filter(item => {
                 const isCancelled = (item.item && item.item.includes('[취소]')) ||
@@ -1807,7 +1814,7 @@
                 if (!isReceived && !isCancelled && !isProcessing) {
                     const pDate = parseKRDate(order.pickupDate);
                     const cutoff = new Date(pDate);
-                    cutoff.setHours(13, 0, 0, 0);
+                    cutoff.setHours(12, 0, 0, 0);
                     if (new Date() < cutoff) {
                         statusText = '미입고';
                         statusColor = '#999';
@@ -1831,10 +1838,10 @@
                             </div>
                             <div style="text-align:right; min-width:90px; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
                                 <div style="font-size:13px; color:#455464; font-weight:700;">${order.qty}개 / ${parseInt(order.total || 0).toLocaleString()}원</div>
-                                ${order.onSite ? `<div style="font-size:14px; font-weight:800; color:var(--nego-orange); margin-bottom:-2px;">현장판매</div>` : `<div style="font-size:15px; font-weight:800; color:${statusColor};">${statusText}</div>`}
+                                ${order.onSite ? `<div style="font-size:16px; font-weight:800; color:var(--nego-orange); margin-bottom:-2px;">현장판매</div>` : `<div style="font-size:16px; font-weight:800; color:${statusColor};">${statusText}</div>`}
                                 ${canDelete ? `<button onclick="deleteOrderServer('${orderTimeFull}', '${order.name}', '${order.item}', '${order.pickupDate}', '${order.matchKey || ''}')" 
-                                     style="margin-top:4px; width:100%; height:28px; background:#eff2f5; color:#666; border:none; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer;">주문취소</button>` : ''}
-                                ${isProcessing ? `<div style="margin-top:4px; width:100%; height:28px; display:flex; align-items:center; justify-content:center; background:#f5f5f5; color:#999; border-radius:6px; font-size:12px; font-weight:700;">취소중</div>` : ''}
+                                     style="margin-top:4px; width:100%; height:28px; background:#eff2f5; color:#666; border:none; border-radius:0; font-size:13px; font-weight:700; cursor:pointer;">주문취소</button>` : ''}
+                                 ${isProcessing ? `<div style="margin-top:4px; width:100%; height:28px; display:flex; align-items:center; justify-content:center; background:#f5f5f5; color:#999; border-radius:0; font-size:13px; font-weight:700;">취소중</div>` : ''}
                             </div>
                         </div>
                     </div>
@@ -2176,7 +2183,7 @@
                 const currentQty = cart[p.name] || 0;
                 const stock = p.stock !== undefined && p.stock !== "" ? parseInt(p.stock) : Infinity;
                 const isSoldOut = stock <= 0;
-                const stockText = isFinite(stock) ? (isSoldOut ? "품절" : `주문가능수량 <span style="color:var(--nego-orange);">${stock}</span>개`) : "재고여유";
+                const stockText = isFinite(stock) ? (isSoldOut ? "품절" : (stock < 10 ? `주문가능수량 <span style="color:var(--nego-orange);">${stock}</span>개` : "")) : "";
 
                 card.innerHTML = `<div class="card-top">` +
                     `<div class="thumb">${imgId ? `<img src="${getImgUrl(imgId, 300)}" loading="lazy" style="width:100%; height:100%; object-fit:contain;">` : 'No Image'}</div>` +
@@ -2257,7 +2264,7 @@
                 footer.classList.remove('visible');
             }
 
-            document.getElementById('total-qty-text').innerText = `총 ${tQ}개 선택`;
+            document.getElementById('total-qty-text').innerHTML = `총 <span style="color:var(--nego-orange);">${tQ}</span>개 선택`;
             document.getElementById('total-price-text').innerText = `${tP.toLocaleString()}원`;
         }
 
@@ -2666,4 +2673,3 @@
 </body>
 
 </html>
-
