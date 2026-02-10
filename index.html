@@ -11,6 +11,8 @@
     <meta http-equiv="Expires" content="0">
 
     <title>MOKET 모켓 - 모두를 위한 공동구매 마켓</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%234CAF20'/><text x='50' y='72' font-family='Pretendard, sans-serif' font-size='70' font-weight='900' fill='white' text-anchor='middle'>M</text></svg>">
 
     <!-- [추가] 자동 업데이트 체크: 새 버전 배포 시 모바일에서 즉시 반영되도록 강제 새로고침 -->
     <script>
@@ -1023,9 +1025,9 @@
                 <label for="confirm-notice-check" style="cursor:pointer;">위 내용을 확인하였습니다.</label>
             </div>
             <div style="display:flex; gap:10px;"><button class="btn-common btn-close"
-                    onclick="closeModal('confirm-overlay')" style="margin-top: 0;">취소</button><button
-                    id="btn-submit-order" class="btn-common btn-primary" onclick="completeOrder()"
-                    style="margin-top: 0;">주문확정</button></div>
+                    onclick="document.getElementById('confirm-notice-check').checked = false; closeModal('confirm-overlay')"
+                    style="margin-top: 0;">취소</button><button id="btn-submit-order" class="btn-common btn-primary"
+                    onclick="completeOrder()" style="margin-top: 0;">주문확정</button></div>
         </div>
     </div>
     <div class="footer" id="main-footer">
@@ -1103,7 +1105,8 @@
             </div>
         </div>
     </div>
-    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbzqKNSWDhTU2bY77MxCC8frugCxI3nYx3L0Eq0NemOvb3IicPNp9d0aSZLcBQ2EkvYa/exec'
+
+    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbxS8_XA9SnBGEPNL1_LC_E2e3kIEGKYKauhBdBxoX_WRNVO8IWI0zovb5mdMFtaMo7T/exec'
 
         // [카카오 초기화]
         try {
@@ -2655,10 +2658,10 @@
                     document.getElementById('profile-modal-title').innerText = "카카오 로그인";
                     modal.style.display = 'flex';
                     checkScrollLock();
-                }, 400); // 500ms -> 400ms로 소폭 단축
+                }, 400);
             } else {
                 // 사용자 정보가 있으면 미픽업 주문 확인 자동 실행
-                setTimeout(checkUnpickedOrders, 1000); // UI 안정화 후 실행
+                setTimeout(checkUnpickedOrders, 1000);
             }
         });
 
