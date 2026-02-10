@@ -2828,17 +2828,27 @@
             loadData();
             loadProfile();
 
-            // 사용자 정보 없으면 카카오 로그인 유도 (사용자 경험 저해하지 않게 약간의 지연)
+            // 사용자 정보 없으면 카카오 로그인 유도
             const name = localStorage.getItem('moket_user_name');
             if (!name || !name.trim()) {
                 setTimeout(() => {
                     const modal = document.getElementById('profile-modal');
-                    modal.classList.add('login-forced');
-                    document.getElementById('profile-modal-title').innerText = "카카오 로그인";
+                    const certName = localStorage.getItem('kakao_original_name');
+
+                    if (certName) {
+                        // 이미 카카오 인증은 된 상태라면 강제 배경(Gate) 없이 정보 입력 모달만 띄움
+                        modal.classList.remove('login-forced');
+                        document.getElementById('profile-modal-title').innerText = "주문자 정보 입력";
+                    } else {
+                        // 카카오 인증 전이라면 강제 배경(Gate) 표시
+                        modal.classList.add('login-forced');
+                        document.getElementById('profile-modal-title').innerText = "카카오 로그인";
+                    }
                     modal.style.display = 'flex';
                     checkScrollLock();
                 }, 400);
             } else {
+
                 // 사용자 정보가 있으면 미픽업 주문 확인 자동 실행
                 setTimeout(checkUnpickedOrders, 1000);
             }
