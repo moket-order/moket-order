@@ -19,8 +19,8 @@
         (function () {
             var now = Date.now();
             var version = new URLSearchParams(window.location.search).get('v');
-            // 1분(60초) 이상 지난 'v' 파라미터가 있거나 없으면 강제 리로드
-            if (!version || (now - parseInt(version)) > 60000) {
+            // 10분(600초) 이상 지난 'v' 파라미터가 있거나 없으면 강제 리로드 (너무 잦은 리로드 방지)
+            if (!version || (now - parseInt(version)) > 600000) {
                 var separator = window.location.href.indexOf('?') !== -1 ? '&' : '?';
                 var newUrl = window.location.href.split('#')[0].split('?')[0] + "?v=" + now;
                 window.location.replace(newUrl);
