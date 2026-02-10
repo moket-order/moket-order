@@ -224,6 +224,20 @@
             height: 18px;
         }
 
+        @keyframes pulse {
+            0% {
+                opacity: 0.5;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.5;
+            }
+        }
+
         .side-menu-header p {
             margin: 10px 0 0 0;
             font-size: 15px;
@@ -327,24 +341,56 @@
             width: 100%;
         }
 
-        /* [추가] 초기 로그인 강제 스타일 */
+        #profile-modal.login-forced .modal-content {
+            background: var(--moket-green) !important;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            text-align: center;
+            height: auto;
+            min-height: 400px;
+            /* 넉넉한 높이 부여 */
+        }
+
         #profile-modal.login-forced .input-group,
         #profile-modal.login-forced .btn-primary,
-        #profile-modal.login-forced .btn-close {
+        #profile-modal.login-forced .btn-close,
+        #profile-modal.login-forced .modal-content>div:first-child {
+            /* 헤더(주문자명 변경) 포함하여 기존 요소 숨김 */
+            display: none !important;
+        }
+
+        #profile-modal .login-logo {
             display: none;
         }
 
-        #profile-modal .login-msg {
-            display: none;
-            text-align: center;
-            margin-bottom: 20px;
-            font-size: 15px;
-            color: #455464;
-            line-height: 1.5;
+        #profile-modal.login-forced .login-logo {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            margin-bottom: 50px;
         }
 
         #profile-modal.login-forced .login-msg {
-            display: block;
+            display: none;
+            /* 기존 텍스트 메시지 숨김 (로고로 대체) */
+        }
+
+        /* 카카오 버튼 스타일 조정 (로그인 모드일 때만) */
+        #profile-modal.login-forced #btn-kakao-login {
+            background: #FEE500;
+            color: #191919;
+            width: 100%;
+            max-width: 280px;
+            /* 버튼 너무 넓지 않게 */
+            margin-top: auto;
+            /* 하단 배치 유도 */
+            border-radius: 6px;
+            /* 약간 둥글게 */
         }
 
         /* 모달 시스템 */
@@ -920,26 +966,31 @@
             <div
                 style="background:var(--moket-green); padding: 25px 20px 25px 20px; border-radius: 0; margin: -25px -25px 10px -25px; text-align: center;">
                 <h3 id="profile-modal-title"
-                    style="margin: 0; font-weight: 800; color: var(--white); font-size: 20px; letter-spacing: 1px;">
-                    주문자 정보</h3>
+                    style="margin: 0; font-weight: 800; color: var(--white); font-size: 18px; letter-spacing: 1px;">
+                    주문자명 변경</h3>
             </div>
-            <div class="login-msg" id="kakao-login-prompt">
-                모켓에 오신 고객님 반갑습니다!<br>서비스를 이용하시려면 <b>카카오 로그인</b>이 필요합니다.
+            <div class="login-logo">
+                <div style="font-size:16px; margin-bottom: 5px; font-weight:700;">모두를 위한 공동구매 마켓</div>
+                <div style="font-size:60px; font-weight:900; line-height:1; margin-bottom:5px;">MOKET</div>
+                <div style="font-size:24px; font-weight:700;">모켓</div>
             </div>
+
+            <!-- [복구] 기존 입력 필드 (로그인 모드일 때는 CSS로 숨겨짐) -->
             <div class="input-group"><strong>주문자명</strong><input id="input-name" type="text" class="modal-input"
                     placeholder="주문자명 입력">
                 <div class="input-hint">오픈채팅방 닉네임과 동일하게 설정 해 주세요.</div>
             </div>
             <div class="input-group"><strong>연락처</strong><input id="input-phone" type="tel" class="modal-input"
                     placeholder="010-0000-0000">
-                <div class="input-hint">주문확인안내와 픽업안내를 받아보실 연락처를 입력 해 주세요.</div>
+                <div class="input-hint">정확한 주문 확인을 위해 연락처를 입력 해 주세요.</div>
             </div>
+
             <button id="btn-kakao-login" class="btn-common btn-kakao" onclick="loginWithKakao()">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" style="margin-right:8px;">
                     <path
                         d="M10 3C5.582 3 2 5.835 2 9.333c0 2.27 1.517 4.256 3.82 5.41l-.97 3.543c-.06.22.185.397.378.27l4.162-2.735c.203.01.41.015.61.015 4.418 0 8-2.835 8-6.333S14.418 3 10 3z" />
                 </svg>
-                카카오로 1초 로그인
+                카카오로 시작하기
             </button>
             <button class="btn-common btn-primary" onclick="saveProfile()">저장하기</button><button
                 class="btn-common btn-close" onclick="closeModal('profile-modal')">닫기</button>
@@ -954,26 +1005,32 @@
         <div class="modal-content" style="text-align: center;">
             <div
                 style="background:var(--moket-green); padding: 25px 20px 25px 20px; border-radius: 0; margin: -25px -25px 10px -25px; text-align: center;">
-                <h3 style="margin: 0; font-weight: 800; color: var(--white); font-size: 1.35rem; letter-spacing: 1px;">
+                <h3 style="margin: 0; font-weight: 800; color: var(--white); font-size: 18px; letter-spacing: 1px;">
                     매장 위치</h3>
             </div>
-            <p style="font-size:15px; font-weight:700; margin:20px 0; line-height:1.5;">서울시 용산구 한강대로 405</p><a
-                href="https://map.naver.com/v5/search/서울시 용산구 한강대로 405" target="_blank" class="btn-common btn-naver">네이버
-                지도로 보기</a><button class="btn-common btn-close" onclick="closeModal('location-modal')">닫기</button>
+            <p style="font-size:15px; font-weight:700; margin:20px 0; line-height:1.5;">서울시 용산구 한강대로 405</p>
+            <a href="https://map.naver.com/v5/search/서울시 용산구 한강대로 405" target="_blank"
+                class="btn-common btn-naver">네이버지도</a>
+            <a href="https://map.kakao.com/link/search/서울시 용산구 한강대로 405" target="_blank"
+                class="btn-common btn-kakao">카카오맵</a>
+            <button class="btn-common btn-close" onclick="closeModal('location-modal')">닫기</button>
         </div>
     </div>
     <div id="hours-modal" class="modal-overlay">
         <div class="modal-content">
             <div
                 style="background:var(--moket-green); padding: 25px 20px 25px 20px; border-radius: 0; margin: -25px -25px 10px -25px; text-align: center;">
-                <h3 style="margin: 0; font-weight: 800; color: var(--white); font-size: 1.35rem; letter-spacing: 1px;">
+                <h3 style="margin: 0; font-weight: 800; color: var(--white); font-size: 18px; letter-spacing: 1px;">
                     영업시간 안내</h3>
             </div>
-            <div
-                style="line-height:2.2; font-weight:700; font-size:15px; margin-bottom:10px; text-align: left; padding-left: 10%;">
-                • 평일:
-                10:00 - 19:00<br>• 토요일: 11:00 - 17:00<br>• 일요일/공휴일: 휴무 </div><button class="btn-common btn-close"
-                onclick="closeModal('hours-modal')">닫기</button>
+            <div style="display:flex; justify-content:center; margin-bottom:10px;">
+                <div style="text-align:left; line-height:2.2; font-weight:700; font-size:15px;">
+                    • 월 - 금 : 10:00 - 19:00<br>
+                    • 토요일 : 11:00 - 17:00<br>
+                    • 일요일/공휴일 : 휴무
+                </div>
+            </div>
+            <button class="btn-common btn-close" onclick="closeModal('hours-modal')">닫기</button>
         </div>
     </div>
     <div class="sticky-header-group">
@@ -1014,8 +1071,9 @@
             <div
                 style="text-align:left; font-size:13px; margin: 15px -10px 10px 0; color:#455464; line-height:1.6; padding:0; font-weight:700;">
                 <div>✅ 주문취소는 주문당일 24시까지 가능합니다.</div>
-                <div>✅ 픽업기간은 입고일 포함 3일(휴무일 제외)입니다.</div>
-                <div>✅ 픽업기간 이후에는 원칙적으로 픽업이 불가능합니다.</div>
+                <div>✅ 픽업기간은 과일, 야채 등 신선식품은 입고 당일까지이며,</div>
+                <div>&emsp;&ensp;이외에는 입고일 포함 3일(휴무일 제외)까지 픽업 가능합니다.</div>
+                <div>✅ 픽업기간 이후에는 현장판매로 전환되어 픽업이 불가능합니다.</div>
                 <div>✅ 픽업기간 이후 수령을 원하시면 카카오톡으로 문의바랍니다.</div>
             </div>
             <div
@@ -1420,6 +1478,14 @@
             return `${y}-${m}-${day} (${dayOfWeek}) ${hh}:${mm}`;
         }
 
+        /**
+         * [추가] 문자열에서 숫자만 추출하는 헬퍼
+         * "2026년 2월 10일" -> "2026210", "26년 2월 10일" -> "26210"
+         */
+        function normD(s) {
+            return String(s || "").replace(/\D/g, "");
+        }
+
         // 픽업일 포맷] YYYY-MM-DD (요일)
         function formatPickupDate(dateInput) {
             const d = new Date(dateInput);
@@ -1482,7 +1548,7 @@
             sessionStorage.setItem('moket_unpicked_checked', 'true');
 
             try {
-                console.log(`[미픽업 확인] ${name} (${phone}) 님의 내역을 서버에서 조회합니다...`);
+                console.log(`[미픽업 확인] ${name} (${phone}) 님의 주문내역을 서버에서 조회합니다...`);
                 // 사용자의 최근 주문 내역 가져오기 (캐시 방지 + 월별 검색 범위 확인용)
                 const historyUrl = `${API_URL}?header=history&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&scope=recent&t=${Date.now()}`;
 
@@ -1586,25 +1652,26 @@
                 return;
             }
 
-            // [수정] 모달을 열 때마다 기본값으로 초기화 (입고-오늘-픽업순 내림차순)
-            currentSortBy = 'pickupDate';
-            currentFilter = 'today';
-            currentStatusFilter = 'stocked';
-            currentSortDir = 'desc'; // 최신순(내림차순)으로 초기화
-            currentHistoryLimit = 10; // 초기화
+            // [수정] 기본값 변경: 전체(기간) - 전체(상태) - 주문순(정렬)
+            currentSortBy = 'timestamp';
+            currentFilter = 'all';
+            currentStatusFilter = 'order'; // "전체" 버튼
+            currentSortDir = 'desc';
+            currentHistoryLimit = 10;
 
             // 버튼 UI 초기화
-            document.getElementById('btn-sort-order').classList.remove('active');
-            document.getElementById('btn-sort-pickup').classList.add('active');
-            document.getElementById('filter-all').classList.remove('active');
-            document.getElementById('filter-today').classList.add('active');
+            document.getElementById('btn-sort-order').classList.add('active');
+            document.getElementById('btn-sort-pickup').classList.remove('active');
+
+            document.getElementById('filter-all').classList.add('active');
+            document.getElementById('filter-today').classList.remove('active');
             document.getElementById('filter-week').classList.remove('active');
             document.getElementById('filter-month').classList.remove('active');
 
             // 하위 분류 버튼 초기화
-            document.getElementById('status-order').classList.remove('active');
+            document.getElementById('status-order').classList.add('active');
             document.getElementById('status-cancel').classList.remove('active');
-            document.getElementById('status-stocked').classList.add('active');
+            document.getElementById('status-stocked').classList.remove('active');
             document.getElementById('status-pickup').classList.remove('active');
 
             const modal = document.getElementById('history-modal');
@@ -1629,7 +1696,7 @@
                 // [복구] 빠른 로딩을 위해 캐시 즉시 렌더링
                 renderHistory();
             } else {
-                list.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:50px 0; color:#999;"><div class="loading-spinner" style="margin-bottom:15px;"></div>내역을 조회 중입니다...</div>';
+                list.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:50px 0; color:#999;"><div class="loading-spinner" style="margin-bottom:15px;"></div>주문내역을 조회 중입니다...</div>';
             }
 
             try {
@@ -1642,8 +1709,13 @@
 
                 if (Array.isArray(recentData)) {
                     // 데이터 병합 (기존 캐시와 합치거나 새로 만듦)
-                    const recentKeys = new Set(recentData.map(o => (o.timestamp + (o.matchKey || "") + o.item).trim()));
-                    const others = (fullHistoryData || []).filter(o => !recentKeys.has((o.timestamp + (o.matchKey || "") + o.item).trim()));
+                    const genKey = (o) => {
+                        const d = parseKRDate(o.timestamp);
+                        d.setSeconds(0, 0); // 초 단위 차이 무시 (서버/로컬 포맷 불일치 해결)
+                        return d.getTime() + "|" + (o.matchKey || "") + "|" + String(o.item).trim();
+                    };
+                    const recentKeys = new Set(recentData.map(genKey));
+                    const others = (fullHistoryData || []).filter(o => !recentKeys.has(genKey(o)));
                     const newData = [...recentData, ...others];
 
                     // [스마트 렌더링] 데이터가 변경된 경우에만 UI 갱신 (불필요한 깜빡임 방지)
@@ -1851,6 +1923,19 @@
                     statusColor = '#666';
                 }
 
+                // [수정] 인라인 함수 호출 시 홑따옴표가 있으면 문법 에러가 발생하므로 이스케이프 처리
+                // 1. 역슬래시 먼저 이스케이프 (다른 이스케이프 문자와 충돌 방지)
+                // 2. 홑따옴표는 JS 문자열 내부용 이스케이프 (\')
+                // 3. 쌍따옴표는 HTML 속성값(onclick="...") 내부용 이스케이프 (&quot;)
+                // 4. 개행문자는 JS 문자열 깨짐 방지 (\n)
+                const escapeArg = (s) => String(s || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n").replace(/\r/g, "");
+
+                const safeTime = escapeArg(orderTimeFull);
+                const safeName = escapeArg(order.name);
+                const safeItem = escapeArg(order.item);
+                const safePickup = escapeArg(order.pickupDate);
+                const safeMatch = escapeArg(order.matchKey);
+
                 htmlBuffer += `
                     <div style="border-bottom: 1px solid #eee; padding: 12px 0; ${isCancelled ? 'opacity:0.6; text-decoration:line-through;' : ''} ${isProcessing ? 'opacity:0.7;' : ''}">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
@@ -1864,7 +1949,7 @@
                             <div style="text-align:right; min-width:90px; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
                                 <div style="font-size:13px; color:#455464; font-weight:700;">${order.qty}개 / ${String(order.total || 0).includes(',') ? order.total : parseInt(order.total || 0).toLocaleString()}원</div>
                                 ${order.onSite ? `<div style="font-size:16px; font-weight:800; color:#999; margin-bottom:-2px;">현장판매</div>` : `<div style="font-size:16px; font-weight:800; color:${statusColor};">${statusText}</div>`}
-                                ${canDelete ? `<button onclick="deleteOrderServer('${orderTimeFull}', '${order.name}', '${order.item}', '${order.pickupDate}', '${order.matchKey || ''}')" 
+                                ${canDelete ? `<button onclick="deleteOrderServer('${safeTime}', '${safeName}', '${safeItem}', '${safePickup}', '${safeMatch}')" 
                                      style="margin-top:4px; width:100%; height:28px; background:#eff2f5; color:#666; border:none; border-radius:0; font-size:13px; font-weight:700; cursor:pointer;">주문취소</button>` : ''}
                                  ${isProcessing ? `<div style="margin-top:4px; width:100%; height:28px; display:flex; align-items:center; justify-content:center; background:#f5f5f5; color:#999; border-radius:0; font-size:13px; font-weight:700;">취소중</div>` : ''}
                             </div>
@@ -1910,16 +1995,26 @@
 
                 // 1. 상태 전이: 처리 중으로 변경
                 isHistoryProcessing = true; // [추가] 글로벌 플래그 설정
-                const targetIdx = fullHistoryData.findIndex(d =>
-                    String(d.timestamp).trim() === String(timestamp).trim() &&
-                    String(d.matchKey || "").trim() === String(matchKey || "").trim() && // matchKey 비교 수정
-                    String(d.item).replace(/['"]/g, '').trim() === String(item).replace(/['"]/g, '').trim()
-                );
+                const targetDigitTime = normD(timestamp);
+                const targetIdx = fullHistoryData.findIndex(d => {
+                    const rowDigitTime = normD(d.timestamp);
+                    // 타임스탬프 매칭 (2026년 vs 26년 차이 대응: 뒤에서부터 잘라서 비교하거나 포함 여부 확인)
+                    const isTimeMatch = rowDigitTime === targetDigitTime ||
+                        (rowDigitTime.length > targetDigitTime.length ? rowDigitTime.endsWith(targetDigitTime) : targetDigitTime.endsWith(rowDigitTime));
 
-                if (targetIdx !== -1) {
-                    fullHistoryData[targetIdx].isProcessing = true;
-                    renderHistory();
+                    return isTimeMatch &&
+                        String(d.matchKey || d.pickupDate || "").trim() === String(matchKey || pickupDate || "").trim() &&
+                        String(d.item).replace(/\[취소\]/g, "").replace(/['"]/g, '').trim() === String(item).replace(/\[취소\]/g, "").replace(/['"]/g, '').trim()
+                });
+
+                if (targetIdx === -1) {
+                    console.error("취소 대상을 찾을 수 없음:", { timestamp, item, matchKey, pickupDate });
+                    showSystemModal("주문 내역에서 해당 항목을 찾을 수 없습니다. (데이터 동기화 중일 수 있습니다)", 'alert');
+                    isHistoryProcessing = false;
+                    return;
                 }
+                fullHistoryData[targetIdx].isProcessing = true;
+                renderHistory();
 
                 const payload = {
                     header: 'delete',
@@ -1991,8 +2086,15 @@
                             showSystemModal("취소에 실패했습니다.잠시 후 다시 시도해 주세요.", 'alert');
                         }
                     })
-                    .catch(e => {
-                        isHistoryProcessing = false; // [추가] 에러 시 해제
+                    .catch(err => {
+                        console.error("취소 실패:", err);
+                        showSystemModal("⚠️ 취소 처리에 실패했습니다.\n" + (err.message || "네트워크 오류"), 'alert');
+                        isHistoryProcessing = false;
+                        document.getElementById('system-modal').style.display = 'none';
+
+                        // [재고 동기화] 실패 시 최신 재고 상태를 다시 불러옴
+                        loadData();
+
                         const errIdx = fullHistoryData.findIndex(d =>
                             String(d.timestamp).trim() === String(timestamp).trim() &&
                             String(d.matchKey || "").trim() === String(matchKey || "").trim() && // matchKey 비교 추가
@@ -2000,7 +2102,6 @@
                         );
                         if (errIdx !== -1) fullHistoryData[errIdx].isProcessing = false;
                         renderHistory();
-                        console.error(e);
                     });
 
                 return true;
@@ -2139,7 +2240,12 @@
 
         function showSkeleton() {
             const container = document.getElementById('product-list');
-            container.innerHTML = '';
+            container.innerHTML = `
+                <div id="loading-msg" style="width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:50px 0; color:var(--nego-orange); font-weight:800;">
+                    <div class="loading-spinner" style="margin-bottom:15px; border-top-color:var(--nego-orange);"></div>
+                    상품목록을 불러오는 중입니다... <br>잠시만 기다려 주세요...
+                </div>
+            `;
             for (let i = 0; i < 5; i++) {
                 const item = document.createElement('div');
                 item.className = 'skeleton-card';
