@@ -1583,25 +1583,25 @@
                 return;
             }
 
-            // [수정] 모달을 열 때마다 기본값으로 초기화 (전체-전체-픽업순 내림차순)
+            // [수정] 모달을 열 때마다 기본값으로 초기화 (입고-오늘-픽업순 내림차순)
             currentSortBy = 'pickupDate';
-            currentFilter = 'all';
-            currentStatusFilter = 'order';
+            currentFilter = 'today';
+            currentStatusFilter = 'stocked';
             currentSortDir = 'desc'; // 최신순(내림차순)으로 초기화
             currentHistoryLimit = 10; // 초기화
 
             // 버튼 UI 초기화
             document.getElementById('btn-sort-order').classList.remove('active');
             document.getElementById('btn-sort-pickup').classList.add('active');
-            document.getElementById('filter-all').classList.add('active');
-            document.getElementById('filter-today').classList.remove('active');
+            document.getElementById('filter-all').classList.remove('active');
+            document.getElementById('filter-today').classList.add('active');
             document.getElementById('filter-week').classList.remove('active');
             document.getElementById('filter-month').classList.remove('active');
 
             // 하위 분류 버튼 초기화
-            document.getElementById('status-order').classList.add('active');
+            document.getElementById('status-order').classList.remove('active');
             document.getElementById('status-cancel').classList.remove('active');
-            document.getElementById('status-stocked').classList.remove('active');
+            document.getElementById('status-stocked').classList.add('active');
             document.getElementById('status-pickup').classList.remove('active');
 
             const modal = document.getElementById('history-modal');
@@ -1752,8 +1752,13 @@
                 const orderDate = parseKRDate(item.timestamp);
                 const isSameDay = (d1, d2) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
 
-                // 1. '오늘' 필터: 정렬 기준과 무관하게 '주문일' 기준
+                // 1. '오늘' 필터
                 if (currentFilter === 'today') {
+                    // [수정] '입고' 탭일 때는 '픽업일' 기준 (지금 시간 이전인 건만), 그 외엔 '주문일' 기준
+                    if (currentStatusFilter === 'stocked') {
+                        const pDate = parseKRDate(item.pickupDate);
+                        return pDate <= now;
+                    }
                     return isSameDay(now, orderDate);
                 }
 
@@ -1855,7 +1860,7 @@
                             </div>
                             <div style="text-align:right; min-width:90px; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
                                 <div style="font-size:13px; color:#455464; font-weight:700;">${order.qty}개 / ${String(order.total || 0).includes(',') ? order.total : parseInt(order.total || 0).toLocaleString()}원</div>
-                                ${order.onSite ? `<div style="font-size:16px; font-weight:800; color:var(--nego-orange); margin-bottom:-2px;">현장판매</div>` : `<div style="font-size:16px; font-weight:800; color:${statusColor};">${statusText}</div>`}
+                                ${order.onSite ? `<div style="font-size:16px; font-weight:800; color:#999; margin-bottom:-2px;">현장판매</div>` : `<div style="font-size:16px; font-weight:800; color:${statusColor};">${statusText}</div>`}
                                 ${canDelete ? `<button onclick="deleteOrderServer('${orderTimeFull}', '${order.name}', '${order.item}', '${order.pickupDate}', '${order.matchKey || ''}')" 
                                      style="margin-top:4px; width:100%; height:28px; background:#eff2f5; color:#666; border:none; border-radius:0; font-size:13px; font-weight:700; cursor:pointer;">주문취소</button>` : ''}
                                  ${isProcessing ? `<div style="margin-top:4px; width:100%; height:28px; display:flex; align-items:center; justify-content:center; background:#f5f5f5; color:#999; border-radius:0; font-size:13px; font-weight:700;">취소중</div>` : ''}
