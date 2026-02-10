@@ -429,7 +429,7 @@
             height: 30px;
             border: 3px solid #f3f3f3;
             border-top: 3px solid var(--moket-green);
-            border-radius: 0;
+            border-radius: 50%;
             animation: spin 1s linear infinite;
         }
 
@@ -1019,7 +1019,7 @@
             <div
                 style="margin-bottom:20px; font-weight:700; font-size:13px; color:#455464; display:flex; align-items:center; justify-content:center; gap:6px;">
                 <input type="checkbox" id="confirm-notice-check"
-                    style="width:18px; height:18px; accent-color:var(--moket-green); margin:0;">
+                    style="width:18px; height:18px; margin:0; cursor:pointer;">
                 <label for="confirm-notice-check" style="cursor:pointer;">위 내용을 확인하였습니다.</label>
             </div>
             <div style="display:flex; gap:10px;"><button class="btn-common btn-close"
@@ -1103,7 +1103,7 @@
             </div>
         </div>
     </div>
-    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbwkRqYwVO5sh17BXD0MqJ3x3dsE42aHPVG2sREqakmUzEz1xMHFUQv5nAKhIRuNr_TT/exec'
+    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbwjtSpJyLBoEBd8MVfw6RaGnoAiTeH729ZX8_v2U51L2uZ5VWnvsNcRgG21bI-PfUHa/exec'
 
         // [카카오 초기화]
         try {
@@ -1797,10 +1797,10 @@
                 let orderTimeFull = '';
                 try {
                     orderTimeFull = order.timestamp || '';
-                    orderTime = (typeof orderTimeFull === 'string') ? orderTimeFull.replace(/\s\d{2}:\d{2}:\d{2}$/, '') : String(orderTimeFull);
+                    orderTime = String(orderTimeFull).replace(/^20(\d{2}년)/, '$1').replace(/[\s\n]+\d{2}:\d{2}:\d{2}$/, '');
                 } catch (e) { console.error("날짜 형식 도중 오류:", e, order); }
                 const isReceived = (order.received === true || order.received === "TRUE");
-                const pickupDisp = order.pickupDate || '정보없음';
+                const pickupDisp = (order.pickupDate || '정보없음').replace(/^20(\d{2}년)/, '$1');
 
                 const orderDateStyle = currentSortBy === 'timestamp' ? 'color:var(--nego-orange); font-weight:700;' : 'color:#455464;';
                 const pickupDateStyle = currentSortBy === 'pickupDate' ? 'color:var(--nego-orange); font-weight:700;' : 'color:#455464;';
