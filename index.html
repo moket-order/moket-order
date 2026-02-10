@@ -1449,20 +1449,22 @@
                             const kakaoPhone = res.kakao_account?.phone_number; // 권한 있을 경우만 들어옴
 
                             if (kakaoName) {
-                                // [수정] 원본 정보는 별도 키에 영구 보관 (사용자 수정 시에도 유지됨)
+                                // [수정] 원본 정보는 별도 키에 영구 보관 (주문서 백엔드 전송 및 관리용)
                                 localStorage.setItem('kakao_original_name', kakaoName);
                                 if (kakaoPhone) localStorage.setItem('kakao_original_phone', kakaoPhone);
 
-                                // 화면 표시용 (사용자가 수정 가능)
-                                localStorage.setItem('moket_user_name', kakaoName);
-                                loadProfile(); // UI 갱신 (인증됨 표시)
+                                // [변경] 입력창에는 예시(placeholder)가 보이도록 자동으로 채우지 않음
+                                // localStorage.setItem('moket_user_name', kakaoName); 
+                                document.getElementById('input-name').value = '';
+
+                                loadProfile(); // UI 갱신 (인증됨 표시 등)
 
                                 const modal = document.getElementById('profile-modal');
                                 modal.classList.remove('login-forced');
                                 document.getElementById('profile-modal-title').innerText = "주문자 정보 입력";
                                 document.getElementById('btn-kakao-login').style.display = "none";
 
-                                showSystemModal(`${kakaoName}님, 반갑습니다!\n마지막으로 연락처를 입력하고 [저장하기]를 눌러주세요.`, 'alert');
+                                showSystemModal(`${kakaoName}님, 반갑습니다!\n주문자명과 연락처를 입력하고 [저장하기]를 눌러주세요.`, 'alert');
                             }
                         },
                         fail: function (error) {
