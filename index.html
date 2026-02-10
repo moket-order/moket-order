@@ -1083,6 +1083,9 @@
     <div id="detail-overlay" class="modal-overlay" onclick="if(event.target === this) closeModal('detail-overlay')">
         <div class="modal-content">
             <div class="slider-wrapper" onclick="openFullscreen()">
+                <div id="detail-counter"
+                    style="position:absolute; top:12px; right:12px; background:rgba(0,0,0,0.4); color:white; padding:4px 10px; border-radius:15px; font-size:12px; font-weight:800; z-index:10; display:none;">
+                </div>
                 <div class="slider-container" id="slider-area"></div>
                 <div class="touch-guide">탭하여 확대보기</div>
             </div>
@@ -2287,22 +2290,25 @@
                 }
 
                 if (freshData.length > 0) {
+                    // [핵심 수정] 기존에 이미 로드해둔 상세 이미지 정보 보존 (서버의 1장짜리 데이터가 덮어씌우지 못하도록)
+                    freshData.forEach(fItem => {
+                        const existing = productsData.find(p => p.name === fItem.name && p.matchKey === fItem.matchKey);
+                        if (existing && existing.isFullLoaded) {
+                            fItem.images = existing.images;
+                            fItem.isFullLoaded = true;
+                        }
+                    });
+
                     // 데이터가 바뀌었을 때만 렌더링 업데이트 (화면 깜빡임 방지)
                     if (JSON.stringify(freshData) !== JSON.stringify(productsData)) {
                         productsData = freshData;
                         localStorage.setItem('moket_products_cache_v2', JSON.stringify(productsData));
-                        console.log("최신 데이터로 화면 업데이트");
+                        console.log("최신 데이터로 화면 업데이트 (상세 이미지 보존됨)");
                         processAndRender(productsData);
-                        // 최신 데이터로 이미지 캐싱 시작
                         startImageCaching(productsData);
-
-                        // [추가] 메인 화면이 떴으니, 사용자가 클릭하기 전에 미리 모든 사진 가져오기 시작!
                         preloadAllProductImages();
                     } else {
-                        // 데이터가 같아도 이미지 캐싱은 체크 (빠진게 있을 수 있으니)
                         startImageCaching(productsData);
-
-                        // 데이터가 같더라도 아직 안불러온 상세 이미지가 있다면 프리로드 시도
                         preloadAllProductImages();
                     }
                 }
@@ -2339,17 +2345,22 @@
             console.log(`이미지 배경 로드 시작 (총 ${sortPriority.length}개 항목, 날짜순 우선순위 적용)`);
 
             for (const p of sortPriority) {
-                if (p.images && p.images.length === 1) {
+                // 아직 폴더 이미지를 다 불러오지 않은 상품만 대상
+                if (!p.isFullLoaded) {
                     try {
                         const res = await fetch(`${API_URL}?action=fetchProductImages&name=${encodeURIComponent(p.name)}`);
                         const allImages = await res.json();
 
-                        if (Array.isArray(allImages) && allImages.length > 1) {
+                        // 결과가 있으면 (비어있더라도 '체크완료'로 간주하여 무한 반복 방지)
+                        if (Array.isArray(allImages)) {
                             const target = productsData.find(pd => pd.name === p.name && pd.matchKey === p.matchKey);
                             if (target) {
-                                target.images = allImages;
+                                // 폴더에 이미지가 1장이라도 있으면 시트 ID 대신 폴더 이미지로 교체
+                                if (allImages.length > 0) {
+                                    target.images = allImages;
+                                }
+                                target.isFullLoaded = true; // 폴더 체크 완료 마킹
 
-                                // [추가] 받아온 정보를 휴대폰 저장소에 영구 저장 (나갔다 들어와도 즉각 로딩)
                                 localStorage.setItem('moket_products_cache_v2', JSON.stringify(productsData));
 
                                 // 캐시 강제 주입
@@ -2357,7 +2368,7 @@
                                     const img = new Image();
                                     img.src = getImgUrl(id, 1000);
                                 });
-                                console.log(`[우선순위 로드 완료] ${p.name} (${p.matchKey})`);
+                                console.log(`[우선순위 로드 완료] ${p.name} (${allImages.length}장)`);
                             }
                         }
                     } catch (e) {
@@ -2551,13 +2562,32 @@
             document.getElementById('detail-desc').style.whiteSpace = 'pre-wrap'; // 줄바꿈 유지
             document.getElementById('detail-desc').innerText = p.desc || "상세 설명이 없습니다.";
             const slider = document.getElementById('slider-area');
+            const counter = document.getElementById('detail-counter');
 
-            // 1. 우선 현재 있는 이미지들(보통 1장)을 먼저 표시
-            if (p.images && p.images.length > 0 && p.images[0]) {
-                slider.innerHTML = p.images.map(id => `<img src="${getImgUrl(id)}" >`).join('');
-            } else {
-                slider.innerHTML = `<div class="slider-no-img">No Image</div>`;
-            }
+            // 1. 현재 정보로 이미지 표시
+            const renderImgs = () => {
+                if (p.images && p.images.length > 0 && p.images[0]) {
+                    slider.innerHTML = p.images.map(id => `<img src="${getImgUrl(id)}" >`).join('');
+                    if (p.images.length > 1) {
+                        counter.innerText = `1 / ${p.images.length}`;
+                        counter.style.display = 'block';
+                    } else {
+                        counter.style.display = 'none';
+                    }
+                } else {
+                    slider.innerHTML = `<div class="slider-no-img">No Image</div>`;
+                    counter.style.display = 'none';
+                }
+            };
+            renderImgs();
+
+            // 슬라이더 스크롤 시 카운터 업데이트
+            slider.onscroll = () => {
+                if (p.images && p.images.length > 1) {
+                    const idx = Math.round(slider.scrollLeft / slider.clientWidth);
+                    counter.innerText = `${idx + 1} / ${p.images.length}`;
+                }
+            };
 
             document.getElementById('detail-overlay').style.display = 'flex';
             checkScrollLock();
@@ -2565,22 +2595,23 @@
             const detailBody = document.querySelector('.detail-body');
             if (detailBody) detailBody.scrollTop = 0;
 
-            // 2. [추가] 이미지가 1장뿐이라면 서버에 전체 이미지를 추가로 요청 (Lazy Loading)
-            if (p.images && p.images.length === 1) {
+            // 2. 만약 아직 폴더 이미지를 '완벽하게' 로드하지 않았다면 서버에 요청 (Lazy Loading)
+            if (!p.isFullLoaded) {
                 try {
                     const res = await fetch(`${API_URL}?action=fetchProductImages&name=${encodeURIComponent(p.name)}`);
                     const allImages = await res.json();
 
-                    if (Array.isArray(allImages) && allImages.length > 1) {
-                        // 데이터 업데이트 및 저장소(localStorage) 영구 기록
-                        p.images = allImages;
+                    if (Array.isArray(allImages)) {
+                        // "폴더 이미지만 보여줘" 요청 반영: 폴더에 한 장이라도 있으면 시트 ID를 완전히 무시하고 교체
+                        if (allImages.length > 0) {
+                            p.images = allImages;
+                        }
+                        p.isFullLoaded = true; // 체크 완료 표시
                         localStorage.setItem('moket_products_cache_v2', JSON.stringify(productsData));
-
-                        // 슬라이더 업데이트 (부드러운 전환을 위해 innerHTML 직접 업데이트)
-                        slider.innerHTML = allImages.map(id => `<img src="${getImgUrl(id)}" >`).join('');
+                        renderImgs(); // 다시 그리기
                     }
                 } catch (e) {
-                    console.error("추가 이미지 로드 실패:", e);
+                    console.error("상세 이미지 로드 실패:", e);
                 }
             }
         }
