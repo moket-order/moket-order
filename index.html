@@ -1100,8 +1100,11 @@
         </div>
     </div>
     <div id="fullscreen-overlay" onclick="closeFullscreen()">
+        <div id="fs-counter"
+            style="position:absolute; top:calc(25px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%); color:white; font-size:16px; font-weight:800; text-shadow:0 2px 4px rgba(0,0,0,0.5); z-index:7102;">
+        </div>
         <button class="fullscreen-close" onclick="closeFullscreen()">&times;</button>
-        <div class="fullscreen-slider" id="fullscreen-slider-area"></div>
+        <div class="fullscreen-slider" id="fullscreen-slider-area" onclick="event.stopPropagation()"></div>
     </div>
     <div id="confirm-overlay" class="modal-overlay">
         <div class="modal-content" style="text-align:center; padding: 25px 15px;">
@@ -2345,6 +2348,11 @@
                             const target = productsData.find(pd => pd.name === p.name && pd.matchKey === p.matchKey);
                             if (target) {
                                 target.images = allImages;
+
+                                // [추가] 받아온 정보를 휴대폰 저장소에 영구 저장 (나갔다 들어와도 즉각 로딩)
+                                localStorage.setItem('moket_products_cache_v2', JSON.stringify(productsData));
+
+                                // 캐시 강제 주입
                                 allImages.forEach(id => {
                                     const img = new Image();
                                     img.src = getImgUrl(id, 1000);
@@ -2564,8 +2572,11 @@
                     const allImages = await res.json();
 
                     if (Array.isArray(allImages) && allImages.length > 1) {
-                        // 데이터 캐싱 및 슬라이더 업데이트 (부드러운 전환을 위해 innerHTML 직접 업데이트)
+                        // 데이터 업데이트 및 저장소(localStorage) 영구 기록
                         p.images = allImages;
+                        localStorage.setItem('moket_products_cache_v2', JSON.stringify(productsData));
+
+                        // 슬라이더 업데이트 (부드러운 전환을 위해 innerHTML 직접 업데이트)
                         slider.innerHTML = allImages.map(id => `<img src="${getImgUrl(id)}" >`).join('');
                     }
                 } catch (e) {
@@ -2579,27 +2590,47 @@
             const slider = document.getElementById('slider-area');
             const index = Math.round(slider.scrollLeft / slider.clientWidth);
 
-            // 현재 상세페이지에 떠있는 상품 데이터 찾기
             const name = document.getElementById('detail-title').innerText;
             const p = productsData.find(i => i.name === name);
             if (!p || !p.images || p.images.length === 0) return;
 
             const fsOverlay = document.getElementById('fullscreen-overlay');
             const fsSlider = document.getElementById('fullscreen-slider-area');
+            const fsCounter = document.getElementById('fs-counter');
 
-            // 모든 이미지 렌더링
+            // 이미지 렌더링
             fsSlider.innerHTML = p.images.map(id => `
                 <div class="fullscreen-slide">
                     <img src="${getImgUrl(id)}">
                 </div>
             `).join('');
 
+            // 카운터 초기화
+            if (p.images.length > 1) {
+                fsCounter.innerText = `${index + 1} / ${p.images.length}`;
+                fsCounter.style.display = 'block';
+            } else {
+                fsCounter.style.display = 'none';
+            }
+
+            // 스크롤 이벤트로 카운터 업데이트
+            fsSlider.onscroll = () => {
+                const curIdx = Math.round(fsSlider.scrollLeft / fsSlider.clientWidth);
+                if (p.images.length > 1) {
+                    fsCounter.innerText = `${curIdx + 1} / ${p.images.length}`;
+                }
+            };
+
             fsOverlay.style.display = 'flex';
             checkScrollLock();
-            // 현재 인덱스로 스크롤 이동
+
+            // 현재 인덱스로 정밀 스크롤 이동
             setTimeout(() => {
-                fsSlider.scrollLeft = index * fsSlider.clientWidth;
-            }, 10);
+                fsSlider.scrollTo({
+                    left: index * fsSlider.clientWidth,
+                    behavior: 'auto'
+                });
+            }, 50);
         }
 
         function closeFullscreen() {
