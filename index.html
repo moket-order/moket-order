@@ -1114,7 +1114,7 @@
             <div id="confirm-item-list"
                 style="text-align:left; background:#f5f5f5; padding: 15px 8px; border-radius:0; margin:10px 0 20px 0; font-size:15px; line-height:1.7; max-height:350px; overflow-y:auto;">
             </div>
-            <div style="font-weight:900; font-size:17px; margin-bottom:15px;">총 합계: <span id="confirm-total-price"
+            <div style="font-weight:900; font-size:18px; margin-bottom:15px;">총 합계: <span id="confirm-total-price"
                     style="color:var(--nego-orange);">0원</span></div>
             <div
                 style="text-align:left; font-size:13px; margin: 1px -10px 10px 0; color:#455464; line-height:1.6; padding:0; font-weight:700;">
@@ -1225,7 +1225,7 @@
         </div>
     </div>
 
-    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbzEXGvYrP8lrlzTGBoWmbjvReCQHmKtMk_xqeb8r7NxWzmFufrUfm9yJNQhFS4wF_q5/exec'
+    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbx7IX_0IPwxhAV18aomO-W3GAOHe_u9zfvj4KrslGZ43Vt4fooTyHhMN37WgJOkiOmW/exec'
 
         // [카카오 초기화]
         try {
@@ -2016,7 +2016,7 @@
                     (order.note && order.note.includes('[취소]')) ||
                     order.received === "canceled" ||
                     order.received === "취소완료" ||
-                    (order.canceled === true || order.canceled === "TRUE");
+                    (order.canceled === true || String(order.canceled).toUpperCase() === "TRUE");
                 const isProcessing = order.isProcessing === true;
 
                 // [안전장치] 데이터 형식이 예전과 다를 경우(예: timestamp가 없는 경우)를 보호
@@ -2026,15 +2026,15 @@
                     orderTimeFull = order.timestamp || '';
                     orderTime = String(orderTimeFull).replace(/^20(\d{2}년)/, '$1').replace(/[\s\n]+\d{2}:\d{2}:\d{2}$/, '');
                 } catch (e) { console.error("날짜 형식 도중 오류:", e, order); }
-                const isReceived = (order.received === true || order.received === "TRUE");
-                const isStocked = (order.isStocked === true || order.isStocked === "TRUE");
+                const isReceived = (order.received === true || String(order.received).toUpperCase() === "TRUE");
+                const isStocked = (order.isStocked === true || String(order.isStocked).toUpperCase() === "TRUE");
                 const pickupDisp = (order.pickupDate || '정보없음').replace(/^20(\d{2}년)/, '$1');
 
                 const orderDateStyle = currentSortBy === 'timestamp' ? 'color:var(--nego-orange); font-weight:700;' : 'color:#455464;';
                 const pickupDateStyle = currentSortBy === 'pickupDate' ? 'color:var(--nego-orange); font-weight:700;' : 'color:#455464;';
 
                 const isOrderToday = parseKRDate(orderTimeFull).toDateString() === new Date().toDateString();
-                const canDelete = isOrderToday && !isCancelled && !isReceived && !isProcessing;
+                const canDelete = isOrderToday && !isCancelled && !isReceived && !isProcessing && !isStocked && !order.onSite;
 
                 // [상태 텍스트/색상 결정]
                 let statusText = '';
@@ -2051,7 +2051,7 @@
                     statusColor = '#4CAF50';
                 } else if (isStocked) {
                     statusText = '입고완료';
-                    statusColor = '#FF6D00';
+                    statusColor = 'var(--nego-orange)'; // var 사용
                 } else {
                     statusText = '미입고';
                     statusColor = '#AAA';
