@@ -14,7 +14,7 @@
 
     <!-- 카카오톡/SNS 공유 미리보기 설정 (Open Graph) -->
     <meta property="og:title" content="MOKET 모켓 - 모두를 위한 공동구매 마켓">
-    <meta property="og:image" content="og-image.png">
+    <meta property="og:image" content="https://moketorder.github.io/og-image.png">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://moketorder.github.io">
 
@@ -1629,18 +1629,12 @@
         // [추가] 미픽업 주문 확인 및 알림 모달
         async function checkUnpickedOrders() {
             // [세션당 1회 제한] 한 번 확인했다면 이번 접속(세션)에서는 다시 띄우지 않음
-            if (sessionStorage.getItem('moket_unpicked_checked') === 'true') {
-                console.log("[미픽업 확인] 이번 세션에서 이미 확인했습니다.");
-                return;
-            }
+            if (sessionStorage.getItem('moket_unpicked_checked') === 'true') return;
 
             const name = (localStorage.getItem('moket_user_name') || "").trim();
             const phone = (localStorage.getItem('moket_user_phone') || "").trim();
 
-            if (!name || !phone) {
-                console.log("[미픽업 확인] 사용자 정보(이름/번호)가 입력되지 않아 확인을 중단합니다.");
-                return;
-            }
+            if (!name || !phone) return;
 
             // 확인 표시 저장 (세션 종료 전까지 유지)
             sessionStorage.setItem('moket_unpicked_checked', 'true');
@@ -1679,17 +1673,12 @@
                     const itemName = String(order.item || "");
                     const receivedStatus = String(order.received || "").trim();
 
-                    // 날짜 비교 로직 (order.pickupDate: "2026년 2월 8일 (일)" -> "2026-02-08")
-                    const dateNums = (order.pickupDate || "").match(/\d+/g);
-                    let isTodayOrPast = true;
-                    if (dateNums && dateNums.length >= 3) {
-                        const orderDateStr = `${dateNums[0]}-${dateNums[1].padStart(2, '0')}-${dateNums[2].padStart(2, '0')}`;
-                        isTodayOrPast = (orderDateStr <= todayStr);
-                    }
+                    // [수정] 날짜 상관없이 '입고완료'인데 '수령전'이면 모두 알림 대상 (미리 입고된 건 포함)
+                    const isTodayOrPast = true;
 
-                    const isCanceled = itemName.includes("[취소]") || order.canceled === true || order.canceled === "TRUE";
-                    const isReceived = (order.received === true || order.received === "TRUE");
-                    const isStocked = (order.isStocked === true || order.isStocked === "TRUE");
+                    const isCanceled = itemName.includes("[취소]") || order.canceled === true || String(order.canceled).toUpperCase() === "TRUE";
+                    const isReceived = (order.received === true || String(order.received).toUpperCase() === "TRUE");
+                    const isStocked = (order.isStocked === true || String(order.isStocked).toUpperCase() === "TRUE");
 
                     // 알림 대상: (오늘 포함 과거 주문) AND (입고완료 상태) AND (수령 전) AND (취소 아님)
                     const result = isTodayOrPast && isStocked && !isReceived && !isCanceled;
@@ -1944,8 +1933,8 @@
             const filtered = fullHistoryData.filter(item => {
                 const isCancelled = (item.item && item.item.includes('[취소]')) ||
                     (item.received === "canceled" || item.received === "취소완료") ||
-                    (item.canceled === true || item.canceled === "TRUE");
-                const isReceived = (item.received === true || item.received === "TRUE");
+                    (item.canceled === true || String(item.canceled).toUpperCase() === "TRUE");
+                const isReceived = (item.received === true || String(item.received).toUpperCase() === "TRUE");
 
                 // [하위 분류 필터 적용]
                 if (currentStatusFilter === 'order') {
@@ -1953,7 +1942,7 @@
                 } else if (currentStatusFilter === 'cancel') {
                     if (!isCancelled) return false;
                 } else if (currentStatusFilter === 'stocked') {
-                    const isStocked = (item.isStocked === true || item.isStocked === "TRUE");
+                    const isStocked = (item.isStocked === true || String(item.isStocked).toUpperCase() === "TRUE");
                     if (isCancelled || isReceived || !isStocked) return false;
                 } else if (currentStatusFilter === 'pickup') {
                     if (!isReceived || isCancelled) return false;
@@ -1966,7 +1955,9 @@
                 // 1. '오늘' 필터
                 if (currentFilter === 'today') {
                     // [수정] '입고' 또는 '픽업' 탭일 때는 '픽업일' 기준 (지금 시간 이전인 건만), 그 외엔 '주문일' 기준
-                    if (currentStatusFilter === 'stocked' || currentStatusFilter === 'pickup') {
+                    // [수정] '입고' 탭일 때는 이미 입고된 건은 날짜 상관없이 보여주거나(미리 입고), '픽업' 탭은 지금 시간 이전인 건만
+                    if (currentStatusFilter === 'stocked') return true;
+                    if (currentStatusFilter === 'pickup') {
                         const pDate = parseKRDate(item.pickupDate);
                         return pDate <= now;
                     }
