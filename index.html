@@ -1261,6 +1261,15 @@
         let pendingStockUpdates = {};
         const STOCK_LOCK_DURATION = 15000; // 15초 동안 유지
 
+        /**
+         * [추가] 인라인 JS 속성(onclick 등)에 문자열을 안전하게 전달하기 위한 이스케이프 함수
+         * 1. 역슬래시 이스케이프
+         * 2. 홑따옴표(\') 이스케이프
+         * 3. 쌍따옴표(&quot;) 이스케이프
+         * 4. 개행문자(\\n) 이스케이프
+         */
+        const escapeArg = (s) => String(s || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n").replace(/\r/g, "");
+
         // [스크롤 방지]
         function checkScrollLock() {
             const modals = document.querySelectorAll('.modal-overlay');
@@ -2075,12 +2084,7 @@
                     statusColor = '#AAA';
                 }
 
-                // [수정] 인라인 함수 호출 시 홑따옴표가 있으면 문법 에러가 발생하므로 이스케이프 처리
-                // 1. 역슬래시 먼저 이스케이프 (다른 이스케이프 문자와 충돌 방지)
-                // 2. 홑따옴표는 JS 문자열 내부용 이스케이프 (\')
-                // 3. 쌍따옴표는 HTML 속성값(onclick="...") 내부용 이스케이프 (&quot;)
-                // 4. 개행문자는 JS 문자열 깨짐 방지 (\n)
-                const escapeArg = (s) => String(s || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n").replace(/\r/g, "");
+
 
                 const safeTime = escapeArg(orderTimeFull);
                 const safeName = escapeArg(order.name);
@@ -2574,7 +2578,7 @@
                     `<div class="item-price-val">${parseInt(p.price || 0).toLocaleString()}원</div>` +
                     `</div></div>` +
                     `<div class="item-controls-bottom-v">` +
-                    `<button class="btn-detail" onclick="openDetail('${p.name.replace(/'/g, "\\'")}')">상세보기</button>` +
+                    `<button class="btn-detail" onclick="openDetail('${escapeArg(p.name)}')">상세보기</button>` +
                     `<div class="qty-group">` +
                     `<div class="stock-status" style="color:${isSoldOut ? '#ff0000' : '#455464'};">${stockText}</div>` +
                     `<div class="qty-controls ${currentQty > 0 ? 'selected' : ''}" style="${isSoldOut ? 'opacity:0.5; pointer-events:none;' : ''}">` +
