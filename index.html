@@ -945,9 +945,9 @@
             line-height: 1.4;
         }
 
-        /* [추가] 주문자정보 변경 메뉴로 진입 시 카카오 로그인 버튼 숨김 */
-        #profile-modal:not(.login-forced) #kakao-login-prompt,
-        #profile-modal:not(.login-forced) #btn-kakao-login {
+        /* [수정] 주문자정보 변경 메뉴로 진입 시 카카오 로그인 버튼 숨김 */
+        #profile-modal:not(.login-forced) #btn-kakao-login,
+        #profile-modal:not(.login-forced) .login-notice {
             display: none !important;
         }
 
@@ -1002,8 +1002,7 @@
             <li onclick="openSideModal('location-modal')">매장위치</li>
             <li onclick="openSideModal('hours-modal')">영업시간</li>
             <li onclick="window.open('https://open.kakao.com/o/sDZthgfi')">카카오톡 문의하기</li>
-            <li onclick="clearAppCache()" style="color:#ff4d4d; border-top:1px solid #eee; margin-top:10px;">로그아웃 (캐시
-                초기화)</li>
+
         </ul>
     </div>
     <div id="profile-modal" class="modal-overlay">
@@ -1442,12 +1441,11 @@
             if (certName) {
                 if (promptDiv) promptDiv.style.display = 'none';
                 if (kakaoBtn) kakaoBtn.style.display = 'none';
-                if (logoutBtn) logoutBtn.style.display = 'block'; // 로그아웃 버튼 표시 (block for text link)
+                if (logoutBtn) logoutBtn.style.display = 'none';
             } else {
                 if (promptDiv) promptDiv.style.display = 'block';
                 if (kakaoBtn) kakaoBtn.style.display = 'flex';
-                // 이름이 저장되어 있다면 로그아웃(초기화) 버튼 표시 (오류 해결 및 비회원 초기화용)
-                if (logoutBtn) logoutBtn.style.display = name ? 'block' : 'none'; // block for text link
+                if (logoutBtn) logoutBtn.style.display = 'none';
             }
         }
 
@@ -3067,8 +3065,7 @@
             loadData();
             loadProfile();
 
-            // [테스트용] 사용자 정보 없어도 로그인 유도창 띄우지 않음
-            /*
+            // [복구] 사용자 정보 없으면 로그인 유도창(카카오 로그인) 띄움
             const name = localStorage.getItem('moket_user_name');
             if (!name || !name.trim()) {
                 setTimeout(() => {
@@ -3088,8 +3085,8 @@
             } else {
                 setTimeout(checkUnpickedOrders, 1000);
             }
-            */
-            // 테스트 중에도 미픽업 확인은 원하시면 주석 해제하여 사용하세요.
+
+            // 미픽업 확인
             // setTimeout(checkUnpickedOrders, 1000);
         });
 
