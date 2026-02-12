@@ -1702,7 +1702,7 @@
 
         let fullHistoryData = []; // 서버에서 가져온 전체 데이터 저장
         let currentSortBy = 'pickupDate'; // 'pickupDate' (픽업일) 기본값
-        let currentSortDir = 'asc'; // 픽업일 기준은 오름차순(오늘->미래)이 기본
+        let currentSortDir = 'desc'; // [수정] 기본 내림차순 (최신순)
         let currentFilter = 'today'; // '오늘' 기본값
         let currentStatusFilter = 'order'; // '주문' 기본값 (하위분류)
 
@@ -1742,7 +1742,7 @@
             currentSortBy = 'timestamp';
             currentFilter = 'all';
             currentStatusFilter = 'order';
-            currentSortDir = 'desc';
+            currentSortDir = 'desc'; // [수정] 기본 내림차순
             currentHistoryLimit = 10;
 
             // 버튼 UI 초기화
@@ -1876,8 +1876,8 @@
             }
             currentSortBy = mode;
             currentHistoryLimit = 10; // 초기화
-            // 모드 변경 시 적절한 기본 정렬 방향 설정
-            currentSortDir = (mode === 'pickupDate') ? 'asc' : 'desc';
+            // [수정] 모든 모드에서 기본 내림차순(desc) 적용
+            currentSortDir = 'desc';
 
             document.getElementById('btn-sort-order').classList.toggle('active', mode === 'timestamp');
             document.getElementById('btn-sort-pickup').classList.toggle('active', mode === 'pickupDate');
