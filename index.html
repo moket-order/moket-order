@@ -977,7 +977,7 @@
             <div class="logo-en">MOKET</div>
             <div class="logo-ko">모켓</div>
         </div>
-        <div class="cart-btn" onclick="openHistoryModal()">
+        <div class="cart-btn" onclick="openHistoryModal(true)">
             <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
                 stroke-linecap="round" stroke-linejoin="round">
                 <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path>
@@ -1002,6 +1002,8 @@
             <li onclick="openSideModal('location-modal')">매장위치</li>
             <li onclick="openSideModal('hours-modal')">영업시간</li>
             <li onclick="window.open('https://open.kakao.com/o/sDZthgfi')">카카오톡 문의하기</li>
+            <li onclick="clearAppCache()" style="color:#ff4d4d; border-top:1px solid #eee; margin-top:10px;">로그아웃 (캐시
+                초기화)</li>
         </ul>
     </div>
     <div id="profile-modal" class="modal-overlay">
@@ -1193,9 +1195,9 @@
                     style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 0; border-top: 1.5px solid #eee; padding-top: 8px;">
                     <div style="grid-column: 1 / 4; display: flex; gap: 6px;">
                         <button class="date-btn active" id="btn-sort-pickup" onclick="changeSortMode('pickupDate')"
-                            style="height:32px; font-size:15px; flex:1; padding:0; font-weight:900;">픽업순</button>
+                            style="height:32px; font-size:15px; flex:1; padding:0; font-weight:900;">픽업일별 정렬</button>
                         <button class="date-btn" id="btn-sort-order" onclick="changeSortMode('timestamp')"
-                            style="height:32px; font-size:15px; flex:1; padding:0; font-weight:900;">주문순</button>
+                            style="height:32px; font-size:15px; flex:1; padding:0; font-weight:900;">주문일별 정렬</button>
                     </div>
                     <div style="grid-column: 4 / 5; display: flex; gap: 6px;">
                         <button class="date-btn" id="btn-sort-dir" onclick="toggleSortDir()"
@@ -1232,7 +1234,7 @@
         </div>
     </div>
 
-    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbx7IX_0IPwxhAV18aomO-W3GAOHe_u9zfvj4KrslGZ43Vt4fooTyHhMN37WgJOkiOmW/exec'
+    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbyxf8K5XTnbWvg4FXBp4J8mPfm1t3y2HxhohPbxvvb0u6bil49BNx9akj4qJ4nxQLM1/exec'
 
         // [카카오 초기화]
         try {
@@ -1407,6 +1409,15 @@
             }
 
                 , 1500);
+        }
+
+        // [추가] 앱 캐시 및 데이터 완전 초기화 (로그아웃 버튼)
+        function clearAppCache() {
+            showSystemModal("로그아웃 하시겠습니까?\n모든 캐시 데이터가 초기화됩니다.", 'confirm', () => {
+                localStorage.clear();
+                sessionStorage.clear();
+                location.reload(true); // 강제 새로고침
+            });
         }
 
         function loadProfile() {
@@ -1822,7 +1833,13 @@
                         const prev = prevMap.get(key);
                         // 앱에서 '취소 중'일 때만 보호하고, 그 외에는 서버 데이터를 우선함 (매뉴얼 해제 대응)
                         if (prev && prev.isProcessing) {
-                            return { ...fresh, isProcessing: prev.isProcessing, received: prev.received, item: prev.item };
+                            // 서버 데이터가 이미 취소된 상태면 '취소중' 상태를 해제하고 서버 데이터 수용
+                            const isFreshCancelled = (fresh.item && fresh.item.includes('[취소]')) ||
+                                fresh.received === "취소완료" ||
+                                (fresh.canceled === true || String(fresh.canceled).toUpperCase() === "TRUE");
+                            if (!isFreshCancelled) {
+                                return { ...fresh, isProcessing: prev.isProcessing, received: prev.received, item: prev.item };
+                            }
                         }
                         return fresh;
                     });
@@ -1848,7 +1865,12 @@
                             const key = genKey(fresh);
                             const prev = prevMap.get(key);
                             if (prev && prev.isProcessing) {
-                                return { ...fresh, isProcessing: prev.isProcessing, received: prev.received, item: prev.item };
+                                const isFreshCancelled = (fresh.item && fresh.item.includes('[취소]')) ||
+                                    fresh.received === "취소완료" ||
+                                    (fresh.canceled === true || String(fresh.canceled).toUpperCase() === "TRUE");
+                                if (!isFreshCancelled) {
+                                    return { ...fresh, isProcessing: prev.isProcessing, received: prev.received, item: prev.item };
+                                }
                             }
                             return fresh;
                         });
@@ -2160,62 +2182,42 @@
                 fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) })
                     .then(res => res.json())
                     .then(result => {
-                        isHistoryProcessing = false; // [추가] 완료 시 해제
-                        const updatedIdx = fullHistoryData.findIndex(d =>
-                            String(d.timestamp).trim() === String(timestamp).trim() &&
-                            String(d.matchKey || "").trim() === String(matchKey || "").trim() && // matchKey 비교 추가
-                            String(d.item).replace(/['"]/g, '').trim() === String(item).replace(/['"]/g, '').trim()
-                        );
+                        isHistoryProcessing = false;
+                        if (targetIdx !== -1) {
+                            fullHistoryData[targetIdx].isProcessing = false;
+                        }
 
                         if (result.result === 'success') {
-                            if (updatedIdx !== -1) {
-                                // 2. 서버 성공 후 취소 상태로 확정
-                                if (!fullHistoryData[updatedIdx].item.includes('[취소]')) {
-                                    fullHistoryData[updatedIdx].item = "[취소] " + fullHistoryData[updatedIdx].item;
+                            if (targetIdx !== -1) {
+                                if (!fullHistoryData[targetIdx].item.includes('[취소]')) {
+                                    fullHistoryData[targetIdx].item = "[취소] " + fullHistoryData[targetIdx].item;
                                 }
-                                fullHistoryData[updatedIdx].received = "취소완료";
-                                fullHistoryData[updatedIdx].isProcessing = false;
+                                fullHistoryData[targetIdx].received = "취소완료";
+                                fullHistoryData[targetIdx].canceled = true;
 
-                                // 로컬 캐시 즉시 업데이트 (사용자별)
                                 const name = document.getElementById('input-name').value;
                                 const phone = document.getElementById('input-phone').value;
-                                const cacheKey = `history_cache_${name}_${phone}`;
-                                localStorage.setItem(cacheKey, JSON.stringify(fullHistoryData));
+                                localStorage.setItem(`history_cache_${name}_${phone}`, JSON.stringify(fullHistoryData));
 
-                                // 로컬 재고 복구 (서버는 이미 완료되었으므로 시각적 업데이트)
                                 const mKey = matchKey || "no-date";
                                 const itemKey = mKey + "|" + String(item).replace(/['"]/g, '').trim();
-
-                                // 이름과 matchKey(또는 픽업일)로 상품 찾기
-                                const p = productsData.find(pd =>
-                                    pd.name === String(item).replace(/['"]/g, '').trim() &&
-                                    (pd.matchKey === mKey || pd.displayDate === String(pickupDate).trim())
-                                );
+                                const p = productsData.find(pd => pd.name === String(item).replace(/['"]/g, '').trim() && (pd.matchKey === mKey || pd.displayDate === String(pickupDate).trim()));
 
                                 if (p) {
-                                    p.stock = parseInt(p.stock || 0) + (parseInt(fullHistoryData[updatedIdx].qty) || 1);
-                                    // [상태 잠금] 15초 동안 이 수량을 보호 (loadData가 덮어쓰지 못하도록)
-                                    pendingStockUpdates[itemKey] = {
-                                        stock: p.stock,
-                                        expire: Date.now() + STOCK_LOCK_DURATION
-                                    };
-
-                                    // 만약 예전 주문으로 인한 다른 형태의 키가 있다면 그것도 업데이트/삭제하여 덮어쓰기 방지
+                                    p.stock = parseInt(p.stock || 0) + (parseInt(fullHistoryData[targetIdx].qty) || 1);
+                                    pendingStockUpdates[itemKey] = { stock: p.stock, expire: Date.now() + STOCK_LOCK_DURATION };
                                     const altKey = (mKey === "no-date" ? "" : "no-date") + "|" + p.name;
                                     if (pendingStockUpdates[altKey]) delete pendingStockUpdates[altKey];
-
-                                    // [UI 갱신] 변경된 재고 데이터로 메인 리스트 즉시 다시 그리기
                                     const activeBtn = document.querySelector('.date-btn.active');
                                     if (activeBtn) renderList(activeBtn.dataset.date);
                                 }
                             }
                             showSystemModal("주문이 취소되었습니다.", 'alert');
                             renderHistory();
-                            setTimeout(() => loadData(), 2000); // 실제 데이터 싱크
+                            setTimeout(() => loadData(), 2000);
                         } else {
-                            if (updatedIdx !== -1) fullHistoryData[updatedIdx].isProcessing = false;
                             renderHistory();
-                            showSystemModal("취소에 실패했습니다.잠시 후 다시 시도해 주세요.", 'alert');
+                            showSystemModal("취소에 실패했습니다. " + (result.message || "잠시 후 다시 시도해 주세요."), 'alert');
                         }
                     })
                     .catch(err => {
@@ -2321,14 +2323,30 @@
                     throw new Error('데이터 형식이 올바르지 않습니다.');
                 }
 
-                // 매핑 처리
-                let freshData = rawData.map(p => ({
-                    ...p,
-                    name: p.name || "",
-                    matchKey: p.matchKey || "",
-                    displayDate: formatDateWithDay(p.date),
-                    images: Array.isArray(p.images) ? p.images : []
-                })).filter(p => p.name && p.matchKey);
+                // [디버깅] 서버 수신 데이터 확인
+                console.log("[Data Sync] 서버 수신 원본 데이터:", rawData);
+
+                // 매핑 처리 (가짜 데이터 'no-date' 원천 차단)
+                let freshData = rawData.map(p => {
+                    let mKey = (p.matchKey || p.date || "").trim();
+                    if (mKey === "no-date") mKey = ""; // 가짜 데이터 제거
+
+                    return {
+                        ...p,
+                        name: (p.name || "").trim(),
+                        matchKey: mKey,
+                        displayDate: p.date ? formatDateWithDay(p.date) : "",
+                        images: Array.isArray(p.images) ? p.images : []
+                    };
+                }).filter(p => {
+                    const isValid = p.name !== "" && p.matchKey !== "" && p.matchKey !== "no-date";
+                    if (!isValid) console.warn("[Data Sync] 유효하지 않은 데이터 제외:", p);
+                    return isValid;
+                });
+
+                console.log("[Data Sync] 최종 유효 데이터:", freshData);
+
+                console.log("[Data Sync] 필터링 후 유효 데이터:", freshData);
 
                 // [상태 잠금 적용] 최근 주문/취소된 품목 보호
                 const now = Date.now();
@@ -2346,7 +2364,7 @@
                 }
 
                 if (freshData.length > 0) {
-                    // [핵심 수정] 기존에 이미 로드해둔 상세 이미지 정보 보존 (서버의 1장짜리 데이터가 덮어씌우지 못하도록)
+                    // [핵심 수정] 기존에 이미 로드해둔 상세 이미지 정보 보존
                     freshData.forEach(fItem => {
                         const existing = productsData.find(p => p.name === fItem.name && p.matchKey === fItem.matchKey);
                         if (existing && existing.isFullLoaded) {
@@ -2367,6 +2385,11 @@
                         startImageCaching(productsData);
                         setTimeout(preloadAllProductImages, 1000);
                     }
+                } else {
+                    // [추가] 데이터가 하나도 없는 경우 (필터링 등으로 인해)
+                    productsData = [];
+                    processAndRender([]);
+                    console.log("조회된 상품이 없습니다.");
                 }
             }
             catch (e) {
@@ -2473,11 +2496,24 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            // 오늘 날짜 이후 데이터만 필터링
+            // 오늘 날짜 이후 데이터만 필터링 (엄격)
             const futureData = data.filter(p => {
-                const pDate = new Date(p.matchKey);
+                const cleanKey = String(p.matchKey).replace(/\./g, '-');
+                const parts = cleanKey.split('-');
+                if (parts.length < 3) {
+                    console.error("[Filter] 날짜 형식 부족:", p.matchKey);
+                    return false;
+                }
+
+                // 로컬 시간 기준으로 정확히 생성 (연, 월-1, 일)
+                const pDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                if (isNaN(pDate.getTime())) return false;
+
                 pDate.setHours(0, 0, 0, 0);
-                return pDate >= today;
+                const isFutureOrToday = pDate >= today;
+
+                if (!isFutureOrToday) console.log(`[Filter] 과거 날짜 제외: ${p.name} (${p.matchKey})`);
+                return isFutureOrToday;
             });
 
             const uniqueDates = [...new Set(futureData.map(p => p.matchKey))].sort((a, b) => new Date(a) - new Date(b));
@@ -2660,7 +2696,7 @@
             // 2. 만약 아직 폴더 이미지를 '완벽하게' 로드하지 않았다면 서버에 요청 (Lazy Loading)
             if (!p.isFullLoaded) {
                 try {
-                    const res = await fetch(`${API_URL}?action=fetchProductImages&name=${encodeURIComponent(p.name)}`);
+                    const res = await fetch(`${API_URL}?action=fetchProductImages&name=${encodeURIComponent(p.name)}&folderId=${p.folderId || ''}`);
                     const allImages = await res.json();
 
                     if (Array.isArray(allImages)) {
@@ -3031,7 +3067,8 @@
             loadData();
             loadProfile();
 
-            // 사용자 정보 없으면 카카오 로그인 유도
+            // [테스트용] 사용자 정보 없어도 로그인 유도창 띄우지 않음
+            /*
             const name = localStorage.getItem('moket_user_name');
             if (!name || !name.trim()) {
                 setTimeout(() => {
@@ -3039,11 +3076,9 @@
                     const certName = localStorage.getItem('kakao_original_name');
 
                     if (certName) {
-                        // 이미 카카오 인증은 된 상태라면 강제 배경(Gate) 없이 정보 입력 모달만 띄움
                         modal.classList.remove('login-forced');
                         document.getElementById('profile-modal-title').innerText = "주문자 정보 입력";
                     } else {
-                        // 카카오 인증 전이라면 강제 배경(Gate) 표시
                         modal.classList.add('login-forced');
                         document.getElementById('profile-modal-title').innerText = "카카오 로그인";
                     }
@@ -3051,10 +3086,11 @@
                     checkScrollLock();
                 }, 400);
             } else {
-
-                // 사용자 정보가 있으면 미픽업 주문 확인 자동 실행
                 setTimeout(checkUnpickedOrders, 1000);
             }
+            */
+            // 테스트 중에도 미픽업 확인은 원하시면 주석 해제하여 사용하세요.
+            // setTimeout(checkUnpickedOrders, 1000);
         });
 
         // [속도 개선] 사용자가 앱에 다시 들어오거나 다른 탭에서 돌아오면 자동으로 최신 데이터 갱신
