@@ -740,7 +740,7 @@
             line-height: 1.4;
             word-break: break-all;
             overflow-wrap: break-word;
-            white-space: normal;
+            white-space: pre-wrap;
         }
 
         .item-price-val {
@@ -1099,7 +1099,7 @@
             </div>
             <div class="detail-body">
                 <h2 id="detail-title"
-                    style="margin:0; font-size:20px; font-weight:800; letter-spacing: 1px; color:var(--item-black);">
+                    style="margin:0; font-size:20px; font-weight:800; letter-spacing: 1px; color:var(--item-black); white-space: pre-wrap;">
                 </h2>
                 <div id="detail-price"
                     style="color:var(--nego-orange); font-weight:900; font-size:20px; margin:10px 0;"></div>
@@ -2092,7 +2092,7 @@
                     <div style="border-bottom: 1px solid #eee; padding: 12px 0; ${isCancelled ? 'opacity:0.6; text-decoration:line-through;' : ''} ${isProcessing ? 'opacity:0.7;' : ''}">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                             <div style="flex:1; padding-right:10px;">
-                                <div style="font-size:16px; font-weight:800; color:var(--item-black); line-height:1.2; margin-bottom:6px;">${order.item}</div>
+                                <div style="font-size:16px; font-weight:800; color:var(--item-black); line-height:1.2; margin-bottom:6px; white-space: pre-wrap;">${order.item}</div>
                                 <div style="font-size:12px; display:flex; flex-direction:column; gap:2px;">
                                     <div style="${orderDateStyle}">주문일: ${orderTime}</div>
                                     <div style="${pickupDateStyle}">픽업일: ${pickupDisp}</div>
@@ -2795,7 +2795,7 @@
                     total += sub;
                     list.innerHTML += `
                         <div style="display:flex; justify-content:space-between; align-items:center; font-size:15px; margin-bottom:8px;">
-                            <span style="color:var(--item-black); font-weight:800; flex:1; padding-right:6px; word-break:keep-all; line-height:1.2;">${name}</span>
+                            <span style="color:var(--item-black); font-weight:800; flex:1; padding-right:6px; word-break:keep-all; line-height:1.2; white-space: pre-wrap;">${name}</span>
                             <div style="display:flex; align-items:center; min-width:90px; justify-content:flex-end; flex-shrink:0;">
                                 <span style="color:#455464; font-size:15px; font-weight:700; text-align:right;">${q}개</span>
                                 <span style="color:#ccc; font-size:0.75rem; margin:0 4px;">/</span>
