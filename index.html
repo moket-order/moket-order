@@ -1192,21 +1192,21 @@
                         style="height:32px; font-size:15px; padding:0; font-weight:900;">취소</button>
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px;">
-                    <button class="date-btn" id="filter-all" onclick="filterHistory('all')"
+                    <button class="date-btn active" id="filter-all" onclick="filterHistory('all')"
                         style="height:32px; font-size:15px; padding:0; font-weight:800;">전체</button>
-                    <button class="date-btn active" id="filter-today" onclick="filterHistory('today')"
-                        style="height:32px; font-size:15px; padding:0; font-weight:800;">오늘</button>
                     <button class="date-btn" id="filter-week" onclick="filterHistory('week')"
                         style="height:32px; font-size:15px; padding:0; font-weight:800;">1주일</button>
+                    <button class="date-btn" id="filter-2weeks" onclick="filterHistory('2weeks')"
+                        style="height:32px; font-size:15px; padding:0; font-weight:800;">2주일</button>
                     <button class="date-btn" id="filter-month" onclick="filterHistory('month')"
                         style="height:32px; font-size:15px; padding:0; font-weight:800;">1개월</button>
                 </div>
                 <div
                     style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 0; border-top: 1.5px solid #eee; padding-top: 8px;">
                     <div style="grid-column: 1 / 4; display: flex; gap: 6px;">
-                        <button class="date-btn active" id="btn-sort-pickup" onclick="changeSortMode('pickupDate')"
+                        <button class="date-btn" id="btn-sort-pickup" onclick="changeSortMode('pickupDate')"
                             style="height:32px; font-size:15px; flex:1; padding:0; font-weight:900;">픽업일별 정렬</button>
-                        <button class="date-btn" id="btn-sort-order" onclick="changeSortMode('timestamp')"
+                        <button class="date-btn active" id="btn-sort-order" onclick="changeSortMode('timestamp')"
                             style="height:32px; font-size:15px; flex:1; padding:0; font-weight:900;">주문일별 정렬</button>
                     </div>
                     <div style="grid-column: 4 / 5; display: flex; gap: 6px;">
@@ -1244,7 +1244,7 @@
         </div>
     </div>
 
-    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbw6F-D5UhJTkLafBv4uOs5_lUD61ervXveLCcZ6ROHNYhFbEi_vJUamKHUjHE9wGeaY/exec'
+    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbxscmMaH75TsZyLSt16zgCv6jCbyFUGMuTGBETFEIGWT9QoUW9IWHXdh0YGq-TGQtcq/exec'
 
         // [카카오 초기화]
         try {
@@ -1466,6 +1466,11 @@
                 if (promptDiv) promptDiv.style.display = 'block';
                 if (kakaoBtn) kakaoBtn.style.display = 'flex';
                 if (logoutBtn) logoutBtn.style.display = 'none';
+            }
+
+            // [추가] 프로필 로드 시 주문내역을 백그라운드에서 미리 가져옴 (체감 속도 개선)
+            if (name && phone) {
+                setTimeout(() => openHistoryModal(false, true), 1000);
             }
         }
 
@@ -1749,163 +1754,103 @@
             loadData(true);
         }
 
-        async function openHistoryModal(isRefresh = false) {
+        // [보조] 주문내역 UI 기본 설정
+        function setupHistoryUI(name) {
+            const modal = document.getElementById('history-modal');
+            const title = document.getElementById('history-modal-title');
+            const displayName = name.trim() || "주문자";
+
+            if (modal.style.display !== 'flex') {
+                currentSortBy = 'timestamp';
+                currentFilter = 'all';
+                currentStatusFilter = 'order';
+                currentSortDir = 'desc';
+                currentHistoryLimit = 10;
+
+                // 버튼 클래스 초기화 (중복 활성화 방지)
+                document.querySelectorAll('#history-modal .date-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById('btn-sort-order')?.classList.add('active');
+                document.getElementById('filter-all')?.classList.add('active');
+                document.getElementById('status-order')?.classList.add('active');
+
+                title.innerHTML = `<span style="background:#fdf2e9; color:var(--nego-orange); padding:2px 10px; border-radius:0; margin-right:5px; font-weight:900;">${displayName}</span>님의 주문내역`;
+                modal.style.display = 'flex';
+                checkScrollLock();
+            }
+        }
+
+        async function openHistoryModal(isRefresh = false, isSilent = false) {
             const name = document.getElementById('input-name').value;
             const phone = document.getElementById('input-phone').value;
 
             if (!name || !phone) {
-                showSystemModal("주문자명과 연락처를 입력해주세요.", 'alert');
+                if (!isSilent) showSystemModal("주문자명과 연락처를 입력해주세요.", 'alert');
                 return;
             }
 
-            // [수정] 이전에는 무조건 초기화(fullHistoryData=[])했지만, 
-            // 이제는 동일 사용자라면 기존 데이터를 유지하여 '사라졌다 나타나는' 현상 방지
             const cacheKey = `history_cache_${name}_${phone}`;
             const cached = localStorage.getItem(cacheKey);
 
-            if (cached && fullHistoryData.length === 0) {
+            if (cached) {
                 fullHistoryData = JSON.parse(cached);
+                if (!isSilent) {
+                    setupHistoryUI(name);
+                    renderHistory();
+                }
             }
 
-            // 기본 필터/정렬 설정
-            currentSortBy = 'timestamp';
-            currentFilter = 'all';
-            currentStatusFilter = 'order';
-            currentSortDir = 'desc'; // [수정] 기본 내림차순
-            currentHistoryLimit = 10;
 
-            // 버튼 UI 초기화
-            document.getElementById('btn-sort-order').classList.add('active');
-            document.getElementById('btn-sort-pickup').classList.remove('active');
-
-            document.getElementById('filter-all').classList.add('active');
-            document.getElementById('filter-today').classList.remove('active');
-            document.getElementById('filter-week').classList.remove('active');
-            document.getElementById('filter-month').classList.remove('active');
-
-            // 하위 분류 버튼 초기화
-            document.getElementById('status-order').classList.add('active');
-            document.getElementById('status-cancel').classList.remove('active');
-            document.getElementById('status-stocked').classList.remove('active');
-            document.getElementById('status-pickup').classList.remove('active');
-
-            const modal = document.getElementById('history-modal');
             const list = document.getElementById('history-list');
-            const title = document.getElementById('history-modal-title');
 
-            // 타이틀 동적 변경 (상단 여백 확보, 이름표 오렌지색)
-            const displayName = name.trim() || "주문자";
-            title.style.fontSize = "20px";
-            title.innerHTML = `<span style="background:#fdf2e9; color:var(--nego-orange); padding:2px 10px; border-radius:0; margin-right:5px; font-weight:900;">${displayName}</span>님의 주문내역`;
-
-            modal.style.display = 'flex';
-            checkScrollLock();
-
-            // 1. [로컬 캐시] 이전에 불러온 내역이 있다면 즉시 표시 (사용자별 구분)
-            // (cacheKey와 cached는 상단에서 이미 선언됨)
-            // fullHistoryData = []; // [삭제] 기존 데이터를 유지하여 깜빡임 방지
-
-            if (isRefresh) {
-                // [추가] 새로고침 시에는 명시적인 로딩 표시
-                list.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:50px 0; color:#999;"><div class="loading-spinner" style="margin-bottom:15px;"></div>주문내역을 조회 중입니다...</div>';
-            } else if (cached) {
-                fullHistoryData = JSON.parse(cached);
-                // [복구] 빠른 로딩을 위해 캐시 즉시 렌더링
-                renderHistory();
-            } else {
-                list.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:50px 0; color:#999;"><div class="loading-spinner" style="margin-bottom:15px;"></div>주문내역을 조회 중입니다...</div>';
+            // 2. [로딩 표시] 캐시가 아예 없거나, 사용자가 '새로고침' 버튼을 눌렀을 때만 로딩바 노출
+            if (!isSilent && (!cached || isRefresh)) {
+                setupHistoryUI(name);
+                document.getElementById('history-list').innerHTML = `
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:50px 0; color:#999;">
+                        <div class="loading-spinner" style="margin-bottom:15px;"></div>
+                        ${isRefresh ? '최신 내역을 동기화 중입니다...' : '주문내역을 불러오는 중입니다...'}
+                    </div>`;
             }
 
             try {
-                // [핵심] 처리 중인 상태 보존 및 중복 방지를 위한 병합 키 생성 함수
                 const genKey = (o) => {
                     if (!o || !o.timestamp) return "invalid_" + Math.random();
-                    // 1. 주문시간 정규화 (초 단위 무시)
                     const d = parseKRDate(o.timestamp);
-                    d.setSeconds(0, 0);
-                    d.setMilliseconds(0);
-
-                    // 2. 상품명 정규화 (따옴표, [취소] 태그 제거)
+                    d.setSeconds(0, 0); d.setMilliseconds(0);
                     const cleanItem = String(o.item || "").replace(/\[취소\]\s*/g, "").replace(/['"]/g, '').trim();
-
-                    // 3. 픽업일 정규화 (날짜만 추출)
-                    const p = parseKRDate(o.pickupDate);
-                    p.setHours(0, 0, 0, 0);
-
-                    return d.getTime() + "|" + p.getTime() + "|" + cleanItem;
+                    return d.getTime() + "|" + cleanItem;
                 };
 
-                // 2. [1단계 로딩] 오늘(최근) 내역만 빠르게 가져와서 업데이트
-                const recentUrl = `${API_URL}?header=history&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&scope=recent`;
-                const resRecent = await fetch(recentUrl);
-                const recentData = await resRecent.json();
-
-                if (recentData && recentData.result === 'error') throw new Error(recentData.message);
-
-                if (Array.isArray(recentData)) {
-                    const prevMap = new Map();
-                    (fullHistoryData || []).forEach(item => prevMap.set(genKey(item), item));
-
-                    const mergedRecent = recentData.map(fresh => {
-                        const key = genKey(fresh);
-                        const prev = prevMap.get(key);
-                        // 앱에서 '취소 중'일 때만 보호하고, 그 외에는 서버 데이터를 우선함 (매뉴얼 해제 대응)
-                        if (prev && prev.isProcessing) {
-                            // 서버 데이터가 이미 취소된 상태면 '취소중' 상태를 해제하고 서버 데이터 수용
-                            const isFreshCancelled = (fresh.item && fresh.item.includes('[취소]')) ||
-                                fresh.received === "취소완료" ||
-                                (fresh.canceled === true || String(fresh.canceled).toUpperCase() === "TRUE");
-                            if (!isFreshCancelled) {
-                                return { ...fresh, isProcessing: prev.isProcessing, received: prev.received, item: prev.item };
-                            }
-                        }
-                        return fresh;
-                    });
-
-                    const recentKeys = new Set(mergedRecent.map(genKey));
-                    const others = (fullHistoryData || []).filter(o => !recentKeys.has(genKey(o)));
-                    const newData = [...mergedRecent, ...others];
-
-                    if (JSON.stringify(newData) !== JSON.stringify(fullHistoryData) || !cached || isRefresh) {
-                        fullHistoryData = newData;
-                        renderHistory();
+                // 2. [최근 내역 패치]
+                const recentUrl = `${API_URL}?header=history&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&scope=recent&t=${Date.now()}`;
+                const resRecent = await fetch(recentUrl).catch(() => null);
+                if (resRecent) {
+                    const recentData = await resRecent.json();
+                    if (Array.isArray(recentData)) {
+                        const map = new Map();
+                        recentData.forEach(item => map.set(genKey(item), item));
+                        fullHistoryData.forEach(item => {
+                            const key = genKey(item);
+                            if (!map.has(key)) map.set(key, item);
+                        });
+                        fullHistoryData = Array.from(map.values());
+                        localStorage.setItem(cacheKey, JSON.stringify(fullHistoryData));
+                        if (document.getElementById('history-modal').style.display === 'flex') renderHistory();
                     }
                 }
 
-                // 3. [2단계 로딩] 전체 내역 배경에서 천천히 가져오기
-                const allUrl = `${API_URL}?header=history&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&scope=all`;
-                fetch(allUrl).then(res => res.json()).then(allData => {
+                // 3. [전체 내역 동기화] 백그라운드
+                const allUrl = `${API_URL}?header=history&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&scope=all&t=${Date.now()}`;
+                fetch(allUrl).then(r => r.json()).then(allData => {
                     if (Array.isArray(allData)) {
-                        const prevMap = new Map();
-                        (fullHistoryData || []).forEach(item => prevMap.set(genKey(item), item));
-
-                        const mergedAll = allData.map(fresh => {
-                            const key = genKey(fresh);
-                            const prev = prevMap.get(key);
-                            if (prev && prev.isProcessing) {
-                                const isFreshCancelled = (fresh.item && fresh.item.includes('[취소]')) ||
-                                    fresh.received === "취소완료" ||
-                                    (fresh.canceled === true || String(fresh.canceled).toUpperCase() === "TRUE");
-                                if (!isFreshCancelled) {
-                                    return { ...fresh, isProcessing: prev.isProcessing, received: prev.received, item: prev.item };
-                                }
-                            }
-                            return fresh;
-                        });
-
-                        const isChanged = JSON.stringify(mergedAll) !== JSON.stringify(fullHistoryData);
-                        fullHistoryData = mergedAll;
-                        localStorage.setItem(cacheKey, JSON.stringify(fullHistoryData));
-
-                        if (isChanged || !cached) renderHistory();
+                        fullHistoryData = allData;
+                        localStorage.setItem(cacheKey, JSON.stringify(allData));
+                        if (document.getElementById('history-modal').style.display === 'flex') renderHistory();
                     }
-                }).catch(err => console.error("전체 내역 로드 실패:", err));
+                }).catch(() => { });
 
             } catch (e) {
-                console.error("역사 로드 실패:", e);
-                if (!fullHistoryData || fullHistoryData.length === 0) {
-                    list.innerHTML = `<div style="text-align:center; color:#ff4d4d; padding:20px; font-size:0.9rem;">🚫 조회 중 오류 발생<br><br><span style="color:#455464;font-size:0.8rem;">${e.message || "연결 상태를 확인해 주세요."}</span></div>`;
-                }
+                console.warn("History fetch partially failed", e);
             }
         }
 
@@ -1929,7 +1874,7 @@
             currentHistoryLimit = 10; // 초기화
             currentSortDir = 'desc'; // [추가] 필터 변경 시 내림차순 기본 적용
             // 버튼 활성화 처리
-            const buttons = ['all', 'today', 'week', 'month'];
+            const buttons = ['all', 'week', '2weeks', 'month'];
             buttons.forEach(b => {
                 const btn = document.getElementById('filter-' + b);
                 if (btn) btn.classList.toggle('active', b === type);
@@ -1988,25 +1933,12 @@
                     if (!isReceived || isCancelled) return false;
                 }
 
-                // [기간 필터 적용]
+                // [기간 필터 적용] 주문일시(timestamp)와 현재 시간의 차이(diffDays)를 기준으로 통일
                 const orderDate = parseKRDate(item.timestamp);
-                const isSameDay = (d1, d2) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
-
-                // 1. '오늘' 필터
-                if (currentFilter === 'today') {
-                    // [수정] '입고' 또는 '픽업' 탭일 때는 '픽업일' 기준 (지금 시간 이전인 건만), 그 외엔 '주문일' 기준
-                    // [수정] '입고' 탭일 때는 이미 입고된 건은 날짜 상관없이 보여주거나(미리 입고), '픽업' 탭은 지금 시간 이전인 건만
-                    if (currentStatusFilter === 'stocked') return true;
-                    if (currentStatusFilter === 'pickup') {
-                        const pDate = parseKRDate(item.pickupDate);
-                        return pDate <= now;
-                    }
-                    return isSameDay(now, orderDate);
-                }
-
-                // 2. 1주일/1개월 필터: 정렬 기준과 무관하게 '주문일' 기준
                 const diffDays = (now - orderDate) / (1000 * 60 * 60 * 24);
+
                 if (currentFilter === 'week') return diffDays >= 0 && diffDays <= 7;
+                if (currentFilter === '2weeks') return diffDays >= 0 && diffDays <= 14;
                 if (currentFilter === 'month') return diffDays >= 0 && diffDays <= 30;
 
                 // 3. '전체' 필터
