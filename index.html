@@ -479,15 +479,14 @@
         #history-modal .modal-content {
             width: 95%;
             max-width: 580px;
-            height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px);
-            /* 상단(10px) + 하단(10px) 여백 */
+            /* 위아래 사이즈를 줄여서 하단 버튼이 가려지지 않게 수정 */
+            height: 82vh;
+            height: 82dvh;
             padding: 0;
             display: flex;
             flex-direction: column;
-            margin-top: calc(10px + env(safe-area-inset-top));
-            /* 노치 가려짐 방지 및 대칭 여백 */
-            margin-bottom: calc(10px + env(safe-area-inset-bottom));
-            /* 하단 10px 여백 유지 */
+            margin: auto;
+            /* 상하좌우 중앙 정렬 */
         }
 
         .slider-wrapper {
