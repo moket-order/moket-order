@@ -1,528 +1,3152 @@
-/*
-통합 주문 관리 스크립트 (GAS) - v49.3 (스타일 통합 및 구문 최적화)
-- [스타일] 이미지처럼 입고/픽업/현판/취소 시 행 전체 색상 및 취소선 자동 적용
-- [기능] 상품명 줄바꿈 대응 및 실시간 고객 DB 업데이트 포함
-*/
+<!DOCTYPE html>
+<html lang="ko">
 
-const ROOT_NAME = "주문서";
-const SUB_ROOT_NAME = "주문내역";
-const IMAGE_ROOT_NAME = "상품이미지";
-const TEMPLATE_NAME = "[템플릿] 주문내역";
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- [추가] 브라우저 캐시 방지 설정 -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
 
-// [1] 메뉴 및 사이드바
-function onOpen() {
-SpreadsheetApp.getUi()
-.createMenu('모켓 메뉴')
-.addItem('주문 알림창 열기', 'showSidebar')
-.addItem('이미지 ID 전체 갱신', 'updateMissingImageIds')
-.addItem('고객 데이터베이스 전체 갱신', 'syncAllCustomersToDB')
-.addToUi();
-}
+    <title>MOKET 모켓 - 모두를 위한 공동구매 마켓</title>
 
-function showSidebar() {
-const html = HtmlService.createHtmlOutputFromFile('Sidebar').setTitle('주문 알림 대기중').setWidth(300);
-SpreadsheetApp.getUi().showSidebar(html);
-}
+    <!-- 카카오톡/SNS 공유 미리보기 설정 (Open Graph) -->
+    <meta property="og:site_name" content="MOKET 모켓">
+    <meta property="og:title" content="MOKET 모켓 - 모두를 위한 공동구매 마켓">
+    <meta property="og:description" content="모켓의 주문서 링크입니다.">
+    <meta property="og:image" content="https://moketorder.github.io/moketorder/og-image-v2.png">
+    <meta property="og:image:secure_url" content="https://moketorder.github.io/moketorder/og-image-v2.png">
+    <meta property="og:image:width" content="800">
+    <meta property="og:image:height" content="800">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://moketorder.github.io/moketorder">
 
-// [2] 유틸리티 함수
-function getLatestOrderTime() {
-return PropertiesService.getScriptProperties().getProperty("LATEST_ORDER_TIME") || "0";
-}
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%234CAF20'/><text x='50' y='72' font-family='Pretendard, sans-serif' font-size='70' font-weight='900' fill='white' text-anchor='middle'>M</text></svg>">
 
-function getCachedFolderId(parentId, folderName) {
-const props = PropertiesService.getScriptProperties();
-const key = "FLD_ID_" + (parentId || "ROOT") + "_" + folderName;
-let id = props.getProperty(key);
-if (id) {
-try { DriveApp.getFolderById(id); return id; } catch (e) { props.deleteProperty(key); }
-}
-const parent = parentId ? DriveApp.getFolderById(parentId) : DriveApp.getRootFolder();
-const folders = parent.getFoldersByName(folderName);
-if (folders.hasNext()) {
-const folder = folders.next();
-id = folder.getId();
-props.setProperty(key, id);
-return id;
-}
-const newFolder = parent.createFolder(folderName);
-id = newFolder.getId();
-props.setProperty(key, id);
-return id;
-}
-
-function makeRes(o) {
-return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
-}
-
-function normD(v) { return String(v || "").replace(/\D/g, ""); }
-
-function normP(p) {
-let s = String(p || "").replace(/\D/g, "");
-if ((s.length === 10 || s.length === 11) && !s.startsWith("0")) return "0" + s;
-return s;
-}
-
-function cleanNP(n) {
-return String(n || "").replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
-}
-
-function getKRDay(d) {
-const days = ["일", "월", "화", "수", "목", "금", "토"];
-return days[d.getDay()];
-}
-
-function formatDateTime(d) {
-return Utilities.formatDate(d, "GMT+9", "yy년 M월 d일") + " (" + getKRDay(d) + ")\n" + Utilities.formatDate(d, "GMT+9",
-"HH:mm:ss");
-}
-
-function formatKRDate(s) {
-const d = (s instanceof Date) ? s : new Date(s);
-return Utilities.formatDate(d, "GMT+9", "yy년 M월 d일") + " (" + getKRDay(d) + ")";
-}
-
-// [3] API 라우팅
-function doGet(e) {
-try {
-const action = e.parameter.action;
-if (action === "ping") return makeRes({ result: "pong" });
-if (action === "fetchProductImages") return fetchProductImages(e.parameter.name, e.parameter.folderId);
-if (action === "fetchOrderHistory" || e.parameter.header === "history") {
-return fetchHistory(e.parameter.name, e.parameter.phone, e.parameter.scope);
-}
-if (action === "getLatestOrderTime" || e.parameter.header === "getLatestOrderTime") {
-return makeRes({ result: "success", time: getLatestOrderTime() });
-}
-return fetchProducts();
-} catch (err) {
-return makeRes({ result: "error", message: err.toString() });
-}
-}
-
-function doPost(e) {
-const lock = LockService.getScriptLock();
-try {
-if (!lock.tryLock(10000)) return makeRes({ result: "error", message: "서버가 혼잡합니다." });
-const data = JSON.parse(e.postData.contents);
-if (data.header === "order") {
-const resp = processOrder(data);
-if (resp && JSON.parse(resp.getContent()).result === "success") {
-updateCustomerDatabase(data.phone, data.name);
-}
-return resp;
-}
-if (data.header === "delete") return handleDelete(data);
-return makeRes({ result: "success" });
-} catch (err) {
-return makeRes({ result: "error", message: err.toString() });
-} finally {
-lock.releaseLock();
-}
-}
-
-// [4] 자동화 트리거 (onEdit 스타일 적용)
-function onEdit(e) {
-if (!e) return;
-const range = e.range;
-const sh = range.getSheet();
-const sName = sh.getName();
-if (range.getRow() < 2) return; const lastCol=sh.getLastColumn(); if (lastCol===0) return; const headers=sh.getRange(1,
-  1, 1, lastCol).getValues()[0].map(h=> String(h).trim());
-
-  if (sName.includes("상품") && !sName.includes("주문내역")) {
-  const pNameCol = headers.findIndex(h => h.includes("상품명") || h.includes("품명")) + 1;
-  const folderIdCol = headers.findIndex(h => h.includes("이미지폴더ID")) + 1;
-  const imageIdCol = headers.findIndex(h => h.includes("이미지ID") || h.includes("이미지주소")) + 1;
-
-  if (pNameCol > 0 && range.getColumn() === pNameCol) {
-  const pName = cleanNP(e.value);
-  if (pName) {
-  try {
-  const imgRoot = DriveApp.getFolderById(getCachedFolderId(getCachedFolderId(null, ROOT_NAME), IMAGE_ROOT_NAME));
-  const folders = imgRoot.getFoldersByName(pName);
-  let folder = folders.hasNext() ? folders.next() : imgRoot.createFolder(pName);
-  if (folderIdCol > 0) sh.getRange(range.getRow(), folderIdCol).setValue(folder.getId());
-  if (imageIdCol > 0) {
-  const files = folder.getFiles();
-  if (files.hasNext()) sh.getRange(range.getRow(), imageIdCol).setValue(files.next().getId());
-  }
-  } catch (err) { console.error("onEdit error", err); }
-  }
-  }
-  }
-
-  // 주문내역 시트 실시간 스타일 및 DB 업데이트
-  if (sName.includes("주문내역")) {
-  const cancelCol = headers.findIndex(h => h.includes("주문취소")) + 1;
-  const pickupCol = headers.findIndex(h => h.includes("픽업여부")) + 1;
-  const onsiteCol = headers.findIndex(h => h.includes("현장판매")) + 1;
-
-  // 체크박스 변경 시 고객 DB 실시간 업데이트
-  if (range.getColumn() === cancelCol || range.getColumn() === pickupCol || range.getColumn() === onsiteCol) {
-  const rowData = sh.getRange(range.getRow(), 1, 1, headers.length).getValues()[0];
-  const name = String(rowData[2]).trim();
-  const phone = String(rowData[3]).trim();
-  if (name && phone) updateCustomerDatabase(phone, name);
-  }
-  }
-  }
-
-  // [5] 주문 처리 (이미지 스타일 및 조건부 서식 포함)
-  function processOrder(data) {
-  const { name, phone, items, timestamp } = data;
-  const ssMain = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ssMain.getSheets().find(s => s.getName().includes("상품")) || ssMain.getSheets()[0];
-  const pData = sheet.getDataRange().getValues();
-  const h = pData[0].map(x => String(x).trim());
-  const sIdx = h.findIndex(x => x.includes("재고") || x.includes("수량"));
-
-  for (const it of items) {
-  const rid = findRowIndex(pData, it.name, it.date, h);
-  if (rid && sIdx !== -1 && (Number(pData[rid - 1][sIdx]) || 0) < Number(it.qty)) { return makeRes({ result: "error" ,
-    message: "재고부족: " + it.name }); } } items.forEach(it=> {
-    const rid = findRowIndex(pData, it.name, it.date, h);
-    if (rid && sIdx !== -1) {
-    const next = (Number(pData[rid - 1][sIdx]) || 0) - Number(it.qty);
-    sheet.getRange(rid, sIdx + 1).setValue(next);
-    it.remainingStock = next;
-    }
-    });
-
-    PropertiesService.getScriptProperties().setProperty("LATEST_ORDER_TIME", String(new Date().getTime()));
-    const subRootId = getCachedFolderId(getCachedFolderId(null, ROOT_NAME), SUB_ROOT_NAME);
-    const groups = items.reduce((acc, it) => {
-    const d = it.date || Utilities.formatDate(new Date(), "GMT+9", "yyyy-MM-dd");
-    if (!acc[d]) acc[d] = [];
-    acc[d].push(it);
-    return acc;
-    }, {});
-
-    for (const date in groups) {
-    const [y, m, d] = date.split("-");
-    const yf = DriveApp.getFolderById(getCachedFolderId(subRootId, y + "년"));
-    const fName = `${y}년 ${m}월 주문내역`;
-    let oss = getSS(yf, fName);
-    if (!oss) {
-    const tmpl = DriveApp.getFilesByName(TEMPLATE_NAME);
-    oss = tmpl.hasNext() ? SpreadsheetApp.open(tmpl.next().makeCopy(fName, yf)) : SpreadsheetApp.create(fName);
-    if (!tmpl.hasNext()) DriveApp.getFileById(oss.getId()).moveTo(yf);
-    }
-    const tName = `${parseInt(m)}월 ${parseInt(d)}일`;
-    let tsh = oss.getSheetByName(tName) || oss.insertSheet(tName);
-
-    if (tsh.getLastRow() === 0) {
-    const head = ["주문시간", "픽업일", "주문자명", "연락처", "카톡 이름", "카톡 연락처", "주문내역", "수량", "가격", "합계", "알림메시지", "입고여부", "픽업여부",
-    "현장판매", "주문취소"];
-    tsh.appendRow(head);
-    tsh.getRange(1, 1, 1,
-    head.length).setBackground("#4CAF50").setFontColor("white").setFontWeight("bold").setHorizontalAlignment("center").setVerticalAlignment("middle");
-    tsh.setFrozenRows(1);
-
-    // 열 너비 설정 (이미지 스타일 복구)
-    tsh.setColumnWidth(1, 150); // 주문시간
-    tsh.setColumnWidth(7, 180); // 주문내역
-    tsh.setColumnWidth(11, 250); // 알림메시지
-    tsh.setColumnWidths(12, 4, 70); // 체크박스들
-
-    // 조건부 서식 설정 (이미지 스타일 복구)
-    const lastRowRange = 2000;
-    const rules = [];
-    // 주문취소 (O열)
-    rules.push(SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied("=$O2=TRUE").setStrikethrough(true).setFontColor("#999999").setBackground("#efefef").setRanges([tsh.getRange("A2:O"
-    + lastRowRange)]).build());
-    // 입고여부 (L열)
-    rules.push(SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied("=$L2=TRUE").setBackground("#ffe599").setRanges([tsh.getRange("L2:L"
-    + lastRowRange)]).build());
-    // 픽업여부 (M열)
-    rules.push(SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied("=$M2=TRUE").setBackground("#b7e1cd").setRanges([tsh.getRange("M2:M"
-    + lastRowRange)]).build());
-    // 현장판매 (N열)
-    rules.push(SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied("=$N2=TRUE").setBackground("#f9cb9c").setRanges([tsh.getRange("N2:N"
-    + lastRowRange)]).build());
-    tsh.setConditionalFormatRules(rules);
-    }
-
-    groups[date].forEach(it => {
-    const lastRow = tsh.getLastRow() + 1;
-    const od = new Date(timestamp);
-    const timeStr = Utilities.formatDate(od, "GMT+9", "yy년 MM월 dd일") + " (" + getKRDay(od) + ") " +
-    Utilities.formatDate(od, "GMT+9", "HH시 mm분");
-    const orderMsg = timeStr + "\n" + name + "님,\n" + it.name + " " + it.qty + "개 주문 완료!\n남은수량은 " + it.remainingStock +
-    "개 입니다.";
-    const rData = [formatDateTime(od), formatKRDate(date), name, "'" + phone, data.kakaoName || "비인증", data.kakaoPhone ?
-    ("'" + data.kakaoPhone) : "비인증", it.name, it.qty, it.price, it.price * it.qty, orderMsg];
-    tsh.appendRow(rData);
-
-    const rowRange = tsh.getRange(lastRow, 1, 1, 15);
-    rowRange.setVerticalAlignment("middle");
-
-    const orangeStyle = SpreadsheetApp.newTextStyle().setForegroundColor("#f68b1e").setBold(true).build();
-    let rb = SpreadsheetApp.newRichTextValue().setText(orderMsg);
-    const nameStart = orderMsg.indexOf(name);
-    if (nameStart !== -1) rb.setTextStyle(nameStart, nameStart + name.length, orangeStyle);
-    const qtyStr = String(it.qty);
-    const qtyIdx = orderMsg.indexOf(" " + qtyStr + "개", nameStart + name.length) + 1;
-    if (qtyIdx > 0) rb.setTextStyle(qtyIdx, qtyIdx + qtyStr.length, orangeStyle);
-
-    tsh.getRange(lastRow, 1, 1, 7).setHorizontalAlignment("left");
-    tsh.getRange(lastRow, 8).setHorizontalAlignment("center");
-    tsh.getRange(lastRow, 9, 1, 2).setHorizontalAlignment("right").setNumberFormat("#,##0");
-    tsh.getRange(lastRow, 11).setRichTextValue(rb.build()).setWrap(true).setHorizontalAlignment("left");
-    tsh.getRange(lastRow, 12, 1, 4).insertCheckboxes().setHorizontalAlignment("center").setValue(false);
-    });
-    }
-    return makeRes({ result: "success" });
-    }
-
-    // 나머지 함수들 (findRowIndex, handleDelete, fetchProducts, syncAllCustomersToDB 등 v49.3 기준 유지)
-    function findRowIndex(pData, name, date, headers) {
-    const nIdx = headers.findIndex(x => x.includes("상품명") || x.includes("품명"));
-    const dIdx = headers.findIndex(x => x.includes("날짜") || x.includes("픽업"));
-    const targetName = cleanNP(name);
-    for (let i = 1; i < pData.length; i++) { let rD=pData[i][dIdx]; rD=(rD instanceof Date) ?
-      Utilities.formatDate(rD, "GMT+9" , "yyyy-MM-dd" ) : String(rD).trim(); if (cleanNP(pData[i][nIdx])===targetName &&
-      rD===date) return i + 1; } return null; } function handleDelete(data) { const { name, timestamp, item }=data;
-      const tD=normD(timestamp); const targetItem=String(item || "" ).replace(/\[취소\]/g, "" ).replace(/['"]/g, ''
-      ).trim(); const rootId=getCachedFolderId(null, ROOT_NAME); const subRootId=getCachedFolderId(rootId,
-      SUB_ROOT_NAME); const subRoot=DriveApp.getFolderById(subRootId); const years=subRoot.getFolders(); while
-      (years.hasNext()) { const yf=years.next(); const fs=yf.getFiles(); while (fs.hasNext()) { const f=fs.next(); if
-      (!f.getName().includes("주문내역")) continue; try { const ss=SpreadsheetApp.open(f); const sheets=ss.getSheets(); for
-      (let sh of sheets) { const rows=sh.getDataRange().getValues(); for (let i=1; i < rows.length; i++) { const
-      rowDigitTime=normD(rows[i][0]); const isTimeMatch=(rowDigitTime===tD) || (rowDigitTime.length> tD.length ?
-      rowDigitTime.endsWith(tD) : tD.endsWith(rowDigitTime));
-      const sheetItem = String(rows[i][6] || "").replace(/\[취소\]/g, "").replace(/['"]/g, "").trim();
-      if (isTimeMatch && String(rows[i][2]).trim() === name && sheetItem === targetItem) {
-      if (rows[i][14] === true || String(rows[i][6]).includes("[취소]")) return makeRes({ result: "success" });
-      const qty = Number(rows[i][7]) || 0;
-      const pDateStr = String(rows[i][1]).trim();
-      sh.getRange(i + 1, 7).setValue("[취소] " + rows[i][6]);
-      sh.getRange(i + 1, 15).setValue(true);
-      try {
-      const ssMain = SpreadsheetApp.getActiveSpreadsheet();
-      const pSheet = ssMain.getSheets().find(s => s.getName().includes("상품")) || ssMain.getSheets()[0];
-      const pData = pSheet.getDataRange().getValues();
-      const pHeaders = pData[0].map(h => String(h).trim());
-      let mDate = "";
-      const dm = pDateStr.match(/(\d{2})년\s*(\d{1,2})월\s*(\d{1,2})일/);
-      if (dm) mDate = "20" + dm[1] + "-" + dm[2].padStart(2, '0') + "-" + dm[3].padStart(2, '0');
-      const pRow = findRowIndex(pData, rows[i][6], mDate, pHeaders);
-      if (pRow) {
-      const sCol = pHeaders.findIndex(h => h.includes("재고") || h.includes("수량")) + 1;
-      if (sCol > 0) pSheet.getRange(pRow, sCol).setValue((Number(pSheet.getRange(pRow, sCol).getValue()) || 0) + qty);
-      }
-      } catch (e) {}
-      updateCustomerDatabase(rows[i][3], name);
-      SpreadsheetApp.flush();
-      return makeRes({ result: "success" });
-      }
-      }
-      }
-      } catch (e) {}
-      }
-      }
-      return makeRes({ result: "error", message: "주문 미찾음" });
-      }
-
-      function fetchProducts() { const ss=SpreadsheetApp.getActiveSpreadsheet(); const
-      sheet=ss.getSheets().find(s=> s.getName().includes("상품")) || ss.getSheets()[0];
-      const data = sheet.getDataRange().getValues();
-      if (data.length < 2) return makeRes([]); const headers=data[0].map(h=> String(h).trim().replace(/\s/g, ""));
-        const products = data.slice(1).map(row => {
-        let raw = {};
-        headers.forEach((h, i) => { raw[h] = row[i]; });
-        const pName = cleanNP(raw["상품명"] || raw["품명"] || "");
-        if (!pName) return null;
-        const p = {
-        name: pName, price: Number(raw["가격"] || raw["단가"] || 0), stock: raw["재고"] || raw["수량"] || 0,
-        desc: raw["설명"] || raw["상세"] || "", date: "", matchKey: "", images: [], folderId: String(raw["이미지폴더ID"] ||
-        "").trim()
-        };
-        let dVal = raw["날짜"] || raw["픽업"] || raw["픽업일"] || raw["판매일"] || raw["일자"] || "";
-        if (dVal instanceof Date) { p.date = Utilities.formatDate(dVal, "GMT+9", "yyyy-MM-dd"); }
-        else {
-        const cleanedDate = String(dVal).replace(/\./g, "-").replace(/\s+/g, "").trim();
-        const match = cleanedDate.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-        p.date = match ? `${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}` : String(dVal).trim();
+    <!-- [추가] 자동 업데이트 체크: 새 버전 배포 시 모바일에서 즉시 반영되도록 강제 새로고침 -->
+    <script>
+        (function () {
+            var now = Date.now();
+            var version = new URLSearchParams(window.location.search).get('v');
+            // 10분(600초) 이상 지난 'v' 파라미터가 있거나 없으면 강제 리로드 (너무 잦은 리로드 방지)
+            if (!version || (now - parseInt(version)) > 600000) {
+                var separator = window.location.href.indexOf('?') !== -1 ? '&' : '?';
+                var newUrl = window.location.href.split('#')[0].split('?')[0] + "?v=" + now;
+                window.location.replace(newUrl);
+            }
+        })();
+    </script>
+    <link rel="preconnect" href="https://script.google.com">
+    <link rel="preconnect" href="https://drive.google.com">
+    <link rel="stylesheet" as="style" crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <script src="https://t1.kakaocdn.net/kakao_js_sdk/1.43.0/kakao.min.js"></script>
+    <style>
+        /* [1] 원본 주문서2.html 스타일 변수 및 레이아웃 완벽 보존 */
+        :root {
+            --moket-green: #4CAF20;
+            --white: #FFFFFF;
+            --font-main: 'Pretendard', sans-serif;
+            --common-radius: 0;
+            --target-height: 42px;
+            /* 상세보기 버튼 높이 (기존 원복) */
+            --qty-height: 35px;
+            /* 수량 조절바 전용 높이 (새로 생성) */
+            --btn-radius: 0;
+            --nego-orange: #FF6D00;
+            --item-black: #1a1a1a;
+            --btn-font-size: 15px;
+            --btn-font-weight: 800;
         }
-        p.matchKey = p.date;
-        const idVal = String(raw["이미지ID"] || raw["이미지주소"] || "").trim();
-        if (idVal) { p.images = [idVal.split(",")[0].trim()]; }
-        else if (p.folderId) {
+
+        body {
+            font-family: var(--font-main);
+            background: #f4f6f8;
+            margin: 0;
+            padding-bottom: calc(120px + env(safe-area-inset-bottom));
+            /* 푸터 높이 고려하여 여백 고정 (기존 150px에서 20% 축소) */
+            letter-spacing: -0.02em;
+            -webkit-font-smoothing: antialiased;
+            word-break: keep-all;
+        }
+
+        /* 헤더: 햄버거 메뉴를 위해 정렬만 추가 */
+        .header {
+            background: var(--moket-green);
+            padding: calc(25px + env(safe-area-inset-top)) 20px 20px 20px;
+            display: grid;
+            grid-template-columns: 70px 1fr 70px;
+            align-items: center;
+            justify-items: center;
+        }
+
+        .header-center {
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .slogan {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 13px;
+            font-weight: 800;
+            /* ExtraBold */
+            letter-spacing: 1px;
+            margin-bottom: 1px;
+        }
+
+        .logo-en {
+            color: var(--white);
+            font-size: 45px;
+            font-weight: 900;
+            /* Black */
+            letter-spacing: 1px;
+            line-height: 0.8;
+            margin-bottom: 1px;
+        }
+
+        .logo-ko {
+            color: var(--white);
+            font-size: 18px;
+            font-weight: 800;
+            /* ExtraBold */
+            letter-spacing: 1px;
+            text-indent: 1px;
+            line-height: 1;
+        }
+
+        /* 햄버거 메뉴 버튼 */
+        .menu-btn {
+            justify-self: start;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 13px;
+            /* 영어 로고 중앙에 맞추기 위한 간격 조정 */
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+        .menu-icons {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .menu-icons span {
+            display: block;
+            width: 24px;
+            height: 3px;
+            background-color: var(--white);
+            border-radius: 0;
+        }
+
+        .btn-label {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--white);
+            line-height: 1;
+            letter-spacing: -0.02em;
+        }
+
+        /* 사이드 메뉴 드로어 */
+        .side-menu {
+            position: fixed;
+            top: 0;
+            left: -200px;
+            width: 200px;
+            height: 100%;
+            background: var(--white);
+            z-index: 5000;
+            transition: 0.3s ease-in-out;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .side-menu.open {
+            left: 0;
+            box-shadow: 5px 0 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .side-menu-header {
+            background: var(--moket-green);
+            /* 타이틀 확대에 맞춰 상하 패딩 조정 */
+            padding: calc(24.5px + env(safe-area-inset-top)) 20px 25px 20px;
+            color: var(--white);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .side-menu-header h2 {
+            margin: 0;
+            font-size: 18px;
+
+        }
+
+        /* [추가] 스켈레톤 로딩 스타일 */
+        .skeleton {
+            background: linear-gradient(90deg, #eee 25%, #f5f5f5 50%, #eee 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
+            border-radius: 0;
+        }
+
+        @keyframes skeleton-loading {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        .skeleton-card {
+            padding: 15px;
+            background: #fff;
+            border-radius: 0;
+            margin-bottom: 12px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .skeleton-thumb {
+            width: 80px;
+            height: 80px;
+        }
+
+        .skeleton-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .skeleton-title {
+            width: 60%;
+            height: 20px;
+        }
+
+        .skeleton-price {
+            width: 40%;
+            height: 18px;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.5;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.5;
+            }
+        }
+
+        .side-menu-header p {
+            margin: 10px 0 0 0;
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+
+        .name-badge {
+            background: #fdf2e9;
+            color: var(--nego-orange);
+            padding: 4px 12px;
+            border-radius: 0;
+            margin-right: 6px;
+            font-weight: 900;
+            display: inline-block;
+        }
+
+        #menu-greeting {
+            margin: 0;
+            padding: 20px 25px;
+            /* 상하좌우 여백 균등 조정 */
+            font-size: 17px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* 가로 중앙 정렬 추가 */
+            color: var(--item-black);
+            border-bottom: 1px solid #f5f5f5;
+        }
+
+        .side-menu-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 4999;
+            backdrop-filter: blur(2px);
+        }
+
+        .menu-list {
+            list-style: none;
+            padding: 10px 25px;
+            margin: 0;
+        }
+
+        .menu-list li {
+            padding: 18px 0;
+            font-size: 16px;
+            font-weight: 700;
+            border-bottom: 1px solid #f5f5f5;
+            color: var(--item-black);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* 공통 버튼 시스템 (닫기 버튼 통일) */
+        .btn-common {
+            width: 100%;
+            height: 48px;
+            /* 전체 버튼 높이 통일 */
+            border-radius: 0;
+            font-weight: 900;
+            font-size: 18px;
+            /* 전체 버튼 폰트 통일 */
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            margin-top: 10px;
+        }
+
+        .btn-close {
+            background: #eff2f5;
+            color: #455464;
+        }
+
+        .btn-primary {
+            background: var(--moket-green);
+            color: #fff;
+        }
+
+        .btn-naver {
+            background: #03C75A;
+            color: #fff;
+        }
+
+        .btn-kakao {
+            background: #FEE500;
+            color: #191919;
+            margin-bottom: 12px;
+            width: 100%;
+        }
+
+        #profile-modal.login-forced .modal-content {
+            background: #4DA72D !important;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            text-align: center;
+
+            /* Full Screen Overrides */
+            width: 100% !important;
+            height: 100% !important;
+            max-width: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            position: fixed;
+            /* 화면 전체 덮기 */
+            top: 0;
+            left: 0;
+            margin: 0;
+            z-index: 9999;
+        }
+
+        #profile-modal.login-forced .input-group,
+        #profile-modal.login-forced .btn-primary,
+        #profile-modal.login-forced .btn-close,
+        #profile-modal.login-forced .modal-content>div:first-child {
+            /* 헤더(주문자정보 변경) 포함하여 기존 요소 숨김 */
+            display: none !important;
+        }
+
+        #profile-modal .login-logo {
+            display: none;
+        }
+
+        #profile-modal.login-forced .login-logo {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            margin-bottom: 30px;
+            letter-spacing: 1px;
+        }
+
+        #profile-modal.login-forced .login-msg {
+            display: none;
+            /* 기존 텍스트 메시지 숨김 (로고로 대체) */
+        }
+
+        /* 카카오 버튼 스타일 조정 (로그인 모드일 때만) */
+        #profile-modal.login-forced #btn-kakao-login {
+            background: #FEE500;
+            color: #191919;
+            width: 100%;
+            max-width: 290px;
+            /* MOKET 텍스트 너비(약 235px)에 맞춤 */
+            /* 버튼 너무 넓지 않게 */
+            margin-top: -10px;
+            /* Reduced from 30px */
+            /* 여백 정도만 줌 */
+            border-radius: 6px;
+            /* 약간 둥글게 */
+            justify-content: center;
+            /* 내용 중앙 정렬 */
+            padding: 0;
+        }
+
+        #profile-modal .login-notice {
+            display: none;
+        }
+
+        #profile-modal.login-forced .login-notice {
+            display: block;
+            margin-top: -5px;
+            /* Moved up slightly */
+            font-size: 15px;
+            /* Increased font size */
+            color: #fff;
+            word-break: keep-all;
+            line-height: 1.4;
+            font-weight: 500;
+        }
+
+        /* 모달 시스템 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            /* 더 진하게 변경 */
+            z-index: 6000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background: #ffffff !important;
+            border-radius: 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            position: relative;
+            width: 95%;
+            max-width: 500px;
+            overflow: hidden;
+            padding: 25px;
+            box-sizing: border-box;
+        }
+
+        /* 상세보기 & 주문내역 모달 (전체화면형) */
+        #detail-overlay .modal-content {
+            width: 95%;
+            max-width: 580px;
+            height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px);
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            margin-top: calc(10px + env(safe-area-inset-top));
+            margin-bottom: calc(10px + env(safe-area-inset-bottom));
+        }
+
+        #history-modal .modal-content {
+            width: 95%;
+            max-width: 580px;
+            height: calc(80vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            margin-top: calc(10vh + env(safe-area-inset-top));
+            margin-bottom: calc(10vh + env(safe-area-inset-bottom));
+        }
+
+        .slider-wrapper {
+            width: 100%;
+            aspect-ratio: 1 / 0.7;
+            /* 높이를 30% 줄임 (기존 1:1) */
+            position: relative;
+            background: #f9f9f9;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .slider-container {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            width: 100%;
+            height: 100%;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .slider-container img {
+            min-width: 100%;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            /* 가로세로 비율 유지하며 영역 채우기 */
+            background: #fff;
+            scroll-snap-align: start;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--moket-green);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .touch-guide {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.5);
+            color: #fff;
+            padding: 5px 12px;
+            border-radius: 0;
+            font-size: 13px;
+            pointer-events: none;
+        }
+
+        .detail-body {
+            padding: 20px 10px 20px 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        /* 상품 리스트 & 카드 원본 유지 */
+        .sticky-header-group {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--white);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .date-section-title {
+            padding: 8px 20px 4px 20px;
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: var(--item-black);
+            text-align: center;
+        }
+
+        .date-filter-container {
+            padding: 4px 10px 8px 10px;
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .date-filter-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .date-btn {
+            flex-shrink: 0;
+            padding: 0 10px;
+            /* 기존 16px에서 10px로 축소 */
+            height: 34px;
+            border-radius: var(--btn-radius);
+            background: #fafafa;
+            color: #455464;
+            font-size: 15px;
+            font-weight: 800;
+            border: 1.5px solid #eee;
+            cursor: pointer;
+        }
+
+        .date-btn.active {
+            background: var(--moket-green);
+            color: var(--white);
+            border-color: var(--moket-green);
+        }
+
+        .container {
+            padding: 10px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .product-card {
+            background: var(--white);
+            border-radius: var(--common-radius);
+            padding: 10px;
+            /* Reverted to 10px as requested */
+            margin-bottom: 10px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0px;
+            box-sizing: border-box;
+            transition: transform 0.2s ease;
+        }
+
+        .product-card:active {
+            transform: scale(0.98);
+        }
+
+        .card-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .card-top {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        .thumb {
+            width: 125px;
+            height: 125px;
+            flex-shrink: 0;
+            border-radius: 0;
+            background-color: #f9f9f9;
+            overflow: hidden;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ccc;
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        .thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: opacity 0.3s ease;
+        }
+
+        .slider-no-img {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f9f9f9;
+            color: #ccc;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .btn-detail {
+            flex: 1;
+            /* Independent width control */
+            height: 40px;
+            /* Independent height control */
+            border: 1.5px solid #eee;
+            background: #fafafa;
+            border-radius: var(--btn-radius);
+            color: #555;
+            font-size: var(--btn-font-size);
+            font-weight: var(--btn-font-weight);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .right-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .item-info-top {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 0;
+            align-items: flex-start;
+            text-align: left;
+        }
+
+        .item-controls-bottom-v {
+            display: flex;
+            align-items: flex-end;
+            /* Revert to flex-end (fixed button position) */
+            gap: 5px;
+            width: 100%;
+            margin-top: -10px;
+            /* Pull up slightly to reduce gap to thumbnail/name */
+        }
+
+
+        .action-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .qty-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            flex: 1.08;
+            /* Independent width control (change to adjust size relative to button) */
+        }
+
+        .stock-status {
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+        }
+
+        .item-name {
+            font-weight: 800;
+            font-size: 17px;
+            margin-top: 10px;
+            /* Slightly larger in vertical layout */
+            color: var(--item-black);
+            line-height: 1.4;
+            word-break: break-all;
+            overflow-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        .item-price-val {
+            color: var(--nego-orange);
+            font-weight: 900;
+            font-size: 17px;
+        }
+
+        .qty-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #fafafa;
+            padding: 0 8px;
+            border-radius: 0;
+            height: 40px;
+            /* 전용 변수 사용 */
+            border: 1.5px solid #eee;
+            transition: all 0.2s ease;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .qty-controls.selected {
+            background: #eef9f2;
+            /* 수량이 1 이상일 때 배경색 (연한 녹색톤) */
+            border-color: var(--moket-green);
+        }
+
+        .qty-controls:active {
+            background: #f0f0f0;
+        }
+
+        .qty-btn {
+            width: 30px;
+            height: 30px;
+            border: none;
+            background: white;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            font-weight: 800;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            color: var(--item-black);
+        }
+
+        .qty-btn:active {
+            background: var(--moket-green) !important;
+            color: white !important;
+            transform: scale(0.9);
+            box-shadow: none;
+        }
+
+        @media (hover: hover) {
+            .qty-btn:hover {
+                background: #f0f0f0;
+            }
+        }
+
+        .qty-num {
+            width: 32px;
+            text-align: center;
+            border: none;
+            background: none;
+            font-weight: 800;
+            font-size: 18px;
+            color: var(--moket-green);
+        }
+
+        /* 푸터 */
+        .footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: var(--white);
+            padding: 8px 20px calc(10px + env(safe-area-inset-bottom)) 20px;
+            box-sizing: border-box;
+            box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.12);
+            z-index: 100;
+            max-width: 600px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100%);
+            /* 아래로 숨김 */
+            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.4s;
+            /* 부드러운 슬라이딩 및 보임 유지 */
+            visibility: hidden;
+            /* 클릭 방지 */
+        }
+
+        .footer.visible {
+            transform: translateX(-50%) translateY(0);
+            visibility: visible;
+        }
+
+        .main-submit-btn {
+            width: 100%;
+            height: 48px;
+            /* 디자인 통일 (기존 44px) */
+            line-height: 48px;
+            padding: 0;
+            background: var(--moket-green);
+            color: var(--white);
+            border: none;
+            border-radius: 0;
+            font-size: 18px;
+            /* 디자인 통일 (기존 15px) */
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        /* 전체화면 확대 */
+        #fullscreen-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 7000;
+            flex-direction: column;
+        }
+
+        .fullscreen-slider {
+            flex: 1;
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .fullscreen-slider::-webkit-scrollbar {
+            display: none;
+        }
+
+        .fullscreen-slide {
+            flex: 0 0 100%;
+            width: 100%;
+            height: 100%;
+            scroll-snap-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fullscreen-slide img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .fullscreen-close {
+            position: absolute;
+            top: calc(20px + env(safe-area-inset-top));
+            right: calc(20px + env(safe-area-inset-right));
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            border-radius: 0;
+            font-size: 24px;
+            z-index: 7101;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+        }
+
+        /* 정보변경 모달용 입력창 */
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .modal-input {
+            width: 100%;
+            height: 50px;
+            border: 1.5px solid #eee;
+            border-radius: 0;
+            padding: 0 15px;
+            box-sizing: border-box;
+            font-size: 15px;
+            margin-top: 8px;
+            outline: none;
+        }
+
+        .modal-input::placeholder {
+            font-size: 15px;
+            /* 원하는 크기로 조절 */
+        }
+
+        .input-hint {
+            font-size: 15px;
+            color: #455464;
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+
+        /* [수정] 주문자정보 변경 메뉴로 진입 시 카카오 로그인 버튼 숨김 */
+        #profile-modal:not(.login-forced) #btn-kakao-login,
+        #profile-modal:not(.login-forced) .login-notice {
+            display: none !important;
+        }
+
+        /* 장바구니 버튼 */
+        .cart-btn {
+            justify-self: end;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            /* 영어 로고 중앙에 맞추기 위한 간격 조정 */
+            cursor: pointer;
+            color: var(--white);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="menu-btn" onclick="toggleMenu()">
+            <div class="menu-icons"><span></span><span></span><span></span></div>
+            <span class="btn-label">메뉴</span>
+        </div>
+        <div class="header-center" onclick="refreshAllData()" style="cursor: pointer;">
+            <div class="slogan">모두를 위한 공동구매 마켓</div>
+            <div class="logo-en">MOKET</div>
+            <div class="logo-ko">모켓</div>
+        </div>
+        <div class="cart-btn" onclick="openHistoryModal(true)">
+            <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path>
+                <path d="M3 6h18"></path>
+                <path d="M16 10a4 4 0 0 1-8 0"></path>
+            </svg>
+            <span class="btn-label">주문내역</span>
+        </div>
+    </div>
+    <div id="side-menu-overlay" class="side-menu-overlay" onclick="toggleMenu()"></div>
+    <div id="side-menu" class="side-menu">
+        <div class="side-menu-header" style="text-align: center;">
+            <div onclick="loadData(true); toggleMenu();" style="cursor: pointer;">
+                <div class="slogan" style="font-size: 11.7px; color: rgba(255,255,255,0.85);">모두를 위한 공동구매 마켓</div>
+                <div class="logo-en" style="font-size: 40.5px;">MOKET</div>
+                <div class="logo-ko" style="font-size: 16.2x; letter-spacing: 1px; text-indent: 1px;">모켓</div>
+            </div>
+        </div>
+        <p id="menu-greeting"><span class="name-badge">주문자</span>님</p>
+        <ul class="menu-list">
+            <li onclick="openSideModal('profile-modal')">주문자정보 변경</li>
+            <li onclick="openSideModal('location-modal')">매장위치</li>
+            <li onclick="openSideModal('hours-modal')">영업시간</li>
+            <li onclick="window.open('https://open.kakao.com/o/sDZthgfi')">카카오톡 문의하기</li>
+
+        </ul>
+    </div>
+    <div id="profile-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div
+                style="background:var(--moket-green); padding: 25px 20px 25px 20px; border-radius: 0; margin: -25px -25px 10px -25px; text-align: center;">
+                <h3 id="profile-modal-title"
+                    style="margin: 0; font-weight: 800; color: var(--white); font-size: 20px; letter-spacing: 1px;">
+                    주문자정보 변경</h3>
+            </div>
+            <div class="login-logo">
+                <div style="font-size:18.2px; margin-bottom: -5px; font-weight:800;">모두를 위한 공동구매 마켓</div>
+                <div style="font-size:63px; font-weight:900; line-height:1; margin-bottom:-5px;">MOKET</div>
+                <div style="font-size:25.2px; font-weight:800;">모켓</div>
+            </div>
+
+            <!-- [복구] 기존 입력 필드 (로그인 모드일 때는 CSS로 숨겨짐) -->
+            <div class="input-group"><strong>주문자명</strong><input id="input-name" type="text" class="modal-input"
+                    placeholder="닉네임 + 핸드폰번호 뒤 네자리">
+                <div class="input-hint">오픈채팅방 닉네임과 같게 설정 해 주세요.</div>
+            </div>
+            <div class="input-group"><strong>연락처</strong><input id="input-phone" type="tel" class="modal-input"
+                    placeholder="010-0000-0000">
+                <div class="input-hint">정확한 주문 확인을 위해 연락처를 입력 해 주세요.</div>
+            </div>
+
+            <button id="btn-kakao-login" class="btn-common btn-kakao" onclick="loginWithKakao()">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" style="margin-right:8px;">
+                    <path
+                        d="M10 3C5.582 3 2 5.835 2 9.333c0 2.27 1.517 4.256 3.82 5.41l-.97 3.543c-.06.22.185.397.378.27l4.162-2.735c.203.01.41.015.61.015 4.418 0 8-2.835 8-6.333S14.418 3 10 3z" />
+                </svg>
+                카카오로 시작하기
+            </button>
+            <div class="login-notice">
+                원활한 서비스를 위해 모두 동의 부탁드립니다.
+            </div>
+            <button class="btn-common btn-primary" onclick="saveProfile()">저장하기</button>
+            <button class="btn-common btn-close" onclick="closeModal('profile-modal')">닫기</button>
+            <button id="btn-kakao-logout" onclick="logoutKakao()"
+                style="display:none; margin-top:25px; background:none; border:none; color:#999; font-size:13px; text-decoration:none; width:100%; cursor:pointer;">카카오
+                로그아웃</button>
+        </div>
+    </div>
+    <div id="save-confirm-modal" class="modal-overlay">
+        <div class="modal-content" style="text-align: center; width: 80%; max-width: 300px; padding: 30px 20px;">
+            <h3 style="margin: 0; font-weight: 900; font-size: 1.3rem;">저장되었습니다</h3>
+        </div>
+    </div>
+    <div id="location-modal" class="modal-overlay">
+        <div class="modal-content" style="text-align: center;">
+            <div
+                style="background:var(--moket-green); padding: 25px 20px 25px 20px; border-radius: 0; margin: -25px -25px 10px -25px; text-align: center;">
+                <h3 style="margin: 0; font-weight: 800; color: var(--white); font-size: 20px; letter-spacing: 1px;">
+                    매장위치</h3>
+            </div>
+            <p style="font-size:16px; font-weight:700; margin:20px 0; line-height:1.5;">서울시 용산구 한강대로 405</p>
+            <a href="https://map.naver.com/v5/search/서울시 용산구 한강대로 405" target="_blank"
+                class="btn-common btn-naver">네이버지도</a>
+            <a href="https://map.kakao.com/link/search/서울시 용산구 한강대로 405" target="_blank"
+                class="btn-common btn-kakao">카카오맵</a>
+            <button class="btn-common btn-close" onclick="closeModal('location-modal')">닫기</button>
+        </div>
+    </div>
+    <div id="hours-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div
+                style="background:var(--moket-green); padding: 25px 20px 25px 20px; border-radius: 0; margin: -25px -25px 10px -25px; text-align: center;">
+                <h3 style="margin: 0; font-weight: 800; color: var(--white); font-size: 20px; letter-spacing: 1px;">
+                    영업시간 안내</h3>
+            </div>
+            <div style="display:flex; justify-content:center; margin-bottom:10px;">
+                <div style="text-align:left; line-height:2.2; font-weight:700; font-size:16px;">
+                    • 월 - 금 : 10:00 - 19:00<br>
+                    • 토요일 : 11:00 - 17:00<br>
+                    • 일요일/공휴일 : 휴무
+                </div>
+            </div>
+            <button class="btn-common btn-close" onclick="closeModal('hours-modal')">닫기</button>
+        </div>
+    </div>
+    <div class="sticky-header-group">
+        <div class="date-section-title">픽업일별 상품목록</div>
+        <div class="date-filter-container" id="date-filters"></div>
+    </div>
+    <div class="container" id="product-list"></div>
+    <div id="detail-overlay" class="modal-overlay" onclick="if(event.target === this) closeModal('detail-overlay')">
+        <div class="modal-content">
+            <div class="slider-wrapper" onclick="openFullscreen()">
+                <div id="detail-counter"
+                    style="position:absolute; top:12px; right:12px; background:rgba(0,0,0,0.4); color:white; padding:4px 10px; border-radius:15px; font-size:12px; font-weight:800; z-index:10; display:none;">
+                </div>
+                <div class="slider-container" id="slider-area"></div>
+                <div class="touch-guide">탭하여 확대보기</div>
+            </div>
+            <div class="detail-body">
+                <h2 id="detail-title"
+                    style="margin:0; font-size:20px; font-weight:800; letter-spacing: 1px; color:var(--item-black); white-space: pre-wrap;">
+                </h2>
+                <div id="detail-price"
+                    style="color:var(--nego-orange); font-weight:900; font-size:20px; margin:10px 0;"></div>
+                <div id="detail-desc" style="white-space:pre-wrap; color:#455464; font-size:15px; line-height:1.6;">
+                </div>
+            </div>
+            <div style="padding: 12px 20px; border-top: 1px solid #f5f5f5;"><button class="btn-common btn-close"
+                    onclick="closeModal('detail-overlay')" style="margin-top: 0;">닫기</button></div>
+        </div>
+    </div>
+    <div id="fullscreen-overlay" onclick="closeFullscreen()">
+        <div id="fs-counter"
+            style="position:absolute; top:calc(25px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%); color:white; font-size:16px; font-weight:800; text-shadow:0 2px 4px rgba(0,0,0,0.5); z-index:7102;">
+        </div>
+        <button class="fullscreen-close" onclick="closeFullscreen()">&times;</button>
+        <div class="fullscreen-slider" id="fullscreen-slider-area" onclick="event.stopPropagation()"></div>
+    </div>
+    <div id="confirm-overlay" class="modal-overlay">
+        <div class="modal-content" style="text-align:center; padding: 25px 15px;">
+            <div id="confirm-item-list"
+                style="text-align:left; background:#f5f5f5; padding: 15px 8px; border-radius:0; margin:10px 0 20px 0; font-size:15px; line-height:1.7; max-height:350px; overflow-y:auto;">
+            </div>
+            <div
+                style="text-align:left; font-size:13px; margin: 1px -10px 10px 0; color:#455464; line-height:1.6; padding:0; font-weight:700;">
+                <div>✅ 주문취소는 당일 24시(당일 입고 상품은 입고 전)까지입니다.</div>
+                <div>✅ 픽업기간은 과일, 야채 등 신선식품은 입고 당일까지이며,</div>
+                <div>&emsp;&ensp;이외에는 입고일 포함 3일(휴무일 제외)까지 픽업 가능합니다.</div>
+                <div>✅ 픽업기간 이후에는 현장 판매로 전환되어 픽업이 불가능합니다.</div>
+                <div>✅ 픽업기간 이후 수령을 원하시면 카카오톡으로 문의 바랍니다.</div>
+            </div>
+            <div
+                style="margin-bottom:20px; font-weight:700; font-size:13px; color:#455464; display:flex; align-items:center; justify-content:center; gap:6px;">
+                <input type="checkbox" id="confirm-notice-check"
+                    style="width:18px; height:18px; margin:0; cursor:pointer;">
+                <label for="confirm-notice-check" style="cursor:pointer;">위 내용을 확인하였습니다.</label>
+            </div>
+            <div style="display:flex; gap:10px;"><button class="btn-common btn-close"
+                    onclick="document.getElementById('confirm-notice-check').checked = false; closeModal('confirm-overlay')"
+                    style="margin-top: 0;">취소</button><button id="btn-submit-order" class="btn-common btn-primary"
+                    onclick="completeOrder()" style="margin-top: 0;">주문확정</button></div>
+        </div>
+    </div>
+    <div class="footer" id="main-footer">
+        <div
+            style="display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; font-weight:800; font-size: 17px;">
+            <span id="total-qty-text">총 0개 선택</span><span id="total-price-text"
+                style="color:var(--nego-orange); font-size:18px;">0원</span>
+        </div><button class="main-submit-btn" onclick="openConfirm()">주문하기</button>
+    </div>
+    <div id="system-modal" class="modal-overlay" style="z-index: 9999;">
+        <div class="modal-content" style="text-align: center; width: 85%; max-width: 350px; padding: 25px 20px;">
+            <div id="sys-modal-msg"
+                style="margin: 10px 0 25px; font-weight: 700; font-size: 18px; line-height: 1.5; color: var(--item-black); white-space: pre-wrap;">
+            </div>
+            <div id="sys-modal-btns" style="display: flex; gap: 10px; justify-content: center;"></div>
+        </div>
+    </div>
+    <!-- 주문내역 모달 -->
+    <div id="history-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div
+                style="background:var(--moket-green); padding: 30px 20px 25px 20px; border-radius: 0; margin: 0 0 10px 0; text-align: center;">
+                <h3 id="history-modal-title"
+                    style="margin: 0; font-weight: 800; color: var(--white); font-size: 17px; letter-spacing: 1px;">
+                    주문내역</h3>
+            </div>
+            <div style="padding: 0 20px 0 20px; flex-shrink: 0;">
+                <div
+                    style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; border-bottom: 1.5px solid #eee; padding-bottom: 8px;">
+                    <button class="date-btn active" id="status-order" onclick="filterStatus('order')"
+                        style="height:32px; font-size:15px; padding:0; font-weight:900;">전체</button>
+                    <button class="date-btn" id="status-stocked" onclick="filterStatus('stocked')"
+                        style="height:32px; font-size:15px; padding:0; font-weight:900;">입고</button>
+                    <button class="date-btn" id="status-pickup" onclick="filterStatus('pickup')"
+                        style="height:32px; font-size:15px; padding:0; font-weight:900;">픽업</button>
+                    <button class="date-btn" id="status-cancel" onclick="filterStatus('cancel')"
+                        style="height:32px; font-size:15px; padding:0; font-weight:900;">취소</button>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px;">
+                    <button class="date-btn" id="filter-all" onclick="filterHistory('all')"
+                        style="height:32px; font-size:15px; padding:0; font-weight:800;">전체</button>
+                    <button class="date-btn active" id="filter-today" onclick="filterHistory('today')"
+                        style="height:32px; font-size:15px; padding:0; font-weight:800;">오늘</button>
+                    <button class="date-btn" id="filter-week" onclick="filterHistory('week')"
+                        style="height:32px; font-size:15px; padding:0; font-weight:800;">1주일</button>
+                    <button class="date-btn" id="filter-month" onclick="filterHistory('month')"
+                        style="height:32px; font-size:15px; padding:0; font-weight:800;">1개월</button>
+                </div>
+                <div
+                    style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 0; border-top: 1.5px solid #eee; padding-top: 8px;">
+                    <div style="grid-column: 1 / 4; display: flex; gap: 6px;">
+                        <button class="date-btn active" id="btn-sort-pickup" onclick="changeSortMode('pickupDate')"
+                            style="height:32px; font-size:15px; flex:1; padding:0; font-weight:900;">픽업일별 정렬</button>
+                        <button class="date-btn" id="btn-sort-order" onclick="changeSortMode('timestamp')"
+                            style="height:32px; font-size:15px; flex:1; padding:0; font-weight:900;">주문일별 정렬</button>
+                    </div>
+                    <div style="grid-column: 4 / 5; display: flex; gap: 6px;">
+                        <button class="date-btn" id="btn-sort-dir" onclick="toggleSortDir()"
+                            style="height: 32px; flex:1; padding: 0; background: #fafafa; border: 1.5px solid #eee; color: #455464; display: flex; align-items: center; justify-content: center; cursor: pointer; outline: none;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="4" y1="6" x2="13" y2="6"></line>
+                                <line x1="4" y1="10" x2="11" y2="10"></line>
+                                <line x1="4" y1="14" x2="9" y2="14"></line>
+                                <line x1="4" y1="18" x2="7" y2="18"></line>
+                                <polyline points="15 15 18 18 21 15"></polyline>
+                                <line x1="18" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                        <button class="date-btn" id="btn-refresh-history" onclick="openHistoryModal(true)"
+                            style="height: 32px; flex:1; padding: 0; background: #fafafa; border: 1.5px solid #eee; color: #455464; display: flex; align-items: center; justify-content: center; cursor: pointer; outline: none;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <polyline points="1 20 1 14 7 14"></polyline>
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div id="history-list" style="flex: 1; overflow-y: auto; padding: 0 20px 20px 20px; text-align: left;">
+                <!-- 동적 생성 -->
+            </div>
+            <div style="padding: 15px 10px; border-top: 1px solid #f5f5f5; flex-shrink: 0;">
+                <button class="btn-common btn-close" onclick="closeModal('history-modal')"
+                    style="margin-top: 0;">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script>const API_URL = 'https://script.google.com/macros/s/AKfycbw6F-D5UhJTkLafBv4uOs5_lUD61ervXveLCcZ6ROHNYhFbEi_vJUamKHUjHE9wGeaY/exec'
+
+        // [카카오 초기화]
         try {
-        const folder = DriveApp.getFolderById(p.folderId);
-        const files = folder.getFiles();
-        const fileList = [];
-        while (files.hasNext()) { const f = files.next(); if (f.getMimeType().startsWith("image/")) fileList.push(f); }
-        if (fileList.length > 0) {
-        fileList.sort((a, b) => a.getName().localeCompare(b.getName(), undefined, { numeric: true, sensitivity: 'base'
-        }));
-        p.images = [fileList[0].getId()];
-        }
-        } catch (e) { }
-        }
-        return p;
-        }).filter(p => p !== null);
-        return makeRes(products);
+            if (typeof Kakao !== 'undefined') {
+                if (!Kakao.isInitialized()) {
+                    Kakao.init('a968b0ece368c55cbffedea6e46ae16b');
+                    console.log('Kakao SDK Initialized:', Kakao.isInitialized());
+                }
+            } else {
+                console.error('Kakao SDK is undefined at init stage');
+            }
+        } catch (e) {
+            console.error('Kakao Init Error:', e);
         }
 
-        function getSS(f, n) {
-        const fs = f.getFilesByName(n);
-        return fs.hasNext() ? SpreadsheetApp.open(fs.next()) : null;
+        let productsData = [];
+        let cart = {}; // { 상품명: 수량 } 저장용 장바구니 상태
+        let isHistoryProcessing = false; // 주문내역 처리 중 플래그 추가
+
+        /**
+         * [추가] 재고 동기화 이슈 해결을 위한 상태 잠금 (State Locking)
+         * { "matchKey|상품명": { stock: 수량, expire: 만료시간 } }
+         * 주문/취소 직후 서버 데이터가 늦게 갱신될 때 로컬 상태를 강제로 유지하는 용도
+         */
+        let pendingStockUpdates = {};
+        const STOCK_LOCK_DURATION = 15000; // 15초 동안 유지
+
+        /**
+         * [추가] 인라인 JS 속성(onclick 등)에 문자열을 안전하게 전달하기 위한 이스케이프 함수
+         * 1. 역슬래시 이스케이프
+         * 2. 홑따옴표(\') 이스케이프
+         * 3. 쌍따옴표(&quot;) 이스케이프
+         * 4. 개행문자(\\n) 이스케이프
+         */
+        const escapeArg = (s) => String(s || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n").replace(/\r/g, "");
+
+        // [스크롤 방지]
+        function checkScrollLock() {
+            const modals = document.querySelectorAll('.modal-overlay');
+            const sideMenu = document.getElementById('side-menu');
+            let isAnyOpen = sideMenu.classList.contains('open');
+
+            if (!isAnyOpen) {
+                for (let m of modals) {
+                    if (window.getComputedStyle(m).display === 'flex') {
+                        isAnyOpen = true;
+                        break;
+                    }
+                }
+            }
+            document.body.style.overflow = isAnyOpen ? 'hidden' : '';
         }
 
-        function updateMissingImageIds() {
-        const ss = SpreadsheetApp.getActiveSpreadsheet();
-        const sheet = ss.getSheets().find(s => s.getName().includes("상품")) || ss.getSheets()[0];
-        const data = sheet.getDataRange().getValues();
-        const headers = data[0].map(h => String(h).trim().replace(/\s/g, ""));
-        const pCol = headers.findIndex(h => h.includes("상품명") || h.includes("품명"));
-        const fCol = headers.findIndex(h => h.includes("이미지폴더ID"));
-        const iCol = headers.findIndex(h => h.includes("이미지ID") || h.includes("이미지주소"));
-        if (pCol === -1 || fCol === -1 || iCol === -1) return;
-        const imgRoot = DriveApp.getFolderById(getCachedFolderId(getCachedFolderId(null, ROOT_NAME), IMAGE_ROOT_NAME));
-        for (let i = 1; i < data.length; i++) { const name=cleanNP(data[i][pCol]); if (!name) continue; let
-          folderId=String(data[i][fCol]).trim(); let folder; if (!folderId) { const
-          folders=imgRoot.getFoldersByName(name); if (folders.hasNext()) { folder=folders.next();
-          folderId=folder.getId(); sheet.getRange(i + 1, fCol + 1).setValue(folderId); } } else { try {
-          folder=DriveApp.getFolderById(folderId); } catch (e) { } } if (folder && !String(data[i][iCol]).trim()) {
-          const files=folder.getFiles(); const fileList=[]; while (files.hasNext()) { const f=files.next(); if
-          (f.getMimeType().startsWith("image/")) fileList.push(f); } if (fileList.length> 0) {
-          fileList.sort((a, b) => a.getName().localeCompare(b.getName(), undefined, { numeric: true, sensitivity: 'base'
-          }));
-          sheet.getRange(i + 1, iCol + 1).setValue(fileList[0].getId());
-          }
-          }
-          }
-          }
+        // [시스템 모달]
+        function showSystemModal(msg, type, yesCallback, noCallback) {
+            const modal = document.getElementById('system-modal');
+            const msgDiv = document.getElementById('sys-modal-msg');
+            const btnDiv = document.getElementById('sys-modal-btns');
 
-          function fetchProductImages(name, folderId) {
-          try {
-          const targetName = cleanNP(name);
-          let folder;
-          if (folderId && folderId !== "undefined" && folderId !== "") { try { folder =
-          DriveApp.getFolderById(folderId); } catch (e) { } }
-          if (!folder) {
-          const imgRoot = DriveApp.getFolderById(getCachedFolderId(getCachedFolderId(null, ROOT_NAME),
-          IMAGE_ROOT_NAME));
-          const folders = imgRoot.getFoldersByName(targetName);
-          if (folders.hasNext()) folder = folders.next();
-          }
-          if (!folder) return makeRes([]);
-          const files = folder.getFiles();
-          const fileList = [];
-          while (files.hasNext()) { const f = files.next(); if (f.getMimeType().startsWith("image/")) fileList.push(f);
-          }
-          fileList.sort((a, b) => a.getName().localeCompare(b.getName(), undefined, { numeric: true, sensitivity: 'base'
-          }));
-          return makeRes(fileList.map(f => f.getId()));
-          } catch (e) { return makeRes([]); }
-          }
+            msgDiv.innerHTML = msg; // innerText 대신 innerHTML 사용하여 스타일 적용 허용
+            msgDiv.style.textAlign = 'center'; // 전체 문구 중앙 정렬 적용
+            msgDiv.style.whiteSpace = 'pre-wrap'; // \n 줄바꿈 지원
+            btnDiv.innerHTML = '';
 
-          function syncAllCustomersToDB() {
-          const ui = SpreadsheetApp.getUi();
-          const subRoot = DriveApp.getFolderById(getCachedFolderId(getCachedFolderId(null, ROOT_NAME), SUB_ROOT_NAME));
-          const customers = {};
-          const years = subRoot.getFolders();
-          while (years.hasNext()) {
-          const yf = years.next();
-          const fs = yf.getFiles();
-          while (fs.hasNext()) {
-          const f = fs.next();
-          if (!f.getName().includes("주문내역")) continue;
-          try {
-          const ss = SpreadsheetApp.open(f);
-          ss.getSheets().forEach(sh => {
-          const rows = sh.getDataRange().getValues();
-          for (let i = 1; i < rows.length; i++) { const p=normP(rows[i][3]); if (p)
-            customers[p]=String(rows[i][2]).trim(); } }); } catch (e) { } } } Object.keys(customers).forEach(p=>
-            updateCustomerDatabase(p, customers[p]));
-            ui.alert("완료!");
+            if (type === 'confirm') {
+                const btnNo = document.createElement('button');
+                btnNo.className = 'btn-common btn-close';
+                btnNo.style.height = '48px';
+                btnNo.style.fontSize = '1rem';
+                btnNo.innerText = '취소';
+
+                btnNo.onclick = () => {
+                    modal.style.display = 'none';
+                    checkScrollLock();
+                    if (noCallback) noCallback();
+                };
+
+                const btnYes = document.createElement('button');
+                btnYes.className = 'btn-common btn-primary';
+                btnYes.style.height = '48px';
+                btnYes.style.fontSize = '1rem';
+                btnYes.innerText = '확인';
+
+                btnYes.onclick = async () => {
+                    if (yesCallback) {
+                        const preventClose = await yesCallback(btnYes, btnNo);
+                        if (preventClose === true) return;
+                    }
+                    modal.style.display = 'none';
+                    checkScrollLock();
+                };
+
+                btnDiv.appendChild(btnNo);
+                btnDiv.appendChild(btnYes);
+            } else if (type === 'alert') {
+                const btnOk = document.createElement('button');
+                btnOk.className = 'btn-common btn-primary';
+                btnOk.style.height = '48px';
+                btnOk.style.fontSize = '1rem';
+                btnOk.innerText = '확인';
+
+                btnOk.onclick = () => {
+                    modal.style.display = 'none';
+                    checkScrollLock();
+                    if (yesCallback) yesCallback();
+                };
+                btnDiv.appendChild(btnOk);
+            } else if (type === 'loading') {
+                // [수정] 주문 확인 중 모달에도 확인 버튼 추가
+                const btnOk = document.createElement('button');
+                btnOk.className = 'btn-common btn-primary';
+                btnOk.style.height = '48px';
+                btnOk.style.fontSize = '1rem';
+                btnOk.innerText = '확인';
+
+                btnOk.onclick = () => {
+                    modal.style.display = 'none';
+                    checkScrollLock();
+                };
+                btnDiv.appendChild(btnOk);
             }
 
-            function updateCustomerDatabase(phone, name) {
-            const targetP = normP(phone);
-            if (!targetP) return;
-            let history = getAllHistoryForCustomer(name, targetP);
+            // 버튼 영역 항상 노출
+            btnDiv.style.display = 'flex';
+
+            modal.style.display = 'flex';
+            checkScrollLock();
+        }
+
+        // [제어] 햄버거 메뉴 및 모달
+        function toggleMenu() {
+            const side = document.getElementById('side-menu');
+            const overlay = document.getElementById('side-menu-overlay');
+            const isOpen = side.classList.contains('open');
+            side.classList.toggle('open');
+            overlay.style.display = isOpen ? 'none' : 'block';
+            checkScrollLock();
+        }
+
+        function openSideModal(id) {
+            toggleMenu();
+            document.getElementById(id).style.display = 'flex';
+            checkScrollLock();
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+            checkScrollLock();
+        }
+
+        // [프로필] 저장 및 로드
+        function saveProfile() {
+            const name = document.getElementById('input-name').value;
+            const phone = document.getElementById('input-phone').value;
+            const greeting = document.getElementById('menu-greeting');
+
+            if (!name.trim() || !phone.trim()) {
+                showSystemModal("주문자명과 연락처를 입력해주세요.", 'alert');
+                return;
+            }
+
+            // 로컬 스토리지에 저장
+            localStorage.setItem('moket_user_name', name);
+            localStorage.setItem('moket_user_phone', phone);
+
+            if (name.trim()) {
+                greeting.innerHTML = `<span class="name-badge">${name}</span>님`;
+            }
+
+            else {
+                greeting.innerHTML = `<span class="name-badge">주문자</span>님`;
+            }
+
+            closeModal('profile-modal');
+            const confirmModal = document.getElementById('save-confirm-modal');
+            confirmModal.style.display = 'flex';
+
+            setTimeout(() => {
+                confirmModal.style.display = 'none';
+                checkScrollLock();
+            }
+
+                , 1500);
+        }
+
+        // [추가] 앱 캐시 및 데이터 완전 초기화 (로그아웃 버튼)
+        function clearAppCache() {
+            showSystemModal("로그아웃 하시겠습니까?\n모든 캐시 데이터가 초기화됩니다.", 'confirm', () => {
+                localStorage.clear();
+                sessionStorage.clear();
+                location.reload(true); // 강제 새로고침
+            });
+        }
+
+        function loadProfile() {
+            const name = localStorage.getItem('moket_user_name');
+            const phone = localStorage.getItem('moket_user_phone');
+
+            if (name) {
+                document.getElementById('input-name').value = name;
+                document.getElementById('menu-greeting').innerHTML = `<span class="name-badge">${name}</span>님`;
+            }
+
+            if (phone) {
+                document.getElementById('input-phone').value = phone;
+            }
+
+            // [추가] 카카오 인증 상태에 따른 버튼 처리 (UI는 숨김)
+            const certName = localStorage.getItem('kakao_original_name');
+            const promptDiv = document.getElementById('kakao-login-prompt');
+            const kakaoBtn = document.getElementById('btn-kakao-login');
+            const logoutBtn = document.getElementById('btn-kakao-logout');
+
+            if (certName) {
+                if (promptDiv) promptDiv.style.display = 'none';
+                if (kakaoBtn) kakaoBtn.style.display = 'none';
+                if (logoutBtn) logoutBtn.style.display = 'none';
+            } else {
+                if (promptDiv) promptDiv.style.display = 'block';
+                if (kakaoBtn) kakaoBtn.style.display = 'flex';
+                if (logoutBtn) logoutBtn.style.display = 'none';
+            }
+        }
+
+        // [카카오 로그인]
+        function loginWithKakao() {
+            console.log('loginWithKakao() called');
+
+            // 1. 프로토콜 확인 (file:// 에서는 카카오 로그인이 작동하지 않음)
+            if (window.location.protocol === 'file:') {
+                showSystemModal("⚠️ 보안 경고 ⚠️\n\n카카오 로그인은 'file://' (컴퓨터에서 직접 열기) 환경에서 작동하지 않습니다.\n\nVS Code 'Live Server'로 실행하거나 웹 서버에 업로드 후 테스트해 주세요.", 'alert');
+                return;
+            }
+
+            if (typeof Kakao === 'undefined') {
+                showSystemModal("카카오 SDK 로드 실패. 인터넷 연결을 확인해 주세요.", 'alert');
+                return;
+            }
+
+            if (!Kakao.isInitialized()) {
+                console.warn('Kakao not initialized, retrying...');
+                try {
+                    Kakao.init('a968b0ece368c55cbffedea6e46ae16b');
+                } catch (e) { console.error(e); }
+            }
+
+            console.log('Requesting Kakao Auth login (v1)...');
+            Kakao.Auth.login({
+                success: function (authObj) {
+                    console.log('Kakao login success:', authObj);
+                    Kakao.API.request({
+                        url: '/v2/user/me',
+                        success: function (res) {
+                            console.log('User info retrieved:', res);
+                            const kakaoName = res.kakao_account?.profile?.nickname;
+                            const kakaoPhone = res.kakao_account?.phone_number; // 권한 있을 경우만 들어옴
+
+                            if (kakaoName) {
+                                // [수정] 원본 정보는 별도 키에 영구 보관 (주문서 백엔드 전송 및 관리용)
+                                localStorage.setItem('kakao_original_name', kakaoName);
+                                if (kakaoPhone) localStorage.setItem('kakao_original_phone', kakaoPhone);
+
+                                // [변경] 입력창에는 예시(placeholder)가 보이도록 자동으로 채우지 않음
+                                // localStorage.setItem('moket_user_name', kakaoName); 
+                                document.getElementById('input-name').value = '';
+
+                                loadProfile(); // UI 갱신 (인증됨 표시 등)
+
+                                const modal = document.getElementById('profile-modal');
+                                modal.classList.remove('login-forced');
+                                document.getElementById('profile-modal-title').innerText = "주문자 정보 입력";
+                                document.getElementById('btn-kakao-login').style.display = "none";
+
+                                showSystemModal(`반갑습니다 ${kakaoName}님!\n주문자명과 연락처를 입력하고\n[저장하기]를 눌러주세요.`, 'alert');
+                            }
+                        },
+                        fail: function (error) {
+                            console.error('User info request failed:', error);
+                            showSystemModal("카카오 사용자 정보를 가져오는데 실패했습니다.", 'alert');
+                        }
+                    });
+                },
+                fail: function (err) {
+                    console.error('Kakao login failed:', err);
+                    showSystemModal("카카오 로그인 창을 띄우지 못했거나 사용자가 취소했습니다.", 'alert');
+                }
+            });
+        }
+
+
+        // [카카오 로그아웃]
+        // [카카오 로그아웃]
+        function logoutKakao() {
+            showSystemModal("로그아웃 하시겠습니까?", "confirm", function () {
+                // 로컬 스토리지 초기화
+                localStorage.removeItem('moket_user_name');
+                localStorage.removeItem('moket_user_phone');
+                localStorage.removeItem('kakao_original_name');
+                localStorage.removeItem('kakao_original_phone');
+
+                // Kakao SDK 로그아웃 (토큰 만료)
+                if (Kakao.Auth.getAccessToken()) {
+                    Kakao.Auth.logout(() => {
+                        console.log('Kakao logout success');
+                        showSystemModal("로그아웃 되었습니다.", "alert", () => location.reload());
+                    });
+                } else {
+                    // 토큰 없어도 그냥 초기화
+                    showSystemModal("로그아웃 되었습니다.", "alert", () => location.reload());
+                }
+            });
+        }
+
+        // [주문내역] 저장 및 조회
+        function saveOrderToHistory(orderData) {
+            const history = JSON.parse(localStorage.getItem('moket_order_history') || '[]');
+            history.push(orderData); // 순차적으로 추가
+            localStorage.setItem('moket_order_history', JSON.stringify(history));
+        }
+
+        // [주문내역] 자동 삭제 (픽업일 기준 8일째 자정)
+        function cleanExpiredOrders() {
+            const history = JSON.parse(localStorage.getItem('moket_order_history') || '[]');
             if (history.length === 0) return;
-            history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            const latestKakao = history.find(h => h.kakaoName && h.kakaoName !== "비인증") || history[0];
-            const stats = calculateStats(history);
-            if (stats) writeToCustomerDatabase(name, targetP, stats, latestKakao.kakaoName, latestKakao.kakaoPhone);
+
+            const now = new Date();
+            // 오늘 자정 (시간/분/초 제거)
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+            const filteredHistory = history.filter(order => {
+                if (!order.pickupDate) return false; // 픽업일 정보가 없는 구버전 내역은 삭제
+
+                const pickup = new Date(order.pickupDate);
+                if (isNaN(pickup.getTime())) return false; // 유효하지 않은 날짜도 삭제
+
+                // 픽업일 기준 8일째 자정 계산 (예: 1일 픽업 -> 9일 00:00 삭제)
+                const expiryTime = new Date(pickup.getFullYear(), pickup.getMonth(), pickup.getDate() + 8).getTime();
+
+                return today < expiryTime;
+            });
+
+            if (filteredHistory.length !== history.length) {
+                localStorage.setItem('moket_order_history', JSON.stringify(filteredHistory));
             }
+        }
 
-            function getAllHistoryForCustomer(name, phone) {
-            const result = [];
-            const subRoot = DriveApp.getFolderById(getCachedFolderId(getCachedFolderId(null, ROOT_NAME),
-            SUB_ROOT_NAME));
-            const years = subRoot.getFolders();
-            while (years.hasNext()) {
-            const yf = years.next();
-            const fs = yf.getFiles();
-            while (fs.hasNext()) {
-            const f = fs.next();
-            if (!f.getName().includes("주문내역")) continue;
+        // [시간 포맷] YYYY-MM-DD (요일) HH:mm
+        function formatOrderDate(dateInput) {
+            const d = new Date(dateInput);
+            if (isNaN(d.getTime())) return dateInput;
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mm = String(d.getMinutes()).padStart(2, '0');
+            const week = ['일', '월', '화', '수', '목', '금', '토'];
+            const dayOfWeek = week[d.getDay()];
+            return `${y}-${m}-${day} (${dayOfWeek}) ${hh}:${mm}`;
+        }
+
+        /**
+         * [추가] 문자열에서 숫자만 추출하는 헬퍼
+         * "2026년 2월 10일" -> "2026210", "26년 2월 10일" -> "26210"
+         */
+        function normD(s) {
+            return String(s || "").replace(/\D/g, "");
+        }
+
+        // 픽업일 포맷] YYYY-MM-DD (요일)
+        function formatPickupDate(dateInput) {
+            const d = new Date(dateInput);
+            if (isNaN(d.getTime())) return dateInput;
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const week = ['일',
+                '월',
+                '화',
+                '수',
+                '목',
+                '금',
+                '토'];
+            const dayOfWeek = week[d.getDay()];
+            return `${y}-${m}-${day} (${dayOfWeek})`;
+        }
+        // [필수] 한국어 날짜 형식을 Date 객체로 변환 (정렬 및 필터용)
+        function parseKRDate(s) {
+            if (!s) return new Date();
+            if (s instanceof Date) return s;
             try {
-            const ss = SpreadsheetApp.open(f);
-            ss.getSheets().forEach(sh => {
-            const data = sh.getDataRange().getValues();
-            for (let i = 1; i < data.length; i++) { if (normP(data[i][3])===phone) { result.push({ timestamp:
-              data[i][0], item: data[i][6], qty: Number(data[i][7]) || 0, price: Number(data[i][8]) || 0, total:
-              Number(data[i][9]) || 0, received: data[i][12]===true, onSite: data[i][13]===true, canceled:
-              data[i][14]===true || String(data[i][6]).includes("[취소]"), kakaoName: data[i][4], kakaoPhone: data[i][5]
-              }); } } }); } catch (e) { } } } return result; } function calculateStats(history) { const
-              total=history.length; if (total===0) return null; const active=history.filter(h=> !h.canceled);
-              const cancelled = history.filter(h => h.canceled);
-              const pickedUp = active.filter(h => h.received);
-              const onSite = active.filter(h => h.onSite);
-              const totalSpend = active.reduce((sum, h) => sum + h.total, 0);
-              let latestDate = new Date(0);
-              history.forEach(h => {
-              let d = h.timestamp instanceof Date ? h.timestamp : new Date(h.timestamp);
-              if (d > latestDate) latestDate = d;
-              });
-              return {
-              latest: formatKRDate(latestDate), totalCount: total, pickupCount: pickedUp.length, onSiteCount:
-              onSite.length, cancelCount: cancelled.length,
-              cancelRate: total > 0 ? (cancelled.length / total) : 0, spending: totalSpend
-              };
-              }
+                let str = String(s).replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+                // "24년 2월 10일 (화)" 또는 "2024년 2월 10일 (화)" 또는 "2024-02-10"
+                const m = str.match(/(?:20)?(\d{2})년\s*(\d{1,2})월\s*(\d{1,2})일/);
+                if (m) {
+                    const year = parseInt(m[1]) + 2000;
+                    const month = parseInt(m[2]) - 1;
+                    const day = parseInt(m[3]);
+                    const timeMatch = str.match(/(\d{1,2}):(\d{1,2}):(\d{1,2})/);
+                    if (timeMatch) {
+                        return new Date(year, month, day, parseInt(timeMatch[1]), parseInt(timeMatch[2]), parseInt(timeMatch[3]));
+                    }
+                    return new Date(year, month, day);
+                }
+                const d = new Date(s);
+                return isNaN(d.getTime()) ? new Date() : d;
+            } catch (e) {
+                return new Date();
+            }
+        }
 
-              function writeToCustomerDatabase(name, phone, stats, kName, kPhone) {
-              const rootId = getCachedFolderId(null, ROOT_NAME);
-              const fileName = "고객 데이터베이스";
-              const folders = DriveApp.getFolderById(rootId).getFilesByName(fileName);
-              let ss = folders.hasNext() ? SpreadsheetApp.open(folders.next()) : SpreadsheetApp.create(fileName);
-              if (ss.getSheets()[0].getLastRow() === 0) {
-              ss.getSheets()[0].appendRow(["고객명", "연락처", "카톡 이름", "카톡 연락처", "최근 주문일", "총 주문건수", "총 픽업완료건수", "총 현장판매건수",
-              "총 주문취소건수", "취소율", "누적 주문금액"]);
-              DriveApp.getFileById(ss.getId()).moveTo(DriveApp.getFolderById(rootId));
-              }
-              const sheet = ss.getSheets()[0];
-              const data = sheet.getDataRange().getValues();
-              let rowIdx = -1;
-              for (let i = 1; i < data.length; i++) { if (normP(data[i][1])===phone) { rowIdx=i + 1; break; } } const
-                rowData=[name, "'" + phone, kName || "비인증" , kPhone || "비인증" , stats.latest, stats.totalCount,
-                stats.pickupCount, stats.onSiteCount, stats.cancelCount, stats.cancelRate, stats.spending]; if (rowIdx>
-                -1) sheet.getRange(rowIdx, 1, 1, rowData.length).setValues([rowData]);
-                else sheet.appendRow(rowData);
+        // [추가] 미픽업 주문 확인 및 알림 모달
+        async function checkUnpickedOrders() {
+            // [세션당 1회 제한] 한 번 확인했다면 이번 접속(세션)에서는 다시 띄우지 않음
+            if (sessionStorage.getItem('moket_unpicked_checked') === 'true') return;
+
+            const name = (localStorage.getItem('moket_user_name') || "").trim();
+            const phone = (localStorage.getItem('moket_user_phone') || "").trim();
+
+            if (!name || !phone) return;
+
+            // 확인 표시 저장 (세션 종료 전까지 유지)
+            sessionStorage.setItem('moket_unpicked_checked', 'true');
+
+            try {
+                console.log(`[미픽업 확인] ${name} (${phone}) 님의 주문내역을 서버에서 조회합니다...`);
+                // 사용자의 최근 주문내역 가져오기 (캐시 방지 + 월별 검색 범위 확인용)
+                const historyUrl = `${API_URL}?header=history&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&scope=recent&t=${Date.now()}`;
+
+                const response = await fetch(historyUrl);
+                if (!response.ok) {
+                    console.error("[미픽업 확인] 서버 응답 오류:", response.status);
+                    return;
                 }
 
-                function scanSheet(sh, targetName, targetPhone, resultArr) {
+                const historyData = await response.json();
+                console.log("[미픽업 확인] 서버 수신 데이터:", historyData);
+
+                if (!Array.isArray(historyData)) {
+                    if (historyData.result === "error") {
+                        console.error("[미픽업 확인] 서버 에러:", historyData.message);
+                    }
+                    return;
+                }
+
+                if (historyData.length === 0) {
+                    console.log("[미픽업 확인] 최근 주문(이번 달/지난 달) 내역이 없습니다. (조회 URL: " + historyUrl + ")");
+                    return;
+                }
+
+                // [판별] '수령완료', '취소', '미입고'가 아닌 것 + 오늘 포함 이전 날짜인 것만 알림
+                const now = new Date();
+                const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+                const unpickedItems = historyData.filter(order => {
+                    const itemName = String(order.item || "");
+                    const receivedStatus = String(order.received || "").trim();
+
+                    // [수정] 날짜 상관없이 '입고완료'인데 '수령전'이면 모두 알림 대상 (미리 입고된 건 포함)
+                    const isTodayOrPast = true;
+
+                    const isCanceled = itemName.includes("[취소]") || order.canceled === true || String(order.canceled).toUpperCase() === "TRUE";
+                    const isReceived = (order.received === true || String(order.received).toUpperCase() === "TRUE");
+                    const isStocked = (order.isStocked === true || String(order.isStocked).toUpperCase() === "TRUE");
+
+                    // 알림 대상: (오늘 포함 과거 주문) AND (입고완료 상태) AND (수령 전) AND (취소 아님)
+                    const result = isTodayOrPast && isStocked && !isReceived && !isCanceled;
+                    if (result) {
+                        console.log(`[미픽업 판별] 상품: ${itemName}, 날짜: ${order.pickupDate}, 상태: ${receivedStatus} -> 알림 대상`);
+                    }
+                    return result;
+                });
+
+                console.log("[미픽업 확인] 최종 미픽업 항목 수:", unpickedItems.length);
+
+                if (unpickedItems.length > 0) {
+                    console.log("[미픽업 확인] 알림 모달을 띄웁니다.");
+                    const styledName = `<span class="name-badge" style="margin-right:0;">${name}</span>`;
+                    showSystemModal(`반갑습니다, ${styledName}님!<div style="margin-bottom:5px;"></div>아직 픽업하지 않은 상품이 있습니다.<br>주문내역을 확인 해 주세요.`, 'alert');
+                }
+            } catch (e) {
+                console.error("[미픽업 확인] 실행 도중 오류 발생:", e);
+            }
+        }
+
+        let fullHistoryData = []; // 서버에서 가져온 전체 데이터 저장
+        let currentSortBy = 'pickupDate'; // 'pickupDate' (픽업일) 기본값
+        let currentSortDir = 'desc'; // [수정] 기본 내림차순 (최신순)
+        let currentFilter = 'today'; // '오늘' 기본값
+        let currentStatusFilter = 'order'; // '주문' 기본값 (하위분류)
+
+        function toggleSortDir() {
+            currentSortDir = (currentSortDir === 'desc') ? 'asc' : 'desc';
+            renderHistory();
+        }
+
+        let currentHistoryLimit = 10;
+
+        // [추가] 데이터 전체 새로고침 (헤더 클릭 시)
+        function refreshAllData() {
+            // [수정] 강제로 캐시를 삭제하지 않고, loadData만 실시간으로 돌림
+            // 이렇게 해야 다음 번에 역사 창을 열었을 때 사라지지 않고 즉시 보임 (배경에서 업데이트됨)
+            loadData(true);
+        }
+
+        async function openHistoryModal(isRefresh = false) {
+            const name = document.getElementById('input-name').value;
+            const phone = document.getElementById('input-phone').value;
+
+            if (!name || !phone) {
+                showSystemModal("주문자명과 연락처를 입력해주세요.", 'alert');
+                return;
+            }
+
+            // [수정] 이전에는 무조건 초기화(fullHistoryData=[])했지만, 
+            // 이제는 동일 사용자라면 기존 데이터를 유지하여 '사라졌다 나타나는' 현상 방지
+            const cacheKey = `history_cache_${name}_${phone}`;
+            const cached = localStorage.getItem(cacheKey);
+
+            if (cached && fullHistoryData.length === 0) {
+                fullHistoryData = JSON.parse(cached);
+            }
+
+            // 기본 필터/정렬 설정
+            currentSortBy = 'timestamp';
+            currentFilter = 'all';
+            currentStatusFilter = 'order';
+            currentSortDir = 'desc'; // [수정] 기본 내림차순
+            currentHistoryLimit = 10;
+
+            // 버튼 UI 초기화
+            document.getElementById('btn-sort-order').classList.add('active');
+            document.getElementById('btn-sort-pickup').classList.remove('active');
+
+            document.getElementById('filter-all').classList.add('active');
+            document.getElementById('filter-today').classList.remove('active');
+            document.getElementById('filter-week').classList.remove('active');
+            document.getElementById('filter-month').classList.remove('active');
+
+            // 하위 분류 버튼 초기화
+            document.getElementById('status-order').classList.add('active');
+            document.getElementById('status-cancel').classList.remove('active');
+            document.getElementById('status-stocked').classList.remove('active');
+            document.getElementById('status-pickup').classList.remove('active');
+
+            const modal = document.getElementById('history-modal');
+            const list = document.getElementById('history-list');
+            const title = document.getElementById('history-modal-title');
+
+            // 타이틀 동적 변경 (상단 여백 확보, 이름표 오렌지색)
+            const displayName = name.trim() || "주문자";
+            title.style.fontSize = "20px";
+            title.innerHTML = `<span style="background:#fdf2e9; color:var(--nego-orange); padding:2px 10px; border-radius:0; margin-right:5px; font-weight:900;">${displayName}</span>님의 주문내역`;
+
+            modal.style.display = 'flex';
+            checkScrollLock();
+
+            // 1. [로컬 캐시] 이전에 불러온 내역이 있다면 즉시 표시 (사용자별 구분)
+            // (cacheKey와 cached는 상단에서 이미 선언됨)
+            // fullHistoryData = []; // [삭제] 기존 데이터를 유지하여 깜빡임 방지
+
+            if (isRefresh) {
+                // [추가] 새로고침 시에는 명시적인 로딩 표시
+                list.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:50px 0; color:#999;"><div class="loading-spinner" style="margin-bottom:15px;"></div>주문내역을 조회 중입니다...</div>';
+            } else if (cached) {
+                fullHistoryData = JSON.parse(cached);
+                // [복구] 빠른 로딩을 위해 캐시 즉시 렌더링
+                renderHistory();
+            } else {
+                list.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:50px 0; color:#999;"><div class="loading-spinner" style="margin-bottom:15px;"></div>주문내역을 조회 중입니다...</div>';
+            }
+
+            try {
+                // [핵심] 처리 중인 상태 보존 및 중복 방지를 위한 병합 키 생성 함수
+                const genKey = (o) => {
+                    if (!o || !o.timestamp) return "invalid_" + Math.random();
+                    // 1. 주문시간 정규화 (초 단위 무시)
+                    const d = parseKRDate(o.timestamp);
+                    d.setSeconds(0, 0);
+                    d.setMilliseconds(0);
+
+                    // 2. 상품명 정규화 (따옴표, [취소] 태그 제거)
+                    const cleanItem = String(o.item || "").replace(/\[취소\]\s*/g, "").replace(/['"]/g, '').trim();
+
+                    // 3. 픽업일 정규화 (날짜만 추출)
+                    const p = parseKRDate(o.pickupDate);
+                    p.setHours(0, 0, 0, 0);
+
+                    return d.getTime() + "|" + p.getTime() + "|" + cleanItem;
+                };
+
+                // 2. [1단계 로딩] 오늘(최근) 내역만 빠르게 가져와서 업데이트
+                const recentUrl = `${API_URL}?header=history&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&scope=recent`;
+                const resRecent = await fetch(recentUrl);
+                const recentData = await resRecent.json();
+
+                if (recentData && recentData.result === 'error') throw new Error(recentData.message);
+
+                if (Array.isArray(recentData)) {
+                    const prevMap = new Map();
+                    (fullHistoryData || []).forEach(item => prevMap.set(genKey(item), item));
+
+                    const mergedRecent = recentData.map(fresh => {
+                        const key = genKey(fresh);
+                        const prev = prevMap.get(key);
+                        // 앱에서 '취소 중'일 때만 보호하고, 그 외에는 서버 데이터를 우선함 (매뉴얼 해제 대응)
+                        if (prev && prev.isProcessing) {
+                            // 서버 데이터가 이미 취소된 상태면 '취소중' 상태를 해제하고 서버 데이터 수용
+                            const isFreshCancelled = (fresh.item && fresh.item.includes('[취소]')) ||
+                                fresh.received === "취소완료" ||
+                                (fresh.canceled === true || String(fresh.canceled).toUpperCase() === "TRUE");
+                            if (!isFreshCancelled) {
+                                return { ...fresh, isProcessing: prev.isProcessing, received: prev.received, item: prev.item };
+                            }
+                        }
+                        return fresh;
+                    });
+
+                    const recentKeys = new Set(mergedRecent.map(genKey));
+                    const others = (fullHistoryData || []).filter(o => !recentKeys.has(genKey(o)));
+                    const newData = [...mergedRecent, ...others];
+
+                    if (JSON.stringify(newData) !== JSON.stringify(fullHistoryData) || !cached || isRefresh) {
+                        fullHistoryData = newData;
+                        renderHistory();
+                    }
+                }
+
+                // 3. [2단계 로딩] 전체 내역 배경에서 천천히 가져오기
+                const allUrl = `${API_URL}?header=history&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&scope=all`;
+                fetch(allUrl).then(res => res.json()).then(allData => {
+                    if (Array.isArray(allData)) {
+                        const prevMap = new Map();
+                        (fullHistoryData || []).forEach(item => prevMap.set(genKey(item), item));
+
+                        const mergedAll = allData.map(fresh => {
+                            const key = genKey(fresh);
+                            const prev = prevMap.get(key);
+                            if (prev && prev.isProcessing) {
+                                const isFreshCancelled = (fresh.item && fresh.item.includes('[취소]')) ||
+                                    fresh.received === "취소완료" ||
+                                    (fresh.canceled === true || String(fresh.canceled).toUpperCase() === "TRUE");
+                                if (!isFreshCancelled) {
+                                    return { ...fresh, isProcessing: prev.isProcessing, received: prev.received, item: prev.item };
+                                }
+                            }
+                            return fresh;
+                        });
+
+                        const isChanged = JSON.stringify(mergedAll) !== JSON.stringify(fullHistoryData);
+                        fullHistoryData = mergedAll;
+                        localStorage.setItem(cacheKey, JSON.stringify(fullHistoryData));
+
+                        if (isChanged || !cached) renderHistory();
+                    }
+                }).catch(err => console.error("전체 내역 로드 실패:", err));
+
+            } catch (e) {
+                console.error("역사 로드 실패:", e);
+                if (!fullHistoryData || fullHistoryData.length === 0) {
+                    list.innerHTML = `<div style="text-align:center; color:#ff4d4d; padding:20px; font-size:0.9rem;">🚫 조회 중 오류 발생<br><br><span style="color:#455464;font-size:0.8rem;">${e.message || "연결 상태를 확인해 주세요."}</span></div>`;
+                }
+            }
+        }
+
+        function changeSortMode(mode) {
+            if (currentSortBy === mode) {
+                toggleSortDir();
+                return;
+            }
+            currentSortBy = mode;
+            currentHistoryLimit = 10; // 초기화
+            // [수정] 모든 모드에서 기본 내림차순(desc) 적용
+            currentSortDir = 'desc';
+
+            document.getElementById('btn-sort-order').classList.toggle('active', mode === 'timestamp');
+            document.getElementById('btn-sort-pickup').classList.toggle('active', mode === 'pickupDate');
+            renderHistory();
+        }
+
+        function filterHistory(type) {
+            currentFilter = type;
+            currentHistoryLimit = 10; // 초기화
+            currentSortDir = 'desc'; // [추가] 필터 변경 시 내림차순 기본 적용
+            // 버튼 활성화 처리
+            const buttons = ['all', 'today', 'week', 'month'];
+            buttons.forEach(b => {
+                const btn = document.getElementById('filter-' + b);
+                if (btn) btn.classList.toggle('active', b === type);
+            });
+            renderHistory();
+        }
+
+        function filterStatus(status) {
+            currentStatusFilter = status;
+            currentHistoryLimit = 10; // 초기화
+            currentSortDir = 'desc'; // [추가] 상태 변경 시 내림차순 기본 적용
+            // 버튼 활성화 처리
+            const statuses = ['order', 'cancel', 'stocked', 'pickup'];
+            statuses.forEach(s => {
+                const btn = document.getElementById('status-' + s);
+                if (btn) btn.classList.toggle('active', s === status);
+            });
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = '';
+
+            // [추가] 정렬 방향 버튼 UI 업데이트 (커스텀 SVG 적용)
+            const sortDirBtn = document.getElementById('btn-sort-dir');
+            if (sortDirBtn) {
+                if (currentSortDir === 'desc') {
+                    sortDirBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="13" y2="6"></line><line x1="4" y1="10" x2="11" y2="10"></line><line x1="4" y1="14" x2="9" y2="14"></line><line x1="4" y1="18" x2="7" y2="18"></line><polyline points="15 15 18 18 21 15"></polyline><line x1="18" y1="6" x2="18" y2="18"></line></svg>`;
+                } else {
+                    sortDirBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="7" y2="6"></line><line x1="4" y1="10" x2="9" y2="10"></line><line x1="4" y1="14" x2="11" y2="14"></line><line x1="4" y1="18" x2="13" y2="18"></line><polyline points="15 9 18 6 21 9"></polyline><line x1="18" y1="6" x2="18" y2="18"></line></svg>`;
+                }
+            }
+
+            if (!fullHistoryData || fullHistoryData.length === 0) {
+                list.innerHTML = '<div style="text-align:center; color:#455464; padding:50px 0;">주문내역이 없습니다.</div>';
+                return;
+            }
+
+            const now = new Date();
+            const filtered = fullHistoryData.filter(item => {
+                const isCancelled = (item.item && item.item.includes('[취소]')) ||
+                    (item.received === "canceled" || item.received === "취소완료") ||
+                    (item.canceled === true || String(item.canceled).toUpperCase() === "TRUE");
+                const isReceived = (item.received === true || String(item.received).toUpperCase() === "TRUE");
+
+                // [하위 분류 필터 적용]
+                if (currentStatusFilter === 'order') {
+                    // '전체' 탭: 취소된 항목도 모두 포함 (기존 필터 로직 제거)
+                } else if (currentStatusFilter === 'cancel') {
+                    if (!isCancelled) return false;
+                } else if (currentStatusFilter === 'stocked') {
+                    const isStocked = (item.isStocked === true || String(item.isStocked).toUpperCase() === "TRUE");
+                    if (isCancelled || isReceived || !isStocked) return false;
+                } else if (currentStatusFilter === 'pickup') {
+                    if (!isReceived || isCancelled) return false;
+                }
+
+                // [기간 필터 적용]
+                const orderDate = parseKRDate(item.timestamp);
+                const isSameDay = (d1, d2) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+
+                // 1. '오늘' 필터
+                if (currentFilter === 'today') {
+                    // [수정] '입고' 또는 '픽업' 탭일 때는 '픽업일' 기준 (지금 시간 이전인 건만), 그 외엔 '주문일' 기준
+                    // [수정] '입고' 탭일 때는 이미 입고된 건은 날짜 상관없이 보여주거나(미리 입고), '픽업' 탭은 지금 시간 이전인 건만
+                    if (currentStatusFilter === 'stocked') return true;
+                    if (currentStatusFilter === 'pickup') {
+                        const pDate = parseKRDate(item.pickupDate);
+                        return pDate <= now;
+                    }
+                    return isSameDay(now, orderDate);
+                }
+
+                // 2. 1주일/1개월 필터: 정렬 기준과 무관하게 '주문일' 기준
+                const diffDays = (now - orderDate) / (1000 * 60 * 60 * 24);
+                if (currentFilter === 'week') return diffDays >= 0 && diffDays <= 7;
+                if (currentFilter === 'month') return diffDays >= 0 && diffDays <= 30;
+
+                // 3. '전체' 필터
+                if (currentFilter === 'all') return true;
+
+                return false;
+            });
+
+            if (filtered.length === 0) {
+                list.innerHTML = '<div style="text-align:center; color:#455464; padding:50px 0;">해당 기간의 내역이 없습니다.</div>';
+                return;
+            }
+
+            // 정렬 로직 (취소된 항목은 무조건 최하단으로 보내지만, 전체 기간 + 전체 상태 필터일 때는 날짜순으로만 정렬)
+            filtered.sort((a, b) => {
+                const isACancelled = (a.item && a.item.includes('[취소]')) || (a.note && a.note.includes('[취소]')) || (a.canceled === true || a.canceled === "TRUE");
+                const isBCancelled = (b.item && b.item.includes('[취소]')) || (b.note && b.note.includes('[취소]')) || (b.canceled === true || b.canceled === "TRUE");
+
+                // [수정] '전체-전체' 필터일 때는 취소 그룹화 무시
+                if (!(currentStatusFilter === 'order' && currentFilter === 'all')) {
+                    if (isACancelled !== isBCancelled) {
+                        return isACancelled ? 1 : -1; // 취소된 건을 뒤로(1) 보냄
+                    }
+                }
+
+                const valA = parseKRDate(a[currentSortBy]);
+                const valB = parseKRDate(b[currentSortBy]);
+
+                if (valA.getTime() !== valB.getTime()) {
+                    return currentSortDir === 'desc' ? valB - valA : valA - valB;
+                }
+
+                // [추가] 보조 정렬: 메인 기준이 동일할 경우 항상 '주문시간(timestamp)' 내림차순(최신순)으로 정렬
+                const timeA = parseKRDate(a.timestamp);
+                const timeB = parseKRDate(b.timestamp);
+                return timeB - timeA;
+            });
+
+            // [더보기 기능] 현재 limit만큼만 보여줌
+            const pagedItems = filtered.slice(0, currentHistoryLimit);
+            let htmlBuffer = '';
+
+            pagedItems.forEach(order => {
+                const isCancelled = (order.item && order.item.includes('[취소]')) ||
+                    (order.note && order.note.includes('[취소]')) ||
+                    order.received === "canceled" ||
+                    order.received === "취소완료" ||
+                    (order.canceled === true || String(order.canceled).toUpperCase() === "TRUE");
+                const isProcessing = order.isProcessing === true;
+
+                // [안전장치] 데이터 형식이 예전과 다를 경우(예: timestamp가 없는 경우)를 보호
+                let orderTime = '정보없음';
+                let orderTimeFull = '';
                 try {
-                const data = sh.getDataRange().getValues();
-                for (let i = 1; i < data.length; i++) { if (normP(data[i][3])===targetPhone &&
-                  String(data[i][2]).trim()===targetName) { resultArr.push({ timestamp: data[i][0], pickupDate:
-                  data[i][1], name: data[i][2], item: data[i][6], qty: data[i][7], price: data[i][8], total: data[i][9],
-                  isStocked: data[i][11], received: data[i][12], onSite: data[i][13], canceled: data[i][14] }); } } }
-                  catch (e) { } } function fetchHistory(name, phone, scope) { const targetP=normP(phone), targetN=(name
-                  || "" ).trim(); const result=[]; const
-                  subRoot=DriveApp.getFolderById(getCachedFolderId(getCachedFolderId(null, ROOT_NAME), SUB_ROOT_NAME));
-                  const years=subRoot.getFolders(); while (years.hasNext()) { const yf=years.next(); const
-                  fs=yf.getFiles(); while (fs.hasNext()) { const f=fs.next(); if (!f.getName().includes("주문내역"))
-                  continue; try { const ss=SpreadsheetApp.open(f); ss.getSheets().forEach(sh=> scanSheet(sh, targetN,
-                  targetP, result));
-                  } catch (e) { }
-                  }
-                  }
-                  return makeRes(result.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
-                  }
+                    orderTimeFull = order.timestamp || '';
+                    orderTime = String(orderTimeFull).replace(/^20(\d{2}년)/, '$1').replace(/[\s\n]+\d{2}:\d{2}:\d{2}$/, '');
+                } catch (e) { console.error("날짜 형식 도중 오류:", e, order); }
+                const isReceived = (order.received === true || String(order.received).toUpperCase() === "TRUE");
+                const isStocked = (order.isStocked === true || String(order.isStocked).toUpperCase() === "TRUE");
+                const pickupDisp = (order.pickupDate || '정보없음').replace(/^20(\d{2}년)/, '$1');
+
+                const orderDateStyle = currentSortBy === 'timestamp' ? 'color:var(--nego-orange); font-weight:700;' : 'color:#455464;';
+                const pickupDateStyle = currentSortBy === 'pickupDate' ? 'color:var(--nego-orange); font-weight:700;' : 'color:#455464;';
+
+                const isOrderToday = parseKRDate(orderTimeFull).toDateString() === new Date().toDateString();
+                const canDelete = isOrderToday && !isCancelled && !isReceived && !isProcessing && !isStocked && !order.onSite;
+
+                // [상태 텍스트/색상 결정]
+                let statusText = '';
+                let statusColor = '';
+
+                if (isProcessing) {
+                    statusText = '취소중...';
+                    statusColor = '#666';
+                } else if (isCancelled) {
+                    statusText = '취소완료';
+                    statusColor = '#999';
+                } else if (isReceived) {
+                    statusText = '픽업완료';
+                    statusColor = '#4CAF50';
+                } else if (isStocked) {
+                    statusText = '입고완료';
+                    statusColor = 'var(--nego-orange)'; // var 사용
+                } else {
+                    statusText = '미입고';
+                    statusColor = '#AAA';
+                }
+
+
+
+                const safeTime = escapeArg(orderTimeFull);
+                const safeName = escapeArg(order.name);
+                const safeItem = escapeArg(order.item);
+                const safePickup = escapeArg(order.pickupDate);
+                const safeMatch = escapeArg(order.matchKey);
+
+                htmlBuffer += `
+                    <div style="border-bottom: 1px solid #eee; padding: 12px 0; ${(isCancelled || order.onSite) ? 'opacity:0.6; text-decoration:line-through;' : ''} ${isProcessing ? 'opacity:0.7;' : ''}">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                            <div style="flex:1; padding-right:10px;">
+                                <div style="font-size:16px; font-weight:800; color:var(--item-black); line-height:1.2; margin-bottom:6px; white-space: pre-wrap;">${order.item}</div>
+                                <div style="font-size:12px; display:flex; flex-direction:column; gap:2px;">
+                                    <div style="${orderDateStyle}">주문일: ${orderTime}</div>
+                                    <div style="${pickupDateStyle}">픽업일: ${pickupDisp}</div>
+                                </div>
+                            </div>
+                            <div style="text-align:right; min-width:90px; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                                <div style="font-size:13px; color:#455464; font-weight:700;">${order.qty}개 / ${String(order.total || 0).includes(',') ? order.total : parseInt(order.total || 0).toLocaleString()}원</div>
+                                ${order.onSite ? `<div style="font-size:16px; font-weight:800; color:#999; margin-bottom:-2px;">현장판매</div>` : `<div style="font-size:16px; font-weight:800; color:${statusColor};">${statusText}</div>`}
+                                ${canDelete ? `<button onclick="deleteOrderServer('${safeTime}', '${safeName}', '${safeItem}', '${safePickup}', '${safeMatch}')" 
+                                     style="margin-top:4px; width:100%; height:28px; background:#eff2f5; color:#666; border:none; border-radius:0; font-size:13px; font-weight:700; cursor:pointer;">주문취소</button>` : ''}
+                                 ${isProcessing ? `<div style="margin-top:4px; width:100%; height:28px; display:flex; align-items:center; justify-content:center; background:#f5f5f5; color:#999; border-radius:0; font-size:13px; font-weight:700;">취소중</div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // 더보기 버튼 추가
+            if (filtered.length > currentHistoryLimit) {
+                htmlBuffer += `
+                    <div style="text-align:center; padding:20px 0;">
+                        <button onclick="loadMoreHistory()" style="background:#f5f5f5; border:none; border-radius:30px; padding:10px 25px; font-weight:800; color:#555; cursor:pointer;">더보기 +</button>
+                    </div>
+                `;
+            }
+
+            list.innerHTML = htmlBuffer;
+        }
+
+        function loadMoreHistory() {
+            currentHistoryLimit += 10;
+            renderHistory();
+        }
+
+        async function deleteOrderServer(timestamp, name, item, pickupDate, matchKey) {
+            // [추가] 중복 취소 방지 체크
+            if (isHistoryProcessing) {
+                showSystemModal("이전 주문 취소 처리중입니다.\n잠시만 기다려 주세요.", 'alert');
+                return;
+            }
+
+            const displayItem = item.replace(/['"]/g, '');
+            showSystemModal(`[${displayItem}]\n주문을 취소하시겠습니까?`, 'confirm', async (btnYes, btnNo) => {
+                // 한 번 더 체크 (모달 떠있는 동안 다른 취소가 시작되었을 수 있음)
+                if (isHistoryProcessing) {
+                    showSystemModal("이전 주문 취소 처리중입니다.\n잠시만 기다려 주세요.", 'alert');
+                    return;
+                }
+
+                document.getElementById('system-modal').style.display = 'none';
+                checkScrollLock();
+
+                // 1. 상태 전이: 처리 중으로 변경
+                isHistoryProcessing = true; // [추가] 글로벌 플래그 설정
+                const targetDigitTime = normD(timestamp);
+                const targetIdx = fullHistoryData.findIndex(d => {
+                    const rowDigitTime = normD(d.timestamp);
+                    // 타임스탬프 매칭 (2026년 vs 26년 차이 대응: 뒤에서부터 잘라서 비교하거나 포함 여부 확인)
+                    const isTimeMatch = rowDigitTime === targetDigitTime ||
+                        (rowDigitTime.length > targetDigitTime.length ? rowDigitTime.endsWith(targetDigitTime) : targetDigitTime.endsWith(rowDigitTime));
+
+                    return isTimeMatch &&
+                        String(d.matchKey || d.pickupDate || "").trim() === String(matchKey || pickupDate || "").trim() &&
+                        String(d.item).replace(/\[취소\]/g, "").replace(/['"]/g, '').trim() === String(item).replace(/\[취소\]/g, "").replace(/['"]/g, '').trim()
+                });
+
+                if (targetIdx === -1) {
+                    console.error("취소 대상을 찾을 수 없음:", { timestamp, item, matchKey, pickupDate });
+                    showSystemModal("주문내역에서 해당 항목을 찾을 수 없습니다. (데이터 동기화 중일 수 있습니다)", 'alert');
+                    isHistoryProcessing = false;
+                    return;
+                }
+                fullHistoryData[targetIdx].isProcessing = true;
+                renderHistory();
+
+                const payload = {
+                    header: 'delete',
+                    timestamp: String(timestamp).trim(),
+                    name: String(name).trim(),
+                    item: String(item).trim(),
+                    pickupDate: String(pickupDate).trim(),
+                    matchKey: String(matchKey || "").trim() // matchKey 전송
+                };
+
+                fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) })
+                    .then(res => res.json())
+                    .then(result => {
+                        isHistoryProcessing = false;
+                        if (targetIdx !== -1) {
+                            fullHistoryData[targetIdx].isProcessing = false;
+                        }
+
+                        if (result.result === 'success') {
+                            if (targetIdx !== -1) {
+                                if (!fullHistoryData[targetIdx].item.includes('[취소]')) {
+                                    fullHistoryData[targetIdx].item = "[취소] " + fullHistoryData[targetIdx].item;
+                                }
+                                fullHistoryData[targetIdx].received = "취소완료";
+                                fullHistoryData[targetIdx].canceled = true;
+
+                                const name = document.getElementById('input-name').value;
+                                const phone = document.getElementById('input-phone').value;
+                                localStorage.setItem(`history_cache_${name}_${phone}`, JSON.stringify(fullHistoryData));
+
+                                const mKey = matchKey || "no-date";
+                                const itemKey = mKey + "|" + String(item).replace(/['"]/g, '').trim();
+                                const p = productsData.find(pd => pd.name === String(item).replace(/['"]/g, '').trim() && (pd.matchKey === mKey || pd.displayDate === String(pickupDate).trim()));
+
+                                if (p) {
+                                    p.stock = parseInt(p.stock || 0) + (parseInt(fullHistoryData[targetIdx].qty) || 1);
+                                    pendingStockUpdates[itemKey] = { stock: p.stock, expire: Date.now() + STOCK_LOCK_DURATION };
+                                    const altKey = (mKey === "no-date" ? "" : "no-date") + "|" + p.name;
+                                    if (pendingStockUpdates[altKey]) delete pendingStockUpdates[altKey];
+                                    const activeBtn = document.querySelector('.date-btn.active');
+                                    if (activeBtn) renderList(activeBtn.dataset.date);
+                                }
+                            }
+                            showSystemModal("주문이 취소되었습니다.", 'alert');
+                            renderHistory();
+                            setTimeout(() => loadData(), 2000);
+                        } else {
+                            renderHistory();
+                            showSystemModal("취소에 실패했습니다. " + (result.message || "잠시 후 다시 시도해 주세요."), 'alert');
+                        }
+                    })
+                    .catch(err => {
+                        console.error("취소 실패:", err);
+                        showSystemModal("⚠️ 취소 처리에 실패했습니다.\n" + (err.message || "네트워크 오류"), 'alert');
+                        isHistoryProcessing = false;
+                        document.getElementById('system-modal').style.display = 'none';
+
+                        // [재고 동기화] 실패 시 최신 재고 상태를 다시 불러옴
+                        loadData();
+
+                        const errIdx = fullHistoryData.findIndex(d =>
+                            String(d.timestamp).trim() === String(timestamp).trim() &&
+                            String(d.matchKey || "").trim() === String(matchKey || "").trim() && // matchKey 비교 추가
+                            String(d.item).replace(/['"]/g, '').trim() === String(item).replace(/['"]/g, '').trim()
+                        );
+                        if (errIdx !== -1) fullHistoryData[errIdx].isProcessing = false;
+                        renderHistory();
+                    });
+
+                return true;
+            });
+        }
+
+        // [날짜] 요일 표시 로직
+        function formatDateWithDay(input) {
+            const d = new Date(input);
+            if (isNaN(d.getTime())) return input;
+            const week = ['일',
+                '월',
+                '화',
+                '수',
+                '목',
+                '금',
+                '토'];
+
+            return `${d.getMonth() + 1}월${d.getDate()}일(${week[d.getDay()]})`;
+        }
+
+        // [이미지 캐시] 브라우저 기본 캐시 활용 (Preloading)
+        function getImgUrl(input, size = 1000, retry = false) {
+            if (!input) return '';
+            let id = input.toString().trim();
+            const driveMatch = id.match(/[-\w]{25,}/);
+            if (driveMatch) id = driveMatch[0];
+
+            let url = `https://drive.google.com/thumbnail?id=${id}&sz=w${size}`;
+            if (retry) url += `&t=${Date.now()}`; // 재시도 시 캐시 무시
+            return url;
+        }
+
+        // [이미지] 배경에서 브라우저 캐시에 미리 저장 (CORS 문제 해결)
+        function startImageCaching(data) {
+            if (!data || data.length === 0) return;
+
+            console.log("이미지 프리로딩(브라우저 캐시) 시작...");
+            data.forEach(p => {
+                if (p.images && p.images[0]) {
+                    const url = getImgUrl(p.images[0], 300);
+                    const img = new Image();
+                    img.src = url; // 단순히 src에 대입하면 브라우저가 알아서 캐싱함
+                }
+            });
+        }
+
+        async function loadData(force = false) {
+            const productArea = document.getElementById('product-list');
+
+            // [상태 잠금 강제 해제] 수동 새로고침 시에는 모든 잠금을 풀고 서버 데이터를 신뢰함
+            if (force) {
+                pendingStockUpdates = {};
+                console.log("새로고침: 모든 재고 잠금을 해제합니다.");
+            }
+
+            // 1. [로컬 캐시] 메모리에 데이터가 없을 때만 즉시 렌더링 (깜빡임 최소화)
+            if (productsData.length === 0) {
+                const cachedData = localStorage.getItem('moket_products_cache_v2');
+                if (cachedData) {
+                    try {
+                        productsData = JSON.parse(cachedData);
+                        console.log("로컬 캐시 데이터 즉시 표시");
+                        processAndRender(productsData);
+                    } catch (e) {
+                        console.error("캐시 로드 실패:", e);
+                    }
+                }
+            }
+
+            // 데이터도 없고 캐시도 없을 때만 스켈레톤 표시
+            if (productsData.length === 0) {
+                showSkeleton();
+            }
+
+            try {
+                // 2. [서버 호출] 배경에서 최신 데이터 가져오기 (캐시방지 타임스맷프 추가)
+                const fetchUrl = API_URL + (API_URL.includes('?') ? '&' : '?') + 't=' + Date.now();
+                const response = await fetch(fetchUrl);
+                if (!response.ok) throw new Error('네트워크 응답이 올바르지 않습니다.');
+                const rawData = await response.json();
+
+                if (!Array.isArray(rawData)) {
+                    if (rawData.result === "error") throw new Error(rawData.message);
+                    throw new Error('데이터 형식이 올바르지 않습니다.');
+                }
+
+                // [디버깅] 서버 수신 데이터 확인
+                console.log("[Data Sync] 서버 수신 원본 데이터:", rawData);
+
+                // 매핑 처리 (가짜 데이터 'no-date' 원천 차단)
+                let freshData = rawData.map(p => {
+                    let mKey = (p.matchKey || p.date || "").trim();
+                    if (mKey === "no-date") mKey = ""; // 가짜 데이터 제거
+
+                    return {
+                        ...p,
+                        name: (p.name || "").trim(),
+                        matchKey: mKey,
+                        displayDate: p.date ? formatDateWithDay(p.date) : "",
+                        images: Array.isArray(p.images) ? p.images : []
+                    };
+                }).filter(p => {
+                    const isValid = p.name !== "" && p.matchKey !== "" && p.matchKey !== "no-date";
+                    if (!isValid) console.warn("[Data Sync] 유효하지 않은 데이터 제외:", p);
+                    return isValid;
+                });
+
+                console.log("[Data Sync] 최종 유효 데이터:", freshData);
+
+                console.log("[Data Sync] 필터링 후 유효 데이터:", freshData);
+
+                // [상태 잠금 적용] 최근 주문/취소된 품목 보호
+                const now = Date.now();
+                for (let key in pendingStockUpdates) {
+                    if (pendingStockUpdates[key].expire < now) {
+                        delete pendingStockUpdates[key];
+                        continue;
+                    }
+                    const [mKey, name] = key.split("|");
+                    const target = freshData.find(pd => pd.matchKey === mKey && pd.name === name);
+                    if (target) {
+                        console.log(`[상태 보호] ${name} (${mKey}) 재고를 로컬 상태(${pendingStockUpdates[key].stock})로 강제 유지합니다.`);
+                        target.stock = pendingStockUpdates[key].stock;
+                    }
+                }
+
+                if (freshData.length > 0) {
+                    // [핵심 수정] 기존에 이미 로드해둔 상세 이미지 정보 보존
+                    freshData.forEach(fItem => {
+                        const existing = productsData.find(p => p.name === fItem.name && p.matchKey === fItem.matchKey);
+                        if (existing && existing.isFullLoaded) {
+                            fItem.images = existing.images;
+                            fItem.isFullLoaded = true;
+                        }
+                    });
+
+                    // 데이터가 바뀌었을 때만 렌더링 업데이트 (화면 깜빡임 방지)
+                    if (JSON.stringify(freshData) !== JSON.stringify(productsData)) {
+                        productsData = freshData;
+                        localStorage.setItem('moket_products_cache_v2', JSON.stringify(productsData));
+                        console.log("최신 데이터로 화면 업데이트 (상세 이미지 보존됨)");
+                        processAndRender(productsData);
+                        startImageCaching(productsData);
+                        setTimeout(preloadAllProductImages, 2000); // 2초 뒤에 배경 프리로드 시작 (메인 이미지 우선)
+                    } else {
+                        startImageCaching(productsData);
+                        setTimeout(preloadAllProductImages, 1000);
+                    }
+                } else {
+                    // [추가] 데이터가 하나도 없는 경우 (필터링 등으로 인해)
+                    productsData = [];
+                    processAndRender([]);
+                    console.log("조회된 상품이 없습니다.");
+                }
+            }
+            catch (e) {
+                console.error("배경 로드 실패:", e);
+                // 캐시조차 없으면 에러 표시
+                if (!productsData || productsData.length === 0) {
+                    productArea.innerHTML = `<div style="text-align:center; padding:50px 20px; color:#ff4d4d;">
+                        🚫 정보를 불러올 수 없습니다.<br>
+                        <span style="font-size:0.8rem; color:#999;">(${e.message})</span>
+                    </div>`;
+                }
+            }
+        }
+
+        // [추가] 배경에서 몰래 모든 상품 이미지를 가져오는 함수 (Preloading)
+        let isPreloading = false;
+        async function preloadAllProductImages() {
+            if (isPreloading || !productsData.length) return;
+            isPreloading = true;
+
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            // [우선순위 정렬] 1순위: 가까운 픽업일, 2순위: 상품명 가나다순 (날짜 없는 상품 제외)
+            const sortPriority = [...productsData]
+                .filter(p => p.matchKey !== "no-date" && p.matchKey >= todayStr)
+                .sort((a, b) => {
+                    const dateSort = a.matchKey.localeCompare(b.matchKey);
+                    if (dateSort !== 0) return dateSort;
+                    return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+                });
+
+            console.log(`이미지 배경 로드 시작 (총 ${sortPriority.length}개 항목, 날짜순 우선순위 적용)`);
+
+            for (const p of sortPriority) {
+                if (!p.isFullLoaded) {
+                    try {
+                        const res = await fetch(`${API_URL}?action=fetchProductImages&name=${encodeURIComponent(p.name)}`);
+                        const allImages = await res.json();
+
+                        if (Array.isArray(allImages)) {
+                            const target = productsData.find(pd => pd.name === p.name && pd.matchKey === p.matchKey);
+                            if (target) {
+                                if (allImages.length > 0) target.images = allImages;
+                                target.isFullLoaded = true;
+                                localStorage.setItem('moket_products_cache_v2', JSON.stringify(productsData));
+
+                                // [핵심 수정] 한꺼번에 로드하지 않고 하나씩 간격을 두고 로드
+                                for (const id of allImages) {
+                                    await new Promise(resolve => {
+                                        const img = new Image();
+                                        img.onload = resolve;
+                                        img.onerror = () => {
+                                            // 실패 시 1회 재시도
+                                            setTimeout(() => {
+                                                const retryImg = new Image();
+                                                retryImg.src = getImgUrl(id, 1000, true);
+                                                resolve();
+                                            }, 1000);
+                                        };
+                                        img.src = getImgUrl(id, 1000);
+                                    });
+                                    await new Promise(r => setTimeout(r, 200)); // 이미지 한 장당 0.2초 휴식
+                                }
+                                console.log(`[프리로드 완료] ${p.name} (${allImages.length}장)`);
+                            }
+                        }
+                    } catch (e) {
+                        console.error(`[프리로드 실패] ${p.name}:`, e);
+                    }
+                    await new Promise(r => setTimeout(r, 800)); // 상품 하나당 0.8초 휴식 (안정성 확보)
+                }
+            }
+            isPreloading = false;
+            console.log("모든 이미지 파일 배경 로드 완료.");
+        }
+
+
+
+
+        function showSkeleton() {
+            const container = document.getElementById('product-list');
+            container.innerHTML = `
+                <div id="loading-msg" style="width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:50px 0; color:#999; text-align:center;">
+                    <div class="loading-spinner" style="margin-bottom:15px;"></div>
+                    상품목록을 조회 중입니다...
+                </div>
+            `;
+            for (let i = 0; i < 5; i++) {
+                const item = document.createElement('div');
+                item.className = 'skeleton-card';
+                item.innerHTML = `
+                    <div class="skeleton skeleton-thumb"></div>
+                    <div class="skeleton-info">
+                        <div class="skeleton skeleton-title"></div>
+                        <div class="skeleton skeleton-price"></div>
+                    </div>
+                `;
+                container.appendChild(item);
+            }
+        }
+
+        // 날짜 필터 생성 및 초기 리스트 렌더링을 담당하는 공통 함수
+        function processAndRender(data) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // 오늘 날짜 이후 데이터만 필터링 (엄격)
+            const futureData = data.filter(p => {
+                const cleanKey = String(p.matchKey).replace(/\./g, '-');
+                const parts = cleanKey.split('-');
+                if (parts.length < 3) {
+                    console.error("[Filter] 날짜 형식 부족:", p.matchKey);
+                    return false;
+                }
+
+                // 로컬 시간 기준으로 정확히 생성 (연, 월-1, 일)
+                const pDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                if (isNaN(pDate.getTime())) return false;
+
+                pDate.setHours(0, 0, 0, 0);
+                const isFutureOrToday = pDate >= today;
+
+                if (!isFutureOrToday) console.log(`[Filter] 과거 날짜 제외: ${p.name} (${p.matchKey})`);
+                return isFutureOrToday;
+            });
+
+            const uniqueDates = [...new Set(futureData.map(p => p.matchKey))].sort((a, b) => new Date(a) - new Date(b));
+            const filterArea = document.getElementById('date-filters');
+
+            // 현재 활성화된 날짜 기억
+            const activeBtn = filterArea.querySelector('.date-btn.active');
+            const activeDate = activeBtn ? activeBtn.dataset.date : (uniqueDates.length > 0 ? uniqueDates[0] : null);
+
+            filterArea.innerHTML = '';
+            uniqueDates.forEach((date, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `date-btn ${((!activeDate && idx === 0) || date === activeDate) ? 'active' : ''}`;
+                btn.dataset.date = date;
+                btn.innerText = futureData.find(p => p.matchKey === date).displayDate;
+                btn.onclick = () => {
+                    document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    renderList(date);
+                    // [추가] 클릭한 버튼이 화면 밖으로 나갔다면 중앙으로 슬라이드 (사용자 요청)
+                    btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                };
+                filterArea.appendChild(btn);
+            });
+
+            if (activeDate && uniqueDates.includes(activeDate)) {
+                renderList(activeDate);
+                // [추가] 초기 로딩 시에도 활성 버튼이 보이지 않는다면 위치 조정
+                setTimeout(() => {
+                    const target = filterArea.querySelector(`[data-date="${activeDate}"]`);
+                    if (target) target.scrollIntoView({ inline: 'center', block: 'nearest' });
+                }, 100);
+            }
+            else if (uniqueDates.length > 0) renderList(uniqueDates[0]);
+            else {
+                document.getElementById('product-list').innerHTML = '<div style="text-align:center; padding:50px 0; color:#999;">현재 주문 가능한 상품이 없습니다.</div>';
+            }
+        }
+
+        function renderList(targetKey) {
+            const container = document.getElementById('product-list');
+            container.innerHTML = '';
+
+            productsData.filter(p => p.matchKey === targetKey).forEach(p => {
+                const imgId = p.images[0];
+                const thumbUrl = imgId ? getImgUrl(imgId, 300) : '';
+
+                const card = document.createElement('div');
+                card.className = 'product-card';
+
+                const currentQty = cart[p.name] || 0;
+                const stock = p.stock !== undefined && p.stock !== "" ? parseInt(p.stock) : Infinity;
+                const isSoldOut = stock <= 0;
+                const stockText = isFinite(stock) ? (isSoldOut ? "품절" : `주문가능수량 <span style="color:var(--nego-orange);">${stock}</span>개`) : "";
+
+                card.innerHTML = `<div class="card-top">` +
+                    `<div class="thumb">${imgId ? `<img src="${getImgUrl(imgId, 300)}" loading="lazy" style="width:100%; height:100%; object-fit:contain;">` : 'No Image'}</div>` +
+                    `<div class="item-info-top">` +
+                    `<div class="item-name" style="margin-bottom:2px;">${p.name}</div>` +
+                    `<div class="item-price-val">${parseInt(p.price || 0).toLocaleString()}원</div>` +
+                    `</div></div>` +
+                    `<div class="item-controls-bottom-v">` +
+                    `<button class="btn-detail" onclick="openDetail('${escapeArg(p.name)}')">상세보기</button>` +
+                    `<div class="qty-group">` +
+                    `<div class="stock-status" style="color:${isSoldOut ? '#ff0000' : '#455464'};">${stockText}</div>` +
+                    `<div class="qty-controls ${currentQty > 0 ? 'selected' : ''}" style="${isSoldOut ? 'opacity:0.5; pointer-events:none;' : ''}">` +
+                    `<button class="qty-btn" onclick="qty(this, -1)">-</button>` +
+                    `<input class="qty-num" value="${currentQty}" readonly data-name="${p.name}" data-price="${p.price}" data-stock="${stock}">` +
+                    `<button class="qty-btn" onclick="qty(this, 1)">+</button>` +
+                    `</div></div></div>`;
+                container.appendChild(card);
+            });
+        }
+
+        function qty(btn, change) {
+            const input = btn.parentElement.querySelector('input');
+            const name = input.dataset.name;
+            const stock = input.dataset.stock ? parseFloat(input.dataset.stock) : Infinity;
+            let val = Math.max(0, (cart[name] || 0) + change);
+
+            if (val > stock) {
+                showSystemModal(`해당 상품의 주문가능 수량은 ${isFinite(stock) ? stock + '개' : '없음'}입니다.`, 'alert');
+                return;
+            }
+
+            cart[name] = val; // 장바구니 상태 업데이트
+            if (val === 0) delete cart[name]; // 0개면 제거
+
+            input.value = val;
+
+            // 수량에 따라 배경색(클래스) 토글
+            const controls = btn.parentElement;
+            if (val > 0) controls.classList.add('selected');
+            else controls.classList.remove('selected');
+
+            updateFooter();
+
+            // [추가] 푸터가 올라오면서 버튼을 가리는지 체크하여 자동 스크롤
+            if (change > 0) {
+                setTimeout(() => {
+                    const footer = document.getElementById('main-footer');
+                    const footerRect = footer.getBoundingClientRect();
+                    const controlsRect = controls.getBoundingClientRect();
+
+                    // 푸터가 활성화된 상태이고, 수량 조절 바가 푸터 영역에 닿거나 가려지면
+                    if (footer.classList.contains('visible') && controlsRect.bottom > footerRect.top - 10) {
+                        const scrollAmount = controlsRect.bottom - footerRect.top + 70; // 70px 정도 여유있게 올림
+                        window.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+                    }
+                }, 350); // 푸터 애니메이션 시간(0.4s)에 맞춰 약간 일찍 실행
+            }
+        }
+
+        function updateFooter() {
+            let tQ = 0,
+                tP = 0;
+
+            // 장바구니(cart) 상태를 기준으로 합산
+            for (const name in cart) {
+                const q = cart[name];
+                const product = productsData.find(p => p.name === name);
+                if (product) {
+                    tQ += q;
+                    tP += (q * parseInt(product.price || 0));
+                }
+            }
+
+            const footer = document.getElementById('main-footer');
+            if (tQ > 0) {
+                footer.classList.add('visible');
+            } else {
+                footer.classList.remove('visible');
+            }
+
+            document.getElementById('total-qty-text').innerHTML = `총 <span style="color:var(--nego-orange);">${tQ}</span>개 선택`;
+            document.getElementById('total-price-text').innerText = `${tP.toLocaleString()}원`;
+        }
+
+        async function openDetail(name) {
+            const p = productsData.find(i => i.name === name);
+            if (!p) return;
+            document.getElementById('detail-title').innerText = p.name;
+            document.getElementById('detail-price').innerText = parseInt(p.price || 0).toLocaleString() + '원';
+            document.getElementById('detail-desc').style.whiteSpace = 'pre-wrap'; // 줄바꿈 유지
+            document.getElementById('detail-desc').innerText = p.desc || "상세 설명이 없습니다.";
+            const slider = document.getElementById('slider-area');
+            const counter = document.getElementById('detail-counter');
+
+            // 1. 이미지 렌더링 함수
+            const renderImgs = () => {
+                if (p.images && p.images.length > 0 && p.images[0]) {
+                    slider.innerHTML = p.images.map(id => `<img src="${getImgUrl(id)}" >`).join('');
+                    if (p.images.length > 1) {
+                        counter.innerText = `1 / ${p.images.length}`;
+                        counter.style.display = 'block';
+                    } else {
+                        counter.style.display = 'none';
+                    }
+                } else {
+                    slider.innerHTML = `<div class="slider-no-img">No Image</div>`;
+                    counter.style.display = 'none';
+                }
+            };
+
+            if (p.isFullLoaded) {
+                renderImgs();
+            } else {
+                slider.innerHTML = `
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:300px; color:#999; text-align:center;">
+                        <div class="loading-spinner" style="margin-bottom:15px;"></div>
+                        이미지를 로딩중입니다...
+                    </div>`;
+                counter.style.display = 'none';
+            }
+
+            // 슬라이더 스크롤 시 카운터 업데이트
+            slider.onscroll = () => {
+                if (p.images && p.images.length > 1) {
+                    const idx = Math.round(slider.scrollLeft / slider.clientWidth);
+                    counter.innerText = `${idx + 1} / ${p.images.length}`;
+                }
+            };
+
+            document.getElementById('detail-overlay').style.display = 'flex';
+            checkScrollLock();
+            slider.scrollLeft = 0;
+            const detailBody = document.querySelector('.detail-body');
+            if (detailBody) detailBody.scrollTop = 0;
+
+            // 2. 만약 아직 폴더 이미지를 '완벽하게' 로드하지 않았다면 서버에 요청 (Lazy Loading)
+            if (!p.isFullLoaded) {
+                try {
+                    const res = await fetch(`${API_URL}?action=fetchProductImages&name=${encodeURIComponent(p.name)}&folderId=${p.folderId || ''}`);
+                    const allImages = await res.json();
+
+                    if (Array.isArray(allImages)) {
+                        // "폴더 이미지만 보여줘" 요청 반영: 폴더 내용을 사용하여 기존 시트 이미지ID 무시
+                        p.images = allImages;
+                        p.isFullLoaded = true; // 체크 완료 표시
+                        localStorage.setItem('moket_products_cache_v2', JSON.stringify(productsData));
+                        renderImgs(); // 이미지 다시 그리기
+                    }
+                } catch (e) {
+                    console.error("상세 이미지 로드 실패:", e);
+                    if (slider.innerText.includes("불러오는 중")) {
+                        slider.innerHTML = `<div class="slider-no-img">No Image</div>`;
+                    }
+                }
+            }
+        }
+
+
+        function openFullscreen() {
+            const slider = document.getElementById('slider-area');
+            const index = Math.round(slider.scrollLeft / slider.clientWidth);
+
+            const name = document.getElementById('detail-title').innerText;
+            const p = productsData.find(i => i.name === name);
+            if (!p || !p.images || p.images.length === 0) return;
+
+            const fsOverlay = document.getElementById('fullscreen-overlay');
+            const fsSlider = document.getElementById('fullscreen-slider-area');
+            const fsCounter = document.getElementById('fs-counter');
+
+            // 이미지 렌더링
+            fsSlider.innerHTML = p.images.map(id => `
+                <div class="fullscreen-slide">
+                    <img src="${getImgUrl(id)}">
+                </div>
+            `).join('');
+
+            // 카운터 초기화
+            if (p.images.length > 1) {
+                fsCounter.innerText = `${index + 1} / ${p.images.length}`;
+                fsCounter.style.display = 'block';
+            } else {
+                fsCounter.style.display = 'none';
+            }
+
+            // 스크롤 이벤트로 카운터 업데이트
+            fsSlider.onscroll = () => {
+                const curIdx = Math.round(fsSlider.scrollLeft / fsSlider.clientWidth);
+                if (p.images.length > 1) {
+                    fsCounter.innerText = `${curIdx + 1} / ${p.images.length}`;
+                }
+            };
+
+            fsOverlay.style.display = 'flex';
+            checkScrollLock();
+
+            // 현재 인덱스로 정밀 스크롤 이동
+            setTimeout(() => {
+                fsSlider.scrollTo({
+                    left: index * fsSlider.clientWidth,
+                    behavior: 'auto'
+                });
+            }, 50);
+        }
+
+        function closeFullscreen() {
+            document.getElementById('fullscreen-overlay').style.display = 'none';
+            checkScrollLock();
+        }
+
+        function openConfirm() {
+            // [추가] 안내사항 체크박스 초기화
+            const noticeCheck = document.getElementById('confirm-notice-check');
+            if (noticeCheck) noticeCheck.checked = false;
+
+            // [추가] 장바구니 비어있음 체크
+            if (Object.keys(cart).length === 0) {
+                showSystemModal("상품이 없습니다. 상품을 선택해 주세요.", 'alert');
+                return;
+            }
+
+            const name = document.getElementById('input-name').value || "입력되지 않음";
+            const phone = document.getElementById('input-phone').value || "입력되지 않음";
+
+            const list = document.getElementById('confirm-item-list');
+            list.innerHTML = `
+                <div style="font-size:18px; font-weight:900; color:var(--item-black); margin-bottom:12px; text-align:center;">주문 내용을 확인해 주세요</div>
+                <div style="margin-bottom:15px; border-bottom:1px solid #ddd; padding-bottom:12px;">
+                    <div style="font-size:16px; font-weight:800; color:var(--item-black); margin-bottom:5px;">주문자 정보</div>
+                    <div style="font-size:15px; color:#000;">주문자명: <span style="font-weight:700; color:var(--nego-orange);">${name}</span></div>
+                    <div style="font-size:15px; color:#000;">연락처: <span style="font-weight:700; color:var(--nego-orange);">${phone}</span></div>
+                </div>
+            `;
+
+            // 장바구니(cart) 상태를 기준으로 확인 창 표시
+            for (const name in cart) {
+                const q = cart[name];
+                const product = productsData.find(p => p.name === name);
+                if (product && q > 0) {
+                    const sub = q * parseInt(product.price || 0);
+                    list.innerHTML += `
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:15px; margin-bottom:8px;">
+                            <span style="color:var(--item-black); font-weight:800; flex:1; padding-right:6px; word-break:keep-all; line-height:1.2; white-space: pre-wrap;">${name}</span>
+                            <div style="display:flex; align-items:center; min-width:90px; justify-content:flex-end; flex-shrink:0;">
+                                <span style="color:#455464; font-size:15px; font-weight:700; text-align:right;">${q}개</span>
+                                <span style="color:#ccc; font-size:0.75rem; margin:0 4px;">/</span>
+                                <span style="color:var(--item-black); font-weight:800; text-align:right;">${sub.toLocaleString()}원</span>
+                            </div>
+                        </div>`;
+                }
+            }
+
+            // [추가] 주문 버튼 상태 초기화 (이전 주문의 '처리 중...' 상태 제거)
+            const submitBtn = document.getElementById('btn-submit-order');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "주문확정";
+                submitBtn.style.opacity = "1";
+            }
+
+            document.getElementById('confirm-overlay').style.display = 'flex';
+            checkScrollLock();
+        }
+
+        async function completeOrder() {
+            // [추가] 안내사항 확인 체크 여부 검사
+            const noticeCheck = document.getElementById('confirm-notice-check');
+            if (noticeCheck && !noticeCheck.checked) {
+                showSystemModal("안내 내용을 확인하고 동의해주세요.", 'alert');
+                return;
+            }
+
+            // [추가] 중복 처리 방지 (데이터 꼬임 방지)
+            if (isHistoryProcessing) {
+                showSystemModal("이전 주문 확인 중입니다.\n잠시만 기다려 주세요.", 'alert');
+                return;
+            }
+
+            const submitBtn = document.getElementById('btn-submit-order');
+            if (submitBtn.disabled) return; // 이미 처리 중이면 중단
+
+            // 처리 시작 플래그 설정
+            isHistoryProcessing = true;
+
+            // 버튼 즉시 비활성화 (중복 클릭 방지)
+            submitBtn.disabled = true;
+            submitBtn.innerText = "처리 중...";
+            submitBtn.style.opacity = "0.7";
+
+            const name = document.getElementById('input-name').value;
+            const phone = document.getElementById('input-phone').value;
+            const allItems = [];
+
+            // 장바구니(cart) 상태를 기준으로 주문 데이터 생성
+            for (const itemName in cart) {
+                const q = cart[itemName];
+                const pData = productsData.find(p => p.name === itemName);
+                if (q > 0 && pData) {
+                    allItems.push({
+                        name: itemName,
+                        qty: q,
+                        price: parseInt(pData.price),
+                        subtotal: q * parseInt(pData.price),
+                        date: pData.matchKey
+                    });
+                }
+            }
+
+            if (allItems.length === 0) {
+                showSystemModal("주문할 상품이 없습니다.", 'alert');
+                submitBtn.disabled = false;
+                submitBtn.innerText = "주문확정";
+                submitBtn.style.opacity = "1";
+                return;
+            }
+
+            if (!name || !phone) {
+                showSystemModal("주문자명과 연락처를 입력해주세요.", 'alert', () => {
+                    closeModal('confirm-overlay');
+                    document.getElementById('profile-modal').style.display = 'flex';
+                });
+                submitBtn.disabled = false;
+                submitBtn.innerText = "주문확정";
+                submitBtn.style.opacity = "1";
+                return;
+            }
+
+            // 모달 닫기
+            closeModal('confirm-overlay');
+            closeModal('detail-overlay');
+
+            const tempTimestamp = new Date().toISOString();
+
+            // 픽업일(date)별로 아이템 그룹화
+            const groups = allItems.reduce((acc, item) => {
+                const d = item.date || 'unknown';
+                if (!acc[d]) acc[d] = [];
+                acc[d].push(item);
+                return acc;
+            }, {});
+
+            const dateKeys = Object.keys(groups);
+
+            // [Optimistic UI] 즉시 성공 처리
+            try {
+                // 장바구니 비우기 및 UI 갱신 (수량 선반영은 하지 않음)
+                cart = {};
+                updateFooter();
+
+                // [UI 갱신] 장바구니가 비워졌으므로 리스트도 다시 그려서 수량 0으로 초기화
+                const activeBtn = document.querySelector('.date-btn.active');
+                if (activeBtn) renderList(activeBtn.dataset.date);
+
+                // 1. 날짜 포맷팅 헬퍼 정의 (JS용)
+                const jsFormatDate = (d) => {
+                    const y = d.getFullYear();
+                    const m = d.getMonth() + 1;
+                    const day = d.getDate();
+                    const w = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
+                    const h = String(d.getHours()).padStart(2, '0');
+                    const min = String(d.getMinutes()).padStart(2, '0');
+                    const s = String(d.getSeconds()).padStart(2, '0');
+                    return `${y}년 ${m}월 ${day}일 (${w}) ${h}:${min}:${s}`;
+                };
+
+                // [수정] 픽업일 포맷팅 헬퍼 ("2024-02-06" -> "2024년 2월 6일 (화)")
+                const jsFormatPickup = (dateStr) => {
+                    if (!dateStr) return "";
+                    const d = new Date(dateStr);
+                    const y = d.getFullYear();
+                    const m = d.getMonth() + 1;
+                    const day = d.getDate();
+                    const w = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
+                    return `${y}년 ${m}월 ${day}일 (${w})`;
+                };
+
+                // 2. 새로운 히스토리 아이템 생성
+                const newHistoryItems = allItems.map(it => ({
+                    timestamp: jsFormatDate(new Date(tempTimestamp)),
+                    item: it.name,
+                    qty: it.qty,
+                    price: it.price,
+                    total: it.subtotal,
+                    pickupDate: jsFormatPickup(it.date), // 즉시 포맷팅 적용
+                    received: false,
+                    name: name,
+                    rawTimestamp: tempTimestamp,
+                    matchKey: it.date // matchKey 추가 (동일 상품 구분용)
+                }));
+
+                // 3. 전역 변수에 추가 (맨 앞에)
+                // [수정] 기존 데이터가 없으면 캐시에서 먼저 로드 (덮어쓰기 방지)
+                const cacheKey_hist = `history_cache_${name}_${phone}`;
+                if (!fullHistoryData || fullHistoryData.length === 0) {
+                    const cached = localStorage.getItem(cacheKey_hist);
+                    if (cached) fullHistoryData = JSON.parse(cached);
+                }
+
+                if (typeof fullHistoryData !== 'undefined' && Array.isArray(fullHistoryData)) {
+                    fullHistoryData = [...newHistoryItems, ...fullHistoryData];
+                    // [최적화] 로컬 스토리지 즉시 갱신 (역사 창 열 때 서버 대기 없이 바로 뜨게 함)
+                    localStorage.setItem(cacheKey_hist, JSON.stringify(fullHistoryData));
+                }
+
+                // 성공 메시지 (기존 Optimistic UI용 모달 제거 또는 변경)
+                // 대신 '주문 확인 중' 모달을 띄우고 서버 응답 후 완료 모달로 전환
+                showSystemModal("주문 확인 중입니다...\n완료창이 뜰 때까지 기다려 주세요...", 'loading');
+
+                // 2. 백그라운드 전송 -> 이제 응답을 기다림 (await)
+                // [수정] 원본 카카오 프로필 정보 항상 포함 (사용자 수동 변경과 관계없이 기록용)
+                const kakaoName = localStorage.getItem('kakao_original_name') || "";
+                const kakaoPhone = localStorage.getItem('kakao_original_phone') || "";
+
+                // 2. 서버 전송 데이터 구성
+                const payload = {
+                    header: 'order',
+                    name: name,
+                    phone: phone,
+                    kakaoName: kakaoName,
+                    kakaoPhone: kakaoPhone,
+                    items: allItems,
+                    timestamp: tempTimestamp // 동일 타임스탬프 사용 (삭제 시 매칭용)
+                };
+
+                // 비동기 실행 (결과를 기다려야 하므로 await 사용 또는 then 체이닝 유지)
+                fetch(API_URL, {
+                    method: 'POST',
+                    redirect: 'follow',
+                    body: JSON.stringify(payload)
+                }).then(res => {
+                    if (!res.ok) throw new Error("전송 실패");
+                    return res.json();
+                }).then(result => {
+                    isHistoryProcessing = false; // [추가] 처리 완료
+                    if (result.result === 'success') {
+                        console.log("주문 백그라운드 처리 완료");
+                        // 로딩 모달을 닫고 완료 모달 표시
+                        document.getElementById('system-modal').style.display = 'none';
+
+                        // [재고 즉시 반영] 서버 성공 시 로컬 데이터를 즉시 갱신하여 체감 속도 향상
+                        allItems.forEach(it => {
+                            const p = productsData.find(pd => pd.matchKey === it.date && pd.name === it.name);
+                            if (p) {
+                                p.stock = parseInt(p.stock || 0) - (parseInt(it.qty) || 0);
+                                // [상태 잠금] 15초 동안 이 수량을 보호 (loadData가 덮어쓰지 못하도록)
+                                const itemKey = (it.date || "") + "|" + it.name;
+                                pendingStockUpdates[itemKey] = {
+                                    stock: p.stock,
+                                    expire: Date.now() + (typeof STOCK_LOCK_DURATION !== 'undefined' ? STOCK_LOCK_DURATION : 15000)
+                                };
+                            }
+                        });
+
+                        // [UI 갱신] 변경된 재고 데이터로 리스트 즉시 다시 그리기
+                        const activeBtn = document.querySelector('.date-btn.active');
+                        if (activeBtn) renderList(activeBtn.dataset.date);
+
+                        showSystemModal("주문이 완료되었습니다!", 'alert');
+                        setTimeout(() => closeModal('system-modal'), 1500);
+
+                        // 확실한 데이터 동기화를 위해 조용히 새로고침
+                        setTimeout(() => loadData(), 2000);
+                    } else {
+                        // [에러 핸들링] 서버에서 재고 부족 등으로 거절한 경우
+                        throw new Error(result.message || "주문 처리 실패");
+                    }
+                }).catch(err => {
+                    console.error("주문 백그라운드 실패:", err);
+                    isHistoryProcessing = false; // [추가] 에러 발생 시 처리 완료로 변경
+                    document.getElementById('system-modal').style.display = 'none';
+
+                    // [재고 동기화] 실패 시 최신 재고 상태를 다시 불러옴
+                    loadData();
+
+                    showSystemModal("⚠️ 주문이 실패했습니다! ⚠️\n" + err.message, 'alert');
+
+                    // 실패 시 버튼 재활성화
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = "주문확정 (재시도)";
+                        submitBtn.style.opacity = "1";
+                    }
+                });
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('system-modal').style.display = 'none';
+                alert("주문 처리 중 오류가 발생했습니다.\n내용: " + err.message);
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = "주문확정 (재시도)";
+                }
+            }
+        }
+
+
+        // window.onload 대신 DOMContentLoaded 사용 (훨씬 빠름)
+        document.addEventListener('DOMContentLoaded', () => {
+            // [마이그레이션] 구버전 카카오 키 이동
+            const oldNick = localStorage.getItem('kakao_nickname');
+            if (oldNick && !localStorage.getItem('kakao_original_name')) {
+                localStorage.setItem('kakao_original_name', oldNick);
+            }
+
+            // 주문내역은 배경에서 삭제 (UI 안막음)
+            setTimeout(() => localStorage.removeItem('moket_order_history'), 100);
+
+            // 데이터 로드와 프로필 로드를 병렬로 시작
+            loadData();
+            loadProfile();
+
+            // [복구] 사용자 정보 없으면 로그인 유도창(카카오 로그인) 띄움
+            const name = localStorage.getItem('moket_user_name');
+            if (!name || !name.trim()) {
+                setTimeout(() => {
+                    const modal = document.getElementById('profile-modal');
+                    const certName = localStorage.getItem('kakao_original_name');
+
+                    if (certName) {
+                        modal.classList.remove('login-forced');
+                        document.getElementById('profile-modal-title').innerText = "주문자 정보 입력";
+                    } else {
+                        modal.classList.add('login-forced');
+                        document.getElementById('profile-modal-title').innerText = "카카오 로그인";
+                    }
+                    modal.style.display = 'flex';
+                    checkScrollLock();
+                }, 400);
+            } else {
+                setTimeout(checkUnpickedOrders, 1000);
+            }
+
+            // 미픽업 확인
+            // setTimeout(checkUnpickedOrders, 1000);
+        });
+
+        // [속도 개선] 사용자가 앱에 다시 들어오거나 다른 탭에서 돌아오면 자동으로 최신 데이터 갱신
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                console.log("Tab focused (visibility), refreshing data...");
+                loadData();
+            }
+        });
+
+        // [추가] 브라우저의 '뒤로가기/앞으로가기' 캐시(bfcache)에서 복구될 때 대응
+        window.addEventListener('pageshow', (event) => {
+            // event.persisted가 true면 캐시된 페이지가 다시 활성화된 것
+            if (event.persisted) {
+                console.log("Page restored from bfcache, refreshing data...");
+                loadData(true);
+            }
+        });
+
+        // [추가] 포커스를 얻었을 때도 갱신 (일부 모바일 환경 대응)
+        window.addEventListener('focus', () => {
+            console.log("Window focused, checking for updates...");
+            loadData();
+        });
+
+        // [수동 새로고침] 로고 클릭 또는 새로고침 버튼 클릭 시 실행
+        function forceRefresh() {
+            console.log("Manual refresh triggered...");
+            loadData(true);
+        }
+
+    </script>
+</body>
+
+</html>
