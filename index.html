@@ -2153,8 +2153,12 @@
                                     <div style="${pickupDateStyle}">픽업일: ${pickupDisp}</div>
                                 </div>
                             </div>
-                            <div style="text-align:right; min-width:90px; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-                                <div style="font-size:13px; color:#455464; font-weight:700;">${displayQty}${typeof displayQty === 'number' ? '개' : ''} / ${String(order.total || 0).includes(',') ? order.total : parseInt(order.total || 0).toLocaleString()}원</div>
+                            <div style="text-align:right; min-width:100px; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                                <div style="font-size:13px; color:#455464; font-weight:700; display:flex; align-items:center; justify-content:flex-end; gap:6px; width:100%;">
+                                    <span style="white-space:nowrap;">${displayQty}${typeof displayQty === 'number' ? '개' : ''}</span>
+                                    <span style="color:#eee; font-weight:300;">|</span>
+                                    <span style="min-width:65px; text-align:right;">${String(order.total || 0).includes(',') ? order.total : parseInt(order.total || 0).toLocaleString()}원</span>
+                                </div>
                                 ${order.onSite ? `<div style="font-size:16px; font-weight:800; color:#999; margin-bottom:-2px;">현장판매</div>` : `<div style="font-size:16px; font-weight:800; color:${statusColor};">${statusText}</div>`}
                                 ${canDelete ? `<button onclick="deleteOrderServer('${safeTime}', '${safeName}', '${safeItem}', '${safePickup}', '${safeMatch}')" 
                                      style="margin-top:4px; width:100%; height:28px; background:#eff2f5; color:#666; border:none; border-radius:0; font-size:13px; font-weight:700; cursor:pointer;">주문취소</button>` : ''}
