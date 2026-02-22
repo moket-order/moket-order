@@ -482,12 +482,12 @@
         #history-modal .modal-content {
             width: 95%;
             max-width: 580px;
-            height: calc(90vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+            height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px);
             padding: 0;
             display: flex;
             flex-direction: column;
-            margin-top: calc(5vh + env(safe-area-inset-top));
-            margin-bottom: calc(5vh + env(safe-area-inset-bottom));
+            margin-top: calc(10px + env(safe-area-inset-top));
+            margin-bottom: calc(10px + env(safe-area-inset-bottom));
         }
 
         .slider-wrapper {
@@ -1209,24 +1209,24 @@
             <div style="padding: 0 20px 0 20px; flex-shrink: 0;">
                 <div
                     style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; border-bottom: 1.5px solid #eee; padding-bottom: 8px;">
-                    <button class="date-btn active" id="status-order" onclick="filterStatus('order')"
-                        style="height:32px; font-size:15px; padding:0; font-weight:900;">전체</button>
-                    <button class="date-btn" id="status-stocked" onclick="filterStatus('stocked')"
+                    <button class="date-btn active" id="status-stocked" onclick="filterStatus('stocked')"
                         style="height:32px; font-size:15px; padding:0; font-weight:900;">입고</button>
                     <button class="date-btn" id="status-pickup" onclick="filterStatus('pickup')"
                         style="height:32px; font-size:15px; padding:0; font-weight:900;">픽업</button>
                     <button class="date-btn" id="status-cancel" onclick="filterStatus('cancel')"
                         style="height:32px; font-size:15px; padding:0; font-weight:900;">취소</button>
+                    <button class="date-btn" id="status-order" onclick="filterStatus('order')"
+                        style="height:32px; font-size:15px; padding:0; font-weight:900;">전체</button>
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px;">
-                    <button class="date-btn active" id="filter-all" onclick="filterHistory('all')"
-                        style="height:32px; font-size:15px; padding:0; font-weight:800;">전체</button>
-                    <button class="date-btn" id="filter-week" onclick="filterHistory('week')"
+                    <button class="date-btn active" id="filter-week" onclick="filterHistory('week')"
                         style="height:32px; font-size:15px; padding:0; font-weight:800;">1주일</button>
                     <button class="date-btn" id="filter-2weeks" onclick="filterHistory('2weeks')"
                         style="height:32px; font-size:15px; padding:0; font-weight:800;">2주일</button>
                     <button class="date-btn" id="filter-month" onclick="filterHistory('month')"
                         style="height:32px; font-size:15px; padding:0; font-weight:800;">1개월</button>
+                    <button class="date-btn" id="filter-all" onclick="filterHistory('all')"
+                        style="height:32px; font-size:15px; padding:0; font-weight:800;">전체</button>
                 </div>
                 <div
                     style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 0; border-top: 1.5px solid #eee; padding-top: 8px;">
@@ -1820,10 +1820,10 @@
         }
 
         let fullHistoryData = []; // 서버에서 가져온 전체 데이터 저장
-        let currentSortBy = 'pickupDate'; // 'pickupDate' (픽업일) 기본값
+        let currentSortBy = 'timestamp'; // 'timestamp' (주문일) 기본값
         let currentSortDir = 'desc'; // [수정] 기본 내림차순 (최신순)
-        let currentFilter = 'today'; // '오늘' 기본값
-        let currentStatusFilter = 'order'; // '주문' 기본값 (하위분류)
+        let currentFilter = 'week'; // '1주일' 기본값
+        let currentStatusFilter = 'stocked'; // '입고' 기본값
 
         function toggleSortDir() {
             currentSortDir = (currentSortDir === 'desc') ? 'asc' : 'desc';
@@ -1847,16 +1847,16 @@
 
             if (modal.style.display !== 'flex') {
                 currentSortBy = 'timestamp';
-                currentFilter = 'all';
-                currentStatusFilter = 'order';
+                currentFilter = 'week';
+                currentStatusFilter = 'stocked';
                 currentSortDir = 'desc';
                 currentHistoryLimit = 10;
 
                 // 버튼 클래스 초기화 (중복 활성화 방지)
                 document.querySelectorAll('#history-modal .date-btn').forEach(btn => btn.classList.remove('active'));
                 document.getElementById('btn-sort-order')?.classList.add('active');
-                document.getElementById('filter-all')?.classList.add('active');
-                document.getElementById('status-order')?.classList.add('active');
+                document.getElementById('filter-week')?.classList.add('active');
+                document.getElementById('status-stocked')?.classList.add('active');
 
                 title.innerHTML = `<span style="background:#fdf2e9; color:var(--nego-orange); padding:2px 10px; border-radius:0; margin-right:5px; font-weight:900;">${displayName}</span>님의 주문내역`;
                 modal.style.display = 'flex';
