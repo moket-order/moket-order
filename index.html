@@ -16,8 +16,8 @@
     <meta property="og:site_name" content="MOKET 모켓">
     <meta property="og:title" content="MOKET 모켓 - 모두를 위한 공동구매 마켓">
     <meta property="og:description" content="모켓의 주문서 링크입니다.">
-    <meta property="og:image" content="https://moketorder.github.io/moketorder/og-image-v1.png">
-    <meta property="og:image:secure_url" content="https://moketorder.github.io/moketorder/og-image-v1.png">
+    <meta property="og:image" content="https://moketorder.github.io/moketorder/og-image-v2.png">
+    <meta property="og:image:secure_url" content="https://moketorder.github.io/moketorder/og-image-v2.png">
     <meta property="og:image:width" content="800">
     <meta property="og:image:height" content="800">
     <meta property="og:image:type" content="image/png">
@@ -3198,21 +3198,18 @@
 
 
 
-            // [수정] 카카오 정보(kakao_original_name)가 있으면 메인, 없으면 카카오 로그인 유도
-            const kakaoInfo = localStorage.getItem('kakao_original_name');
-            if (!kakaoInfo) {
-                setTimeout(() => {
-                    const modal = document.getElementById('profile-modal');
-                    // 카카오 정보 없음 -> 무조건 로그인 모드
-                    modal.classList.add('login-forced');
-                    document.getElementById('profile-modal-title').innerText = "카카오 로그인";
+            // [수정] 기존 로그인 정보 여부와 관계없이 접속 시 무조건 카카오 로그인 유도창 띄움
+            setTimeout(() => {
+                const modal = document.getElementById('profile-modal');
+                modal.classList.add('login-forced');
+                document.getElementById('profile-modal-title').innerText = "카카오 로그인";
 
-                    modal.style.display = 'flex';
-                    checkScrollLock();
-                }, 400);
-            } else {
-                setTimeout(checkUnpickedOrders, 1000);
-            }
+                modal.style.display = 'flex';
+                checkScrollLock();
+
+                // 미픽업 확인 실행 (로그인 창 뒤에서 데이터 조회 시작)
+                setTimeout(checkUnpickedOrders, 600);
+            }, 400);
 
             // 미픽업 확인
             // setTimeout(checkUnpickedOrders, 1000);
@@ -3251,4 +3248,3 @@
 </body>
 
 </html>
-
