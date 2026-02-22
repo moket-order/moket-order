@@ -1034,7 +1034,7 @@
 
         </ul>
     </div>
-    <div id="profile-modal" class="modal-overlay">
+    <div id="profile-modal" class="modal-overlay" onclick="handleBypassClick(event)">
         <div class="modal-content">
             <div
                 style="background:var(--moket-green); padding: 25px 20px 25px 20px; border-radius: 0; margin: -25px -25px 10px -25px; text-align: center;">
@@ -1093,10 +1093,10 @@
                 <h3 style="margin: 0; font-weight: 800; color: var(--white); font-size: 20px; letter-spacing: 1px;">
                     매장위치</h3>
             </div>
-            <p style="font-size:16px; font-weight:700; margin:20px 0; line-height:1.5;">서울시 용산구 한강대로 405</p>
-            <a href="https://map.naver.com/v5/search/서울시 용산구 한강대로 405" target="_blank"
+            <p style="font-size:16px; font-weight:700; margin:20px 0; line-height:1.5;">경기도 하남시 미사강변한강로 60-1, 1동 1층 106호</p>
+            <a href="https://map.naver.com/v5/search/경기도 하남시 미사강변한강로 60-1, 1동 1층 106호" target="_blank"
                 class="btn-common btn-naver">네이버지도</a>
-            <a href="https://map.kakao.com/link/search/서울시 용산구 한강대로 405" target="_blank"
+            <a href="https://map.kakao.com/link/search/경기도 하남시 미사강변한강로 60-1, 1동 1층 106호" target="_blank"
                 class="btn-common btn-kakao">카카오맵</a>
             <button class="btn-common btn-close" onclick="closeModal('location-modal')">닫기</button>
         </div>
@@ -1298,6 +1298,40 @@
          */
         let pendingStockUpdates = {};
         const STOCK_LOCK_DURATION = 15000; // 15초 동안 유지
+
+        // [추가] 10번 클릭 시 로그인 무시 바이패스
+        let bypassCount = 0;
+        let lastBypassTime = 0;
+        function handleBypassClick(e) {
+            // 버튼이나 입력창, 또는 인터랙티브한 요소 클릭은 카운트에서 제외
+            if (e && (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.closest('button') || e.target.closest('.modal-input'))) {
+                return;
+            }
+
+            const now = Date.now();
+            if (now - lastBypassTime > 2000) bypassCount = 0; // 2초 넘으면 초기화
+            lastBypassTime = now;
+            bypassCount++;
+            if (bypassCount >= 10) {
+                showSystemModal("관리자 모드로 진입합니다 (비인증).", 'alert');
+
+                // [추가] 주문자 정보 초기화 및 모드 전환
+                const modal = document.getElementById('profile-modal');
+                modal.classList.remove('login-forced');
+                document.getElementById('profile-modal-title').innerText = "주문자정보 변경";
+
+                document.getElementById('input-name').value = '';
+                document.getElementById('input-phone').value = '';
+                document.getElementById('menu-greeting').innerHTML = `<span class="name-badge">관리자</span>님`;
+
+                // [추가] 재고 동기화 버튼 노출
+                const stockBtn = document.getElementById('btn-reset-stock');
+                if (stockBtn) stockBtn.style.display = 'block';
+
+                closeModal('profile-modal');
+                bypassCount = 0;
+            }
+        }
 
         // [추가] Firebase 키에 사용할 수 없는 문자 세척 함수 (. # $ [ ] / 등 제거)
         function fSafeKey(s) {
@@ -1727,52 +1761,43 @@
             sessionStorage.setItem('moket_unpicked_checked', 'true');
 
             try {
-                console.log(`[미픽업 확인] ${name} (${phone}) 님의 주문내역을 서버에서 조회합니다...`);
-                // 사용자의 최근 주문내역 가져오기 (캐시 방지 + 월별 검색 범위 확인용)
-                const historyUrl = `${API_URL}?header=history&name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&scope=recent&t=${Date.now()}`;
+                console.log(`[미픽업 확인] ${name} (${phone}) 님의 주문내역을 파이어베이스에서 조회합니다...`);
 
-                const response = await fetch(historyUrl);
+                const cleanPhone = phone.replace(/\D/g, "");
+                const fbUrl = `${FIREBASE_DB_URL}orders/${cleanPhone}.json`;
+
+                const response = await fetch(fbUrl);
                 if (!response.ok) {
-                    console.error("[미픽업 확인] 서버 응답 오류:", response.status);
+                    console.error("[미픽업 확인] 파이어베이스 응답 오류:", response.status);
                     return;
                 }
 
-                const historyData = await response.json();
-                console.log("[미픽업 확인] 서버 수신 데이터:", historyData);
+                const fbData = await response.json();
+                console.log("[미픽업 확인] 파이어베이스 수신 데이터:", fbData);
 
-                if (!Array.isArray(historyData)) {
-                    if (historyData.result === "error") {
-                        console.error("[미픽업 확인] 서버 에러:", historyData.message);
-                    }
+                if (!fbData || typeof fbData !== 'object') {
+                    console.log("[미픽업 확인] 최근 주문 내역이 없습니다.");
                     return;
                 }
 
-                if (historyData.length === 0) {
-                    console.log("[미픽업 확인] 최근 주문(이번 달/지난 달) 내역이 없습니다. (조회 URL: " + historyUrl + ")");
-                    return;
-                }
+                // 오브젝트 형태의 파이어베이스 데이터를 배열로 변환
+                const historyData = Object.values(fbData);
 
-                // [판별] '수령완료', '취소', '미입고'가 아닌 것 + 오늘 포함 이전 날짜인 것만 알림
-                const now = new Date();
-                const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
+                // [판별] '입고완료'인데 '수령완료'가 아니고 '취소'가 아닌 항목 필터링
                 const unpickedItems = historyData.filter(order => {
                     const itemName = String(order.item || "");
-                    const receivedStatus = String(order.received || "").trim();
 
-                    // [수정] 날짜 상관없이 '입고완료'인데 '수령전'이면 모두 알림 대상 (미리 입고된 건 포함)
-                    const isTodayOrPast = true;
+                    const isCanceled = itemName.includes("[취소]") ||
+                        order.canceled === true ||
+                        String(order.canceled).toUpperCase() === "TRUE" ||
+                        order.received === "canceled" ||
+                        order.received === "취소완료";
 
-                    const isCanceled = itemName.includes("[취소]") || order.canceled === true || String(order.canceled).toUpperCase() === "TRUE";
                     const isReceived = (order.received === true || String(order.received).toUpperCase() === "TRUE");
                     const isStocked = (order.isStocked === true || String(order.isStocked).toUpperCase() === "TRUE");
 
-                    // 알림 대상: (오늘 포함 과거 주문) AND (입고완료 상태) AND (수령 전) AND (취소 아님)
-                    const result = isTodayOrPast && isStocked && !isReceived && !isCanceled;
-                    if (result) {
-                        console.log(`[미픽업 판별] 상품: ${itemName}, 날짜: ${order.pickupDate}, 상태: ${receivedStatus} -> 알림 대상`);
-                    }
-                    return result;
+                    // 알림 대상: (입고완료 상태) AND (수령 전) AND (취소 아님)
+                    return isStocked && !isReceived && !isCanceled;
                 });
 
                 console.log("[미픽업 확인] 최종 미픽업 항목 수:", unpickedItems.length);
@@ -1780,7 +1805,7 @@
                 if (unpickedItems.length > 0) {
                     console.log("[미픽업 확인] 알림 모달을 띄웁니다.");
                     const styledName = `<span class="name-badge" style="margin-right:0;">${name}</span>`;
-                    showSystemModal(`반갑습니다, ${styledName}님!<div style="margin-bottom:5px;"></div>아직 픽업하지 않은 상품이 있습니다.<br>주문내역을 확인 해 주세요.`, 'alert');
+                    showSystemModal(`반갑습니다, ${styledName}님!<div style="margin-bottom:5px;"></div>아직 픽업하지 않은 상품이 있습니다.<br>주문내역을 확인해 주세요.`, 'alert');
                 }
             } catch (e) {
                 console.error("[미픽업 확인] 실행 도중 오류 발생:", e);
