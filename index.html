@@ -16,8 +16,8 @@
     <meta property="og:site_name" content="MOKET 모켓">
     <meta property="og:title" content="MOKET 모켓 - 모두를 위한 공동구매 마켓">
     <meta property="og:description" content="모켓의 주문서 링크입니다.">
-    <meta property="og:image" content="https://moketorder.github.io/moketorder/og-image-v1.png">
-    <meta property="og:image:secure_url" content="https://moketorder.github.io/moketorder/og-image-v1.png">
+    <meta property="og:image" content="https://moketorder.github.io/moketorder/og-image-v4.png">
+    <meta property="og:image:secure_url" content="https://moketorder.github.io/moketorder/og-image-v4.png">
     <meta property="og:image:width" content="800">
     <meta property="og:image:height" content="800">
     <meta property="og:image:type" content="image/png">
@@ -77,7 +77,7 @@
         /* 헤더: 햄버거 메뉴를 위해 정렬만 추가 */
         .header {
             background: var(--moket-green);
-            padding: calc(25px + env(safe-area-inset-top)) 20px 20px 20px;
+            padding: calc(26px + env(safe-area-inset-top)) 20px 20px 20px;
             display: grid;
             grid-template-columns: 70px 1fr 70px;
             align-items: center;
@@ -94,7 +94,7 @@
             font-size: 14px;
             font-weight: 800;
             /* ExtraBold */
-            letter-spacing: 0px;
+            letter-spacing: 0.5px;
             margin-bottom: -2px;
         }
 
@@ -110,7 +110,7 @@
 
         .logo-ko {
             color: var(--white);
-            font-size: 24px;
+            font-size: 27px;
             font-weight: 900;
             /* Black */
             letter-spacing: 0px;
@@ -643,8 +643,8 @@
         }
 
         .thumb {
-            width: 125px;
-            height: 125px;
+            width: 110px;
+            height: 110px;
             flex-shrink: 0;
             border-radius: 0;
             background-color: #f9f9f9;
@@ -1020,10 +1020,11 @@
         <div class="side-menu-header" style="text-align: center;">
             <div onclick="handleAdminClick();" style="cursor: pointer;">
                 <div class="slogan"
-                    style="font-size: 14px; color: rgba(255,255,255,0.9); letter-spacing: 0px; margin-bottom: -2px;">모두를
+                    style="font-size: 14px; color: rgba(255,255,255,0.9); letter-spacing: 0.5px; margin-bottom: -2px;">
+                    모두를
                     위한 공동구매 마켓</div>
-                <div class="logo-en" style="font-size: 45px; letter-spacing: -1px; margin-bottom: -1px;">MOKET</div>
-                <div class="logo-ko" style="font-size: 24px; letter-spacing: 0px; text-indent: 1px;">모켓</div>
+                <div class="logo-en" style="font-size: 45px; letter-spacing: -1px; margin-bottom: -1.5px;">MOKET</div>
+                <div class="logo-ko" style="font-size: 27px; letter-spacing: 0px; text-indent: 1px;">모켓</div>
             </div>
         </div>
         <p id="menu-greeting"><span class="name-badge">주문자</span>님</p>
@@ -1031,7 +1032,7 @@
             <li onclick="openSideModal('profile-modal')">주문자정보 변경</li>
             <li onclick="openSideModal('location-modal')">매장위치</li>
             <li onclick="openSideModal('hours-modal')">영업시간</li>
-            <li onclick="window.open('https://open.kakao.com/o/s01HVpgi')">카카오톡 문의하기</li>
+            <li onclick="window.open('https://open.kakao.com/o/sYXQsmii')">카카오톡 문의하기</li>
 
         </ul>
     </div>
@@ -1044,12 +1045,13 @@
                     주문자정보 변경</h3>
             </div>
             <div class="login-logo">
-                <div style="font-size:21px; margin-bottom: -9px; font-weight:800; letter-spacing: 0px;">모두를 위한 공동구매 마켓
+                <div style="font-size:21.5px; margin-bottom: -10px; font-weight:800; letter-spacing: 0px;">모두를 위한 공동구매
+                    마켓
                 </div>
                 <div
-                    style="font-size:67.5px; font-weight:900; line-height:1; margin-bottom:-12px; letter-spacing: -2px;">
+                    style="font-size:67.5px; font-weight:900; line-height:1; margin-bottom:-14.5px; letter-spacing: -2px;">
                     MOKET</div>
-                <div style="font-size:36px; font-weight:900; letter-spacing: -1px;">모켓</div>
+                <div style="font-size:40.5px; font-weight:900; letter-spacing: -1px;">모켓</div>
             </div>
 
             <!-- [복구] 기존 입력 필드 (로그인 모드일 때는 CSS로 숨겨짐) -->
@@ -1080,6 +1082,9 @@
             <button id="btn-reset-stock" onclick="resetGlobalStock()"
                 style="display:none; margin-top:40px; background:none; border:1px solid #ddd; color:#999; font-size:12px; padding:8px; border-radius:5px; width:100%; cursor:pointer;">재고
                 동기화</button>
+            <button id="btn-unlink-kakao" onclick="unlinkKakao()"
+                style="display:none; margin-top:10px; background:none; border:1px solid #ddd; color:#999; font-size:12px; padding:8px; border-radius:5px; width:100%; cursor:pointer;">카카오
+                탈퇴하기</button>
         </div>
     </div>
     <div id="save-confirm-modal" class="modal-overlay">
@@ -1112,9 +1117,9 @@
             </div>
             <div style="display:flex; justify-content:center; margin-bottom:10px;">
                 <div style="text-align:left; line-height:2.2; font-weight:700; font-size:16px;">
-                    • 월 - 금 : 10:00 - 19:00<br>
-                    • 토요일 : 11:00 - 17:00<br>
-                    • 일요일/공휴일 : 휴무
+                    • 월요일 - 금요일 : 12:00 - 20:00<br>
+                    • 토요일 : 12:00 - 16:00<br>
+                    • 일요일 : 휴무
                 </div>
             </div>
             <button class="btn-common btn-close" onclick="closeModal('hours-modal')">닫기</button>
@@ -1326,9 +1331,11 @@
                 document.getElementById('input-phone').value = '';
                 document.getElementById('menu-greeting').innerHTML = `<span class="name-badge">관리자</span>님`;
 
-                // [추가] 재고 동기화 버튼 노출
+                // [추가] 재고 동기화 및 탈퇴 버튼 노출
                 const stockBtn = document.getElementById('btn-reset-stock');
+                const unlinkBtn = document.getElementById('btn-unlink-kakao');
                 if (stockBtn) stockBtn.style.display = 'block';
+                if (unlinkBtn) unlinkBtn.style.display = 'block';
 
                 closeModal('profile-modal');
                 bypassCount = 0;
@@ -1451,6 +1458,7 @@
 
             if (adminClickCount >= 10) {
                 document.getElementById('btn-reset-stock').style.display = 'block';
+                document.getElementById('btn-unlink-kakao').style.display = 'block';
                 showSystemModal("관리자 모드가 활성화되었습니다.", 'alert');
                 adminClickCount = 0;
                 return;
@@ -1635,25 +1643,26 @@
 
 
         // [카카오 로그아웃]
-        // [카카오 로그아웃]
-        function logoutKakao() {
-            showSystemModal("로그아웃 하시겠습니까?", "confirm", function () {
-                // 로컬 스토리지 초기화
-                localStorage.removeItem('moket_user_name');
-                localStorage.removeItem('moket_user_phone');
-                localStorage.removeItem('kakao_original_name');
-                localStorage.removeItem('kakao_original_phone');
-
-                // Kakao SDK 로그아웃 (토큰 만료)
-                if (Kakao.Auth.getAccessToken()) {
-                    Kakao.Auth.logout(() => {
-                        console.log('Kakao logout success');
-                        showSystemModal("로그아웃 되었습니다.", "alert", () => location.reload());
-                    });
-                } else {
-                    // 토큰 없어도 그냥 초기화
-                    showSystemModal("로그아웃 되었습니다.", "alert", () => location.reload());
+        // [카카오 탈퇴/연결끊기]
+        function unlinkKakao() {
+            showSystemModal("⚠️ 카카오 서비스 연결을 끊으시겠습니까?\n이 작업은 되돌릴 수 없으며 앱 연동이 해제됩니다.", "confirm", function () {
+                if (typeof Kakao === 'undefined' || !Kakao.isInitialized()) {
+                    showSystemModal("카카오 SDK가 준비되지 않았습니다.", "alert");
+                    return;
                 }
+                Kakao.API.request({
+                    url: '/v1/user/unlink',
+                    success: function (res) {
+                        console.log('Unlink success:', res);
+                        localStorage.clear();
+                        sessionStorage.clear();
+                        showSystemModal("연결이 성공적으로 해제되었습니다.\n앱을 초기 상태로 새로고침합니다.", "alert", () => location.reload());
+                    },
+                    fail: function (err) {
+                        console.error('Unlink failed:', err);
+                        showSystemModal("탈퇴 처리에 실패했습니다.\n로그인 상태를 확인해 주세요.", "alert");
+                    }
+                });
             });
         }
 
@@ -2157,7 +2166,7 @@
                                 <div style="font-size:13px; color:#455464; font-weight:700; display:flex; align-items:center; justify-content:flex-end; gap:6px; width:100%;">
                                     <span style="white-space:nowrap;">${displayQty}${typeof displayQty === 'number' ? '개' : ''}</span>
                                     <span style="color:#eee; font-weight:300;">|</span>
-                                    <span style="min-width:65px; text-align:right;">${String(order.total || 0).includes(',') ? order.total : parseInt(order.total || 0).toLocaleString()}원</span>
+                                    <span style="min-width:40px; text-align:right;">${String(order.total || 0).includes(',') ? order.total : parseInt(order.total || 0).toLocaleString()}원</span>
                                 </div>
                                 ${order.onSite ? `<div style="font-size:16px; font-weight:800; color:#999; margin-bottom:-2px;">현장판매</div>` : `<div style="font-size:16px; font-weight:800; color:${statusColor};">${statusText}</div>`}
                                 ${canDelete ? `<button onclick="deleteOrderServer('${safeTime}', '${safeName}', '${safeItem}', '${safePickup}', '${safeMatch}')" 
