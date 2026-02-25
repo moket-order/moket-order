@@ -1118,7 +1118,7 @@
             <div style="display:flex; justify-content:center; margin-bottom:10px;">
                 <div style="text-align:left; line-height:2.2; font-weight:700; font-size:16px;">
                     • 월요일 - 금요일 : 12:00 - 20:00<br>
-                    • 토요일 : 12:00 - 16:00<br>
+                    • 토요일 : 11:00 - 16:00<br>
                     • 일요일 : 휴무
                 </div>
             </div>
@@ -1213,25 +1213,21 @@
             </div>
             <div style="padding: 0 20px 0 20px; flex-shrink: 0;">
                 <div
-                    style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; border-bottom: 1.5px solid #eee; padding-bottom: 8px;">
+                    style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; border-bottom: 1.5px solid #eee; padding-bottom: 8px;">
                     <button class="date-btn active" id="status-stocked" onclick="filterStatus('stocked')"
                         style="height:32px; font-size:15px; padding:0; font-weight:900;">입고</button>
                     <button class="date-btn" id="status-pickup" onclick="filterStatus('pickup')"
                         style="height:32px; font-size:15px; padding:0; font-weight:900;">픽업</button>
                     <button class="date-btn" id="status-cancel" onclick="filterStatus('cancel')"
                         style="height:32px; font-size:15px; padding:0; font-weight:900;">취소</button>
-                    <button class="date-btn" id="status-order" onclick="filterStatus('order')"
-                        style="height:32px; font-size:15px; padding:0; font-weight:900;">전체</button>
                 </div>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px;">
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px;">
                     <button class="date-btn active" id="filter-week" onclick="filterHistory('week')"
                         style="height:32px; font-size:15px; padding:0; font-weight:800;">1주일</button>
                     <button class="date-btn" id="filter-2weeks" onclick="filterHistory('2weeks')"
                         style="height:32px; font-size:15px; padding:0; font-weight:800;">2주일</button>
                     <button class="date-btn" id="filter-month" onclick="filterHistory('month')"
                         style="height:32px; font-size:15px; padding:0; font-weight:800;">1개월</button>
-                    <button class="date-btn" id="filter-all" onclick="filterHistory('all')"
-                        style="height:32px; font-size:15px; padding:0; font-weight:800;">전체</button>
                 </div>
                 <div
                     style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 0; border-top: 1.5px solid #eee; padding-top: 8px;">
@@ -1960,7 +1956,7 @@
             currentHistoryLimit = 10; // 초기화
             currentSortDir = 'desc'; // [추가] 필터 변경 시 내림차순 기본 적용
             // 버튼 활성화 처리
-            const buttons = ['all', 'week', '2weeks', 'month'];
+            const buttons = ['week', '2weeks', 'month'];
             buttons.forEach(b => {
                 const btn = document.getElementById('filter-' + b);
                 if (btn) btn.classList.toggle('active', b === type);
@@ -1973,7 +1969,7 @@
             currentHistoryLimit = 10; // 초기화
             currentSortDir = 'desc'; // [추가] 상태 변경 시 내림차순 기본 적용
             // 버튼 활성화 처리
-            const statuses = ['order', 'cancel', 'stocked', 'pickup'];
+            const statuses = ['cancel', 'stocked', 'pickup'];
             statuses.forEach(s => {
                 const btn = document.getElementById('status-' + s);
                 if (btn) btn.classList.toggle('active', s === status);
