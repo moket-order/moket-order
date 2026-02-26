@@ -16,8 +16,8 @@
     <meta property="og:site_name" content="MOKET 모켓">
     <meta property="og:title" content="MOKET 모켓 - 모두를 위한 공동구매 마켓">
     <meta property="og:description" content="모켓의 주문서 링크입니다.">
-    <meta property="og:image" content="https://moketorder.github.io/moketorder/og-image-v4.png">
-    <meta property="og:image:secure_url" content="https://moketorder.github.io/moketorder/og-image-v4.png">
+    <meta property="og:image" content="https://moketorder.github.io/moketorder/og-image-v5.png">
+    <meta property="og:image:secure_url" content="https://moketorder.github.io/moketorder/og-image-v5.png">
     <meta property="og:image:width" content="800">
     <meta property="og:image:height" content="800">
     <meta property="og:image:type" content="image/png">
@@ -59,7 +59,7 @@
             --btn-radius: 0;
             --nego-orange: #FF6D00;
             --item-black: #1a1a1a;
-            --btn-font-size: 15px;
+            --btn-font-size: 17px;
             --btn-font-weight: 800;
         }
 
@@ -91,7 +91,7 @@
 
         .slogan {
             color: rgba(255, 255, 255, 0.9);
-            font-size: 14px;
+            font-size: 15.5px;
             font-weight: 800;
             /* ExtraBold */
             letter-spacing: 0.5px;
@@ -100,7 +100,7 @@
 
         .logo-en {
             color: var(--white);
-            font-size: 45px;
+            font-size: 50px;
             font-weight: 900;
             /* Black */
             letter-spacing: -1px;
@@ -110,7 +110,7 @@
 
         .logo-ko {
             color: var(--white);
-            font-size: 27px;
+            font-size: 30px;
             font-weight: 900;
             /* Black */
             letter-spacing: 0px;
@@ -146,7 +146,7 @@
         }
 
         .btn-label {
-            font-size: 15px;
+            font-size: 17px;
             font-weight: 800;
             color: var(--white);
             line-height: 1;
@@ -175,7 +175,7 @@
         .side-menu-header {
             background: var(--moket-green);
             /* 타이틀 확대에 맞춰 상하 패딩 조정 */
-            padding: calc(22px + env(safe-area-inset-top)) 20px 22px 20px;
+            padding: calc(32px + env(safe-area-inset-top)) 20px 22px 20px;
             color: var(--white);
             display: flex;
             flex-direction: column;
@@ -273,7 +273,7 @@
             margin: 0;
             padding: 20px 25px;
             /* 상하좌우 여백 균등 조정 */
-            font-size: 17px;
+            font-size: 19px;
             font-weight: 800;
             letter-spacing: 1px;
             display: flex;
@@ -304,7 +304,7 @@
 
         .menu-list li {
             padding: 18px 0;
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 700;
             border-bottom: 1px solid #f5f5f5;
             color: var(--item-black);
@@ -547,10 +547,82 @@
             pointer-events: none;
         }
 
-        .detail-body {
-            padding: 20px 10px 20px 20px;
+        /* [추가] 좌우 슬라이드 안내 가이드 */
+        .slide-guide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            pointer-events: none;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .slide-guide-text {
+            font-size: 16px;
+            font-weight: 800;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.65);
+            padding: 8px 18px;
+            border-radius: 25px;
+            color: #fff;
+        }
+
+        .slide-guide-arrows {
+            position: absolute;
+            top: 49%;
+            left: 0;
+            width: 100%;
+            transform: translateY(-50%);
+            display: flex;
+            justify-content: space-between;
+            padding: 0 15px;
+            box-sizing: border-box;
+            font-size: 35px;
+            color: rgba(255, 255, 255, 0.9);
+            animation: arrows-bounce 1.5s infinite;
+        }
+
+        @keyframes arrows-bounce {
+
+            0%,
+            100% {
+                padding: 0 20px;
+                opacity: 0.6;
+            }
+
+            50% {
+                padding: 0 10px;
+                opacity: 1;
+            }
+        }
+
+        .fade-out {
+            animation: fade-out-ani 0.5s forwards;
+        }
+
+        @keyframes fade-out-ani {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+            }
+        }
+
+        .detail-scroll-area {
             flex: 1;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .detail-body {
+            padding: 20px 10px 20px 20px;
         }
 
         /* 상품 리스트 & 카드 원본 유지 */
@@ -564,7 +636,7 @@
 
         .date-section-title {
             padding: 8px 20px 4px 20px;
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 800;
             letter-spacing: 1px;
             color: var(--item-black);
@@ -591,7 +663,7 @@
             border-radius: var(--btn-radius);
             background: #fafafa;
             color: #455464;
-            font-size: 15px;
+            font-size: 17px;
             font-weight: 800;
             border: 1.5px solid #eee;
             cursor: pointer;
@@ -740,14 +812,14 @@
         }
 
         .stock-status {
-            font-size: 15px;
+            font-size: 17px;
             font-weight: 800;
             letter-spacing: -0.03em;
         }
 
         .item-name {
             font-weight: 800;
-            font-size: 17px;
+            font-size: 19px;
             margin-top: 10px;
             /* Slightly larger in vertical layout */
             color: var(--item-black);
@@ -760,7 +832,7 @@
         .item-price-val {
             color: var(--nego-orange);
             font-weight: 900;
-            font-size: 17px;
+            font-size: 19px;
         }
 
         .qty-controls {
@@ -824,7 +896,7 @@
             border: none;
             background: none;
             font-weight: 800;
-            font-size: 18px;
+            font-size: 20px;
             color: var(--moket-green);
         }
 
@@ -1132,20 +1204,29 @@
     <div class="container" id="product-list"></div>
     <div id="detail-overlay" class="modal-overlay" onclick="if(event.target === this) closeModal('detail-overlay')">
         <div class="modal-content">
-            <div class="slider-wrapper" onclick="openFullscreen()">
-                <div id="detail-counter"
-                    style="position:absolute; top:12px; right:12px; background:rgba(0,0,0,0.4); color:white; padding:4px 10px; border-radius:15px; font-size:12px; font-weight:800; z-index:10; display:none;">
+            <div class="detail-scroll-area">
+                <div class="slider-wrapper" onclick="openFullscreen()">
+                    <div id="detail-counter"
+                        style="position:absolute; top:12px; right:12px; background:rgba(0,0,0,0.4); color:white; padding:4px 10px; border-radius:15px; font-size:12px; font-weight:800; z-index:10; display:none;">
+                    </div>
+                    <div class="slider-container" id="slider-area"></div>
+                    <div id="slide-guide" class="slide-guide">
+                        <div class="slide-guide-arrows">
+                            <span>❮</span>
+                            <span>❯</span>
+                        </div>
+                        <div class="slide-guide-text">좌우로 슬라이드</div>
+                    </div>
+                    <div class="touch-guide">탭하여 확대보기</div>
                 </div>
-                <div class="slider-container" id="slider-area"></div>
-                <div class="touch-guide">탭하여 확대보기</div>
-            </div>
-            <div class="detail-body">
-                <h2 id="detail-title"
-                    style="margin:0; font-size:20px; font-weight:800; letter-spacing: 1px; color:var(--item-black); white-space: pre-wrap;">
-                </h2>
-                <div id="detail-price"
-                    style="color:var(--nego-orange); font-weight:900; font-size:20px; margin:10px 0;"></div>
-                <div id="detail-desc" style="white-space:pre-wrap; color:#455464; font-size:15px; line-height:1.6;">
+                <div class="detail-body">
+                    <h2 id="detail-title"
+                        style="margin:0; font-size:22px; font-weight:800; letter-spacing: 1px; color:var(--item-black); white-space: pre-wrap;">
+                    </h2>
+                    <div id="detail-price"
+                        style="color:var(--nego-orange); font-weight:900; font-size:22px; margin:10px 0;"></div>
+                    <div id="detail-desc" style="white-space:pre-wrap; color:#455464; font-size:17px; line-height:1.6;">
+                    </div>
                 </div>
             </div>
             <div style="padding: 12px 20px; border-top: 1px solid #f5f5f5;"><button class="btn-common btn-close"
@@ -1208,34 +1289,38 @@
             <div
                 style="background:var(--moket-green); padding: 30px 20px 25px 20px; border-radius: 0; margin: 0 0 10px 0; text-align: center;">
                 <h3 id="history-modal-title"
-                    style="margin: 0; font-weight: 800; color: var(--white); font-size: 17px; letter-spacing: 1px;">
+                    style="margin: 0; font-weight: 800; color: var(--white); font-size: 20px; letter-spacing: 1px;">
                     주문내역</h3>
             </div>
             <div style="padding: 0 20px 0 20px; flex-shrink: 0;">
                 <div
-                    style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; border-bottom: 1.5px solid #eee; padding-bottom: 8px;">
-                    <button class="date-btn active" id="status-stocked" onclick="filterStatus('stocked')"
-                        style="height:32px; font-size:15px; padding:0; font-weight:900;">입고</button>
+                    style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; border-bottom: 1.5px solid #eee; padding-bottom: 8px;">
+                    <button class="date-btn active" id="status-order" onclick="filterStatus('order')"
+                        style="height:32px; font-size:17px; padding:0; font-weight:900;">전체</button>
+                    <button class="date-btn" id="status-stocked" onclick="filterStatus('stocked')"
+                        style="height:32px; font-size:17px; padding:0; font-weight:900;">입고</button>
                     <button class="date-btn" id="status-pickup" onclick="filterStatus('pickup')"
-                        style="height:32px; font-size:15px; padding:0; font-weight:900;">픽업</button>
+                        style="height:32px; font-size:17px; padding:0; font-weight:900;">픽업</button>
                     <button class="date-btn" id="status-cancel" onclick="filterStatus('cancel')"
-                        style="height:32px; font-size:15px; padding:0; font-weight:900;">취소</button>
+                        style="height:32px; font-size:17px; padding:0; font-weight:900;">취소</button>
                 </div>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px;">
-                    <button class="date-btn active" id="filter-week" onclick="filterHistory('week')"
-                        style="height:32px; font-size:15px; padding:0; font-weight:800;">1주일</button>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px;">
+                    <button class="date-btn active" id="filter-all" onclick="filterHistory('all')"
+                        style="height:32px; font-size:17px; padding:0; font-weight:800;">전체</button>
+                    <button class="date-btn" id="filter-week" onclick="filterHistory('week')"
+                        style="height:32px; font-size:17px; padding:0; font-weight:800;">1주일</button>
                     <button class="date-btn" id="filter-2weeks" onclick="filterHistory('2weeks')"
-                        style="height:32px; font-size:15px; padding:0; font-weight:800;">2주일</button>
+                        style="height:32px; font-size:17px; padding:0; font-weight:800;">2주일</button>
                     <button class="date-btn" id="filter-month" onclick="filterHistory('month')"
-                        style="height:32px; font-size:15px; padding:0; font-weight:800;">1개월</button>
+                        style="height:32px; font-size:17px; padding:0; font-weight:800;">1개월</button>
                 </div>
                 <div
                     style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 0; border-top: 1.5px solid #eee; padding-top: 8px;">
                     <div style="grid-column: 1 / 4; display: flex; gap: 6px;">
                         <button class="date-btn active" id="btn-sort-order" onclick="changeSortMode('timestamp')"
-                            style="height:32px; font-size:15px; flex:1; padding:0; font-weight:900;">주문일별 정렬</button>
+                            style="height:32px; font-size:17px; flex:1; padding:0; font-weight:900;">주문일별 정렬</button>
                         <button class="date-btn" id="btn-sort-pickup" onclick="changeSortMode('pickupDate')"
-                            style="height:32px; font-size:15px; flex:1; padding:0; font-weight:900;">픽업일별 정렬</button>
+                            style="height:32px; font-size:17px; flex:1; padding:0; font-weight:900;">픽업일별 정렬</button>
                     </div>
                     <div style="grid-column: 4 / 5; display: flex; gap: 6px;">
                         <button class="date-btn" id="btn-sort-dir" onclick="toggleSortDir()"
@@ -1518,9 +1603,9 @@
             setTimeout(() => {
                 confirmModal.style.display = 'none';
                 checkScrollLock();
-            }
-
-                , 1500);
+                // [추가] 프로필 저장 완료 후 미픽업 알림 체크 실행
+                setTimeout(checkUnpickedOrders, 500);
+            }, 1500);
         }
 
         // [추가] 앱 캐시 및 데이터 완전 초기화 (로그아웃 버튼)
@@ -1760,9 +1845,12 @@
         }
 
         // [추가] 미픽업 주문 확인 및 알림 모달
-        async function checkUnpickedOrders() {
-            // [세션당 1회 제한] 한 번 확인했다면 이번 접속(세션)에서는 다시 띄우지 않음
-            if (sessionStorage.getItem('moket_unpicked_checked') === 'true') return;
+        async function checkUnpickedOrders(force = false) {
+            // [세션당 1회 제한] 한 번 확인했다면 이번 접속(세션)에서는 다시 띄우지 않음 (단, 강제 실행 시 제외)
+            if (!force && sessionStorage.getItem('moket_unpicked_checked') === 'true') return;
+
+            // 카카오 로그인이 안 되어 있으면 중단 (이전 사용자 정보로 인한 오작동 방지)
+            if (!localStorage.getItem('kakao_original_name')) return;
 
             const name = (localStorage.getItem('moket_user_name') || "").trim();
             const phone = (localStorage.getItem('moket_user_phone') || "").trim();
@@ -1827,8 +1915,8 @@
         let fullHistoryData = []; // 서버에서 가져온 전체 데이터 저장
         let currentSortBy = 'timestamp'; // 'timestamp' (주문일) 기본값
         let currentSortDir = 'desc'; // [수정] 기본 내림차순 (최신순)
-        let currentFilter = 'week'; // '1주일' 기본값
-        let currentStatusFilter = 'stocked'; // '입고' 기본값
+        let currentFilter = 'all'; // '전체' 기본값
+        let currentStatusFilter = 'order'; // '전체' 기본값 (새 주문이 즉시 보이도록)
 
         function toggleSortDir() {
             currentSortDir = (currentSortDir === 'desc') ? 'asc' : 'desc';
@@ -1852,16 +1940,16 @@
 
             if (modal.style.display !== 'flex') {
                 currentSortBy = 'timestamp';
-                currentFilter = 'week';
-                currentStatusFilter = 'stocked';
+                currentFilter = 'all';
+                currentStatusFilter = 'order';
                 currentSortDir = 'desc';
                 currentHistoryLimit = 10;
 
                 // 버튼 클래스 초기화 (중복 활성화 방지)
                 document.querySelectorAll('#history-modal .date-btn').forEach(btn => btn.classList.remove('active'));
                 document.getElementById('btn-sort-order')?.classList.add('active');
-                document.getElementById('filter-week')?.classList.add('active');
-                document.getElementById('status-stocked')?.classList.add('active');
+                document.getElementById('filter-all')?.classList.add('active');
+                document.getElementById('status-order')?.classList.add('active');
 
                 title.innerHTML = `<span style="background:#fdf2e9; color:var(--nego-orange); padding:2px 10px; border-radius:0; margin-right:5px; font-weight:900;">${displayName}</span>님의 주문내역`;
                 modal.style.display = 'flex';
@@ -1911,7 +1999,7 @@
                     if (data) {
                         // 객체 형태를 배열로 변환하고 최신순 정렬
                         const allOrders = Object.values(data).sort((a, b) => {
-                            return new Date(b.timestamp) - new Date(a.timestamp);
+                            return parseKRDate(b.timestamp) - parseKRDate(a.timestamp);
                         });
 
                         // 로컬 처리 중 상태 유지 로직
@@ -1956,7 +2044,7 @@
             currentHistoryLimit = 10; // 초기화
             currentSortDir = 'desc'; // [추가] 필터 변경 시 내림차순 기본 적용
             // 버튼 활성화 처리
-            const buttons = ['week', '2weeks', 'month'];
+            const buttons = ['all', 'week', '2weeks', 'month'];
             buttons.forEach(b => {
                 const btn = document.getElementById('filter-' + b);
                 if (btn) btn.classList.toggle('active', b === type);
@@ -1969,7 +2057,7 @@
             currentHistoryLimit = 10; // 초기화
             currentSortDir = 'desc'; // [추가] 상태 변경 시 내림차순 기본 적용
             // 버튼 활성화 처리
-            const statuses = ['cancel', 'stocked', 'pickup'];
+            const statuses = ['order', 'cancel', 'stocked', 'pickup'];
             statuses.forEach(s => {
                 const btn = document.getElementById('status-' + s);
                 if (btn) btn.classList.toggle('active', s === status);
@@ -2019,9 +2107,9 @@
                 const orderDate = parseKRDate(item.timestamp);
                 const diffDays = (now - orderDate) / (1000 * 60 * 60 * 24);
 
-                if (currentFilter === 'week') return diffDays >= 0 && diffDays <= 7;
-                if (currentFilter === '2weeks') return diffDays >= 0 && diffDays <= 14;
-                if (currentFilter === 'month') return diffDays >= 0 && diffDays <= 30;
+                if (currentFilter === 'week') return diffDays <= 7;
+                if (currentFilter === '2weeks') return diffDays <= 14;
+                if (currentFilter === 'month') return diffDays <= 30;
 
                 // 3. '전체' 필터
                 if (currentFilter === 'all') return true;
@@ -2152,22 +2240,22 @@
                     <div style="border-bottom: 1px solid #eee; padding: 12px 0; ${(isCancelled || order.onSite) ? 'opacity:0.6; text-decoration:line-through;' : ''} ${isProcessing ? 'opacity:0.7;' : ''}">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                             <div style="flex:1; padding-right:10px;">
-                                <div style="font-size:16px; font-weight:800; color:var(--item-black); line-height:1.2; margin-bottom:6px; white-space: pre-wrap;">${displayItem}</div>
-                                <div style="font-size:12px; display:flex; flex-direction:column; gap:2px;">
+                                <div style="font-size:18px; font-weight:800; color:var(--item-black); line-height:1.2; margin-bottom:6px; white-space: pre-wrap;">${displayItem}</div>
+                                <div style="font-size:14px; display:flex; flex-direction:column; gap:2px;">
                                     <div style="${orderDateStyle}">주문일: ${orderTime}</div>
                                     <div style="${pickupDateStyle}">픽업일: ${pickupDisp}</div>
                                 </div>
                             </div>
                             <div style="text-align:right; min-width:100px; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-                                <div style="font-size:13px; color:#455464; font-weight:700; display:flex; align-items:center; justify-content:flex-end; gap:6px; width:100%;">
-                                    <span style="white-space:nowrap;">${displayQty}${typeof displayQty === 'number' ? '개' : ''}</span>
-                                    <span style="color:#eee; font-weight:300;">|</span>
-                                    <span style="min-width:40px; text-align:right;">${String(order.total || 0).includes(',') ? order.total : parseInt(order.total || 0).toLocaleString()}원</span>
+                                <div style="font-size:17px; color:#455464; font-weight:700; display:flex; align-items:center; justify-content:flex-end; gap:0; width:100%;">
+                                    <span style="white-space:nowrap; min-width:38px; text-align:right;">${displayQty}${typeof displayQty === 'number' ? '개' : ''}</span>
+                                    <span style="color:#eee; font-weight:300; margin: 0 2px;">|</span>
+                                    <span style="min-width:70px; text-align:right;">${String(order.total || 0).includes(',') ? order.total : parseInt(order.total || 0).toLocaleString()}원</span>
                                 </div>
-                                ${order.onSite ? `<div style="font-size:16px; font-weight:800; color:#999; margin-bottom:-2px;">현장판매</div>` : `<div style="font-size:16px; font-weight:800; color:${statusColor};">${statusText}</div>`}
+                                ${order.onSite ? `<div style="font-size:18px; font-weight:800; color:#999; margin-bottom:-2px;">현장판매</div>` : `<div style="font-size:18px; font-weight:800; color:${statusColor};">${statusText}</div>`}
                                 ${canDelete ? `<button onclick="deleteOrderServer('${safeTime}', '${safeName}', '${safeItem}', '${safePickup}', '${safeMatch}')" 
-                                     style="margin-top:4px; width:100%; height:28px; background:#eff2f5; color:#666; border:none; border-radius:0; font-size:13px; font-weight:700; cursor:pointer;">주문취소</button>` : ''}
-                                 ${isProcessing ? `<div style="margin-top:4px; width:100%; height:28px; display:flex; align-items:center; justify-content:center; background:#f5f5f5; color:#999; border-radius:0; font-size:13px; font-weight:700;">취소중</div>` : ''}
+                                     style="margin-top:4px; width:100%; height:28px; background:#eff2f5; color:#666; border:none; border-radius:0; font-size:15px; font-weight:700; cursor:pointer;">주문취소</button>` : ''}
+                                 ${isProcessing ? `<div style="margin-top:4px; width:100%; height:28px; display:flex; align-items:center; justify-content:center; background:#f5f5f5; color:#999; border-radius:0; font-size:15px; font-weight:700;">취소중</div>` : ''}
                             </div>
                         </div>
                     </div>
@@ -2412,26 +2500,32 @@
             }
 
             try {
-                // 2. [서버 호출] 배경에서 최신 데이터 가져오기 (캐시방지 타임스맷프 추가)
+                // 2. [서버 호출] 배경에서 최신 데이터 가져오기 (Promise.all로 병렬 처리하여 속도 개선)
                 const fetchUrl = API_URL + (API_URL.includes('?') ? '&' : '?') + 't=' + Date.now();
-                const response = await fetch(fetchUrl);
-                if (!response.ok) throw new Error('네트워크 응답이 올바르지 않습니다.');
-                const rawData = await response.json();
 
-                // [추가] Firebase에서 실시간 전역 재고 변동분 가져오기
+                // 로딩 중 표시 (기능적으로만 작동하도록 투명도 조절)
+                const header = document.querySelector('.header');
+                if (header) header.style.opacity = '0.7';
+
+                const [mainRes, stockRes] = await Promise.all([
+                    fetch(fetchUrl).catch(e => { console.error("GAS 로드 실패:", e); return { ok: false }; }),
+                    fetch(`${FIREBASE_DB_URL}global_stock.json`).catch(e => { console.error("Firebase 로드 실패:", e); return { ok: false }; })
+                ]);
+
+                if (header) header.style.opacity = '1';
+
+                // 메인 데이터 처리
+                if (!mainRes.ok) throw new Error('네트워크 응답이 올바르지 않습니다.');
+                const rawData = await mainRes.json();
+
+                // 실시간 전역 재고 변동분 처리
                 let globalAdjustments = {};
-                try {
-                    const stockRes = await fetch(`${FIREBASE_DB_URL}global_stock.json`);
-                    if (stockRes.ok) globalAdjustments = await stockRes.json() || {};
-                } catch (e) { console.error("전역 재고 로드 실패:", e); }
-
-                if (!Array.isArray(rawData)) {
-                    if (rawData.result === "error") throw new Error(rawData.message);
-                    throw new Error('데이터 형식이 올바르지 않습니다.');
+                if (stockRes.ok) {
+                    globalAdjustments = await stockRes.json() || {};
                 }
 
                 // [디버깅] 서버 수신 데이터 확인
-                console.log("[Data Sync] 서버 수신 원본 데이터:", rawData);
+                console.log("[Data Sync] 병렬 로드 완료", { rawData, globalAdjustments });
 
                 // 매핑 처리 (가짜 데이터 'no-date' 원천 차단)
                 let freshData = rawData.map(p => {
@@ -2705,7 +2799,7 @@
             const stock = input.dataset.stock ? parseFloat(input.dataset.stock) : Infinity;
             let val = Math.max(0, (cart[name] || 0) + change);
 
-            if (val > stock) {
+            if (change > 0 && val > stock) {
                 showSystemModal(`해당 상품의 주문가능 수량은 ${isFinite(stock) ? stock + '개' : '없음'}입니다.`, 'alert');
                 return;
             }
@@ -2780,6 +2874,7 @@
             document.getElementById('detail-desc').innerText = p.desc || "상세 설명이 없습니다.";
             const slider = document.getElementById('slider-area');
             const counter = document.getElementById('detail-counter');
+            const guide = document.getElementById('slide-guide');
 
             // 1. 이미지 렌더링 함수
             const renderImgs = () => {
@@ -2788,12 +2883,22 @@
                     if (p.images.length > 1) {
                         counter.innerText = `1 / ${p.images.length}`;
                         counter.style.display = 'block';
+
+                        // [추가] 이미지가 여러 장일 때만 좌우 슬라이드 안내 가이드 표시
+                        guide.style.display = 'flex';
+                        guide.classList.remove('fade-out');
+                        setTimeout(() => {
+                            guide.classList.add('fade-out');
+                            setTimeout(() => { guide.style.display = 'none'; }, 500);
+                        }, 2000);
                     } else {
                         counter.style.display = 'none';
+                        guide.style.display = 'none';
                     }
                 } else {
                     slider.innerHTML = `<div class="slider-no-img">No Image</div>`;
                     counter.style.display = 'none';
+                    guide.style.display = 'none';
                 }
             };
 
@@ -2819,8 +2924,8 @@
             document.getElementById('detail-overlay').style.display = 'flex';
             checkScrollLock();
             slider.scrollLeft = 0;
-            const detailBody = document.querySelector('.detail-body');
-            if (detailBody) detailBody.scrollTop = 0;
+            const detailScrollArea = document.querySelector('.detail-scroll-area');
+            if (detailScrollArea) detailScrollArea.scrollTop = 0;
 
             // 2. 만약 아직 폴더 이미지를 '완벽하게' 로드하지 않았다면 서버에 요청 (Lazy Loading)
             if (!p.isFullLoaded) {
@@ -3228,12 +3333,9 @@
 
                     modal.style.display = 'flex';
                     checkScrollLock();
-
-                    // 미픽업 확인 실행 (로그인 창 뒤에서 데이터 조회 시작)
-                    setTimeout(checkUnpickedOrders, 600);
                 }, 400);
             } else {
-                setTimeout(checkUnpickedOrders, 1000);
+                setTimeout(() => checkUnpickedOrders(), 1000);
             }
 
             // 미픽업 확인
