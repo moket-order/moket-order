@@ -16,8 +16,8 @@
     <meta property="og:site_name" content="MOKET 모켓">
     <meta property="og:title" content="MOKET 모켓 - 모두를 위한 공동구매 마켓">
     <meta property="og:description" content="모켓의 주문서 링크입니다.">
-    <meta property="og:image" content="https://moketorder.github.io/moketorder/og-image-v6.png">
-    <meta property="og:image:secure_url" content="https://moketorder.github.io/moketorder/og-image-v6.png">
+    <meta property="og:image" content="https://moketorder.github.io/moketorder/og-image-v6.jpg">
+    <meta property="og:image:secure_url" content="https://moketorder.github.io/moketorder/og-image-v6.jpg">
     <meta property="og:image:width" content="800">
     <meta property="og:image:height" content="800">
     <meta property="og:image:type" content="image/png">
@@ -262,16 +262,19 @@
         .name-badge {
             background: #fdf2e9;
             color: var(--nego-orange);
-            padding: 4px 12px;
+            padding: 4px 8px;
+            /* 12px -> 8px 축소 */
             border-radius: var(--common-radius);
-            margin-right: 6px;
+            margin-right: 4px;
+            /* 6px -> 4px 축소 */
             font-weight: 900;
             display: inline-block;
         }
 
         #menu-greeting {
             margin: 0;
-            padding: 20px 25px;
+            padding: 20px 15px;
+            /* 25px -> 15px 축소 */
             /* 상하좌우 여백 균등 조정 */
             font-size: 19px;
             font-weight: 800;
@@ -1299,7 +1302,7 @@
             <div
                 style="background:var(--moket-green); padding: 30px 20px 25px 20px; border-radius: var(--common-radius) var(--common-radius) 0 0; margin: 0 0 10px 0; text-align: center;">
                 <h3 id="history-modal-title"
-                    style="margin: 0; font-weight: 800; color: var(--white); font-size: 20px; letter-spacing: 1px;">
+                    style="margin: 0; font-weight: 800; color: var(--white); font-size: 20px; letter-spacing: 0.5px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; line-height: 1.4; gap: 4px; word-break: break-all;">
                     주문내역</h3>
             </div>
             <div style="padding: 0 20px 0 20px; flex-shrink: 0;">
@@ -1957,7 +1960,7 @@
                 document.getElementById('filter-week')?.classList.add('active');
                 document.getElementById('status-stocked')?.classList.add('active');
 
-                title.innerHTML = `<span style="background:#fdf2e9; color:var(--nego-orange); padding:2px 10px; border-radius:var(--common-radius); margin-right:5px; font-weight:900;">${displayName}</span>님의 주문내역`;
+                title.innerHTML = `<span class="name-badge" style="margin-right:0;">${displayName}</span><span>님의 주문내역</span>`;
                 modal.style.display = 'flex';
                 checkScrollLock();
             }
