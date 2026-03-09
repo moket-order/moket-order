@@ -275,13 +275,22 @@
             /* 상하좌우 여백 균등 조정 */
             font-size: 19px;
             font-weight: 800;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
+            /* 약간 축소 */
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-wrap: wrap;
+            /* [추가] 이름이 길면 자동으로 줄바꿈 */
+            gap: 8px;
+            /* [추가] 줄바꿈 시 간격 */
+            line-height: 1.4;
+            /* [추가] 줄바꿈 시 행간 여유 */
             /* 가로 중앙 정렬 추가 */
             color: var(--item-black);
             border-bottom: 1px solid #f5f5f5;
+            word-break: break-all;
+            /* [추가] 긴 닉네임 대응 */
         }
 
         .side-menu-overlay {
@@ -2449,8 +2458,10 @@
             const driveMatch = id.match(/[-\w]{25,}/);
             if (driveMatch) id = driveMatch[0];
 
-            let url = `https://drive.google.com/thumbnail?id=${id}&sz=w${size}`;
-            if (retry) url += `&t=${Date.now()}`; // 재시도 시 캐시 무시
+            // [수정] drive.google.com/thumbnail 대신 lh3.googleusercontent.com 주소를 사용하여 모바일/GitHub 호환성 개선
+            // thumbnail 주소는 특정 브라우저에서 Referrer 문제로 차단되는 경우가 많음
+            let url = `https://lh3.googleusercontent.com/d/${id}=w${size}`;
+            if (retry) url = `https://drive.google.com/thumbnail?id=${id}&sz=w${size}&t=${Date.now()}`;
             return url;
         }
 
@@ -2772,7 +2783,7 @@
                 const stockText = isFinite(stock) ? (isSoldOut ? "품절" : `주문가능수량 <span style="color:var(--nego-orange);">${stock}</span>개`) : "";
 
                 card.innerHTML = `<div class="card-top">` +
-                    `<div class="thumb">${imgId ? `<img src="${getImgUrl(imgId, 300)}" loading="lazy" style="width:100%; height:100%; object-fit:contain;" onerror="this.onerror=null; this.src=getImgUrl('${imgId}', 300, true);">` : 'No Image'}</div>` +
+                    `<div class="thumb">${imgId ? `<img src="${getImgUrl(imgId, 300)}" loading="lazy" referrerpolicy="no-referrer" style="width:100%; height:100%; object-fit:contain;" onerror="this.onerror=null; this.src=getImgUrl('${imgId}', 300, true);">` : 'No Image'}</div>` +
                     `<div class="item-info-top">` +
                     `<div class="item-name" style="margin-bottom:2px;">${p.name}</div>` +
                     `<div class="item-price-val">${parseInt(p.price || 0).toLocaleString()}원</div>` +
@@ -2876,7 +2887,7 @@
             // 1. 이미지 렌더링 함수
             const renderImgs = () => {
                 if (p.images && p.images.length > 0 && p.images[0]) {
-                    slider.innerHTML = p.images.map(id => `<img src="${getImgUrl(id)}" onerror="this.onerror=null; this.src=getImgUrl('${id}', 1000, true);">`).join('');
+                    slider.innerHTML = p.images.map(id => `<img src="${getImgUrl(id)}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src=getImgUrl('${id}', 1000, true);">`).join('');
                     if (p.images.length > 1) {
                         counter.innerText = `1 / ${p.images.length}`;
                         counter.style.display = 'block';
@@ -2962,7 +2973,7 @@
             // 이미지 렌더링
             fsSlider.innerHTML = p.images.map(id => `
                 <div class="fullscreen-slide">
-                    <img src="${getImgUrl(id)}">
+                    <img src="${getImgUrl(id)}" referrerpolicy="no-referrer">
                 </div>
             `).join('');
 
