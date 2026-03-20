@@ -16,8 +16,8 @@
     <meta property="og:site_name" content="MOKET 모켓">
     <meta property="og:title" content="MOKET 모켓 - 모두를 위한 공동구매 마켓">
     <meta property="og:description" content="모켓의 주문서 링크입니다.">
-    <meta property="og:image" content="https://moketorder.github.io/moketorder/og-image-v6.jpg">
-    <meta property="og:image:secure_url" content="https://moketorder.github.io/moketorder/og-image-v6.jpg">
+    <meta property="og:image" content="https://moketorder.github.io/moketorder/og-image-v6.png">
+    <meta property="og:image:secure_url" content="https://moketorder.github.io/moketorder/og-image-v6.png">
     <meta property="og:image:width" content="800">
     <meta property="og:image:height" content="800">
     <meta property="og:image:type" content="image/png">
@@ -1202,7 +1202,7 @@
             <div style="display:flex; justify-content:center; margin-bottom:10px;">
                 <div style="text-align:left; line-height:2.2; font-weight:700; font-size:16px;">
                     • 월요일 - 금요일 : 12:00 - 20:00<br>
-                    • 토요일 : 11:00 - 16:00<br>
+                    • 토요일 : 12:00 - 16:00<br>
                     • 일요일 : 휴무
                 </div>
             </div>
@@ -1735,22 +1735,29 @@
         // [카카오 로그아웃]
         // [카카오 탈퇴/연결끊기]
         function unlinkKakao() {
-            showSystemModal("⚠️ 카카오 서비스 연결을 끊으시겠습니까?\n이 작업은 되돌릴 수 없으며 앱 연동이 해제됩니다.", "confirm", function () {
-                if (typeof Kakao === 'undefined' || !Kakao.isInitialized()) {
-                    showSystemModal("카카오 SDK가 준비되지 않았습니다.", "alert");
+            showSystemModal("⚠️ 카카오 서비스 연결을 끊고 앱을 초기화하시겠습니까?\n이 작업은 되돌릴 수 없으며 앱 데이터가 초기화됩니다.", "confirm", function () {
+                const forceClear = () => {
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    showSystemModal("앱 데이터가 성공적으로 초기화되었습니다.", "alert", () => location.reload());
+                };
+
+                if (typeof Kakao === 'undefined' || !Kakao.isInitialized() || !Kakao.Auth.getAccessToken()) {
+                    console.log('No valid Kakao token, clearing local storage only.');
+                    forceClear();
                     return;
                 }
+                
                 Kakao.API.request({
                     url: '/v1/user/unlink',
                     success: function (res) {
                         console.log('Unlink success:', res);
-                        localStorage.clear();
-                        sessionStorage.clear();
-                        showSystemModal("연결이 성공적으로 해제되었습니다.\n앱을 초기 상태로 새로고침합니다.", "alert", () => location.reload());
+                        forceClear();
                     },
                     fail: function (err) {
                         console.error('Unlink failed:', err);
-                        showSystemModal("탈퇴 처리에 실패했습니다.\n로그인 상태를 확인해 주세요.", "alert");
+                        console.log('Forcing local clear anyway.');
+                        forceClear();
                     }
                 });
             });
