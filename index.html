@@ -1180,25 +1180,6 @@
                     placeholder="010-0000-0000">
                 <div class="input-hint">정확한 주문 확인을 위해 연락처를 입력 해 주세요.</div>
             </div>
-            <div class="input-group"><strong>성별</strong>
-                <select id="input-gender" class="modal-input" style="appearance: auto;">
-                    <option value="" disabled selected>선택해주세요</option>
-                    <option value="남성">남성</option>
-                    <option value="여성">여성</option>
-                    <option value="선택안함">선택안함</option>
-                </select>
-            </div>
-            <div class="input-group"><strong>연령대</strong>
-                <select id="input-age" class="modal-input" style="appearance: auto;">
-                    <option value="" disabled selected>선택해주세요</option>
-                    <option value="10대">10대</option>
-                    <option value="20대">20대</option>
-                    <option value="30대">30대</option>
-                    <option value="40대">40대</option>
-                    <option value="50대">50대</option>
-                    <option value="60대 이상">60대 이상</option>
-                </select>
-            </div>
 
             <button id="btn-kakao-login" class="btn-common btn-kakao" onclick="loginWithKakao()">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" style="margin-right:8px;">
@@ -1651,20 +1632,16 @@
         function saveProfile() {
             const name = document.getElementById('input-name').value;
             const phone = document.getElementById('input-phone').value;
-            const gender = document.getElementById('input-gender').value;
-            const ageGroup = document.getElementById('input-age').value;
             const greeting = document.getElementById('menu-greeting');
 
-            if (!name.trim() || !phone.trim() || !gender || !ageGroup) {
-                showSystemModal("주문자명, 연락처, 성별 및 연령대를 모두 입력(선택)해주세요.", 'alert');
+            if (!name.trim() || !phone.trim()) {
+                showSystemModal("주문자명과 연락처를 모두 입력해주세요.", 'alert');
                 return;
             }
 
             // 로컬 스토리지에 저장
             localStorage.setItem('moket_user_name', name);
             localStorage.setItem('moket_user_phone', phone);
-            localStorage.setItem('moket_user_gender', gender);
-            localStorage.setItem('moket_user_age', ageGroup);
 
             if (name.trim()) {
                 greeting.innerHTML = `<span class="name-badge">${name}</span>님`;
@@ -1773,15 +1750,32 @@
                             const kakaoName = res.kakao_account?.profile?.nickname;
                             const kakaoPhone = res.kakao_account?.phone_number; // 권한 있을 경우만 들어옴
                             const kakaoRealName = res.kakao_account?.name; // 실제 이름 (권한 있을 경우)
+                            const kakaoGender = res.kakao_account?.gender; // 'male' or 'female'
+                            const kakaoAgeRange = res.kakao_account?.age_range; // '20~29' 등
 
                             if (kakaoName) {
-                                // [수정] 원본 정보는 별도 키에 영구 보관 (주문서 백엔드 전송 및 관리용)
+                                // [수정] 원본 정보는 별도 키에 영구 보관
                                 localStorage.setItem('kakao_original_name', kakaoName);
                                 if (kakaoPhone) localStorage.setItem('kakao_original_phone', kakaoPhone);
                                 if (kakaoRealName) localStorage.setItem('kakao_real_name', kakaoRealName);
 
-                                // [변경] 입력창에는 예시(placeholder)가 보이도록 자동으로 채우지 않음
-                                // localStorage.setItem('moket_user_name', kakaoName); 
+                                // [성별 변환]
+                                if (kakaoGender) {
+                                    const genderMap = { 'male': '남성', 'female': '여성' };
+                                    localStorage.setItem('moket_user_gender', genderMap[kakaoGender] || "미선택");
+                                }
+
+                                // [연령대 변환]
+                                if (kakaoAgeRange) {
+                                    let ageMapped = "60대 이상";
+                                    if (kakaoAgeRange.includes("10") || kakaoAgeRange.includes("1~9") || kakaoAgeRange.includes("15")) ageMapped = "10대";
+                                    else if (kakaoAgeRange.includes("20")) ageMapped = "20대";
+                                    else if (kakaoAgeRange.includes("30")) ageMapped = "30대";
+                                    else if (kakaoAgeRange.includes("40")) ageMapped = "40대";
+                                    else if (kakaoAgeRange.includes("50")) ageMapped = "50대";
+                                    localStorage.setItem('moket_user_age', ageMapped);
+                                }
+
                                 document.getElementById('input-name').value = '';
 
                                 loadProfile(); // UI 갱신 (인증됨 표시 등)
