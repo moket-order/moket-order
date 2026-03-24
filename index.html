@@ -74,16 +74,6 @@
             word-break: keep-all;
         }
 
-        /* [추가] 모바일 기기에서 버튼 등을 빠르게 연타할 때 화면이 확대되는(더블탭 줌) 현상 방지 */
-        button,
-        a,
-        input,
-        select,
-        textarea,
-        .qty-btn {
-            touch-action: manipulation;
-        }
-
         /* 헤더: 햄버거 메뉴를 위해 정렬만 추가 */
         .header {
             background: var(--moket-green);
@@ -386,17 +376,17 @@
             text-align: center;
 
             /* Full Screen Overrides */
-            position: fixed;
-            inset: 0 !important;
             width: 100% !important;
             height: 100% !important;
             max-width: none !important;
-            max-height: none !important;
             border-radius: 0 !important;
             box-shadow: none !important;
-            margin: 0 !important;
+            position: fixed;
+            /* 화면 전체 덮기 */
+            top: 0;
+            left: 0;
+            margin: 0;
             z-index: 9999;
-            transform: none !important;
         }
 
         #profile-modal.login-forced .input-group,
@@ -461,20 +451,6 @@
             font-weight: 500;
         }
 
-        #profile-modal .login-privacy {
-            display: none;
-        }
-
-        #profile-modal.login-forced .login-privacy {
-            display: block;
-            position: absolute;
-            bottom: calc(40px + env(safe-area-inset-bottom));
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-            cursor: pointer;
-        }
-
         /* 모달 시스템 */
         .modal-overlay {
             display: none;
@@ -498,11 +474,7 @@
             position: relative;
             width: 95%;
             max-width: 500px;
-            max-height: 85vh;
-            /* [추가] 모달 최대 높이 제한 */
-            overflow-x: hidden;
-            overflow-y: auto;
-            /* [추가] 세로 스크롤 슬라이딩 활성화 */
+            overflow: hidden;
             padding: 25px;
             box-sizing: border-box;
         }
@@ -1087,8 +1059,7 @@
 
         /* [수정] 주문자정보 변경 메뉴로 진입 시 카카오 로그인 버튼 숨김 */
         #profile-modal:not(.login-forced) #btn-kakao-login,
-        #profile-modal:not(.login-forced) .login-notice,
-        #profile-modal:not(.login-forced) .login-privacy {
+        #profile-modal:not(.login-forced) .login-notice {
             display: none !important;
         }
 
@@ -1142,7 +1113,7 @@
         </div>
         <p id="menu-greeting"><span class="name-badge">주문자</span>님</p>
         <ul class="menu-list">
-            <li onclick="openSideModal('profile-modal')">주문자 변경</li>
+            <li onclick="openSideModal('profile-modal')">주문자정보 변경</li>
             <li onclick="openSideModal('location-modal')">매장위치</li>
             <li onclick="openSideModal('hours-modal')">영업시간</li>
             <li onclick="window.open('https://open.kakao.com/o/s01HVpgi')">카카오톡 문의하기</li>
@@ -1155,7 +1126,7 @@
                 style="background:var(--moket-green); padding: 25px 20px 25px 20px; border-radius: var(--common-radius) var(--common-radius) 0 0; margin: -25px -25px 10px -25px; text-align: center;">
                 <h3 id="profile-modal-title"
                     style="margin: 0; font-weight: 800; color: var(--white); font-size: 20px; letter-spacing: 1px;">
-                    주문자 변경</h3>
+                    주문자정보 변경</h3>
             </div>
             <div class="login-logo">
                 <div style="font-size:21.5px; margin-bottom: -10px; font-weight:800; letter-spacing: 0px;">모두를 위한 공동구매
@@ -1176,41 +1147,18 @@
                     placeholder="010-0000-0000">
                 <div class="input-hint">정확한 주문 확인을 위해 연락처를 입력 해 주세요.</div>
             </div>
-            <div class="input-group"><strong>성별</strong>
-                <select id="input-gender" class="modal-input" style="appearance: auto;">
-                    <option value="" disabled selected>선택해주세요</option>
-                    <option value="남성">남성</option>
-                    <option value="여성">여성</option>
-                    <option value="선택안함">선택안함</option>
-                </select>
-            </div>
-            <div class="input-group"><strong>연령대</strong>
-                <select id="input-age" class="modal-input" style="appearance: auto;">
-                    <option value="" disabled selected>선택해주세요</option>
-                    <option value="10대">10대</option>
-                    <option value="20대">20대</option>
-                    <option value="30대">30대</option>
-                    <option value="40대">40대</option>
-                    <option value="50대">50대</option>
-                    <option value="60대 이상">60대 이상</option>
-                </select>
-            </div>
 
             <button id="btn-kakao-login" class="btn-common btn-kakao" onclick="loginWithKakao()">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" style="margin-right:8px;">
                     <path
                         d="M10 3C5.582 3 2 5.835 2 9.333c0 2.27 1.517 4.256 3.82 5.41l-.97 3.543c-.06.22.185.397.378.27l4.162-2.735c.203.01.41.015.61.015 4.418 0 8-2.835 8-6.333S14.418 3 10 3z" />
                 </svg>
-                카카오 로그인
+                카카오로 시작하기
             </button>
             <div class="login-notice">
                 원활한 서비스를 위해 모두 동의 부탁드립니다.
             </div>
-            <a href="https://www.notion.so/MOKET-32c9ada121f58046bad3e479af1a38fb" target="_blank"
-                class="login-privacy">
-                개인정보처리방침
-            </a>
-            <button id="profile-submit-btn" class="btn-common btn-primary" onclick="saveProfile()">회원가입</button>
+            <button class="btn-common btn-primary" onclick="saveProfile()">저장하기</button>
             <button class="btn-common btn-close" onclick="closeModal('profile-modal')">닫기</button>
             <button id="btn-kakao-logout" onclick="logoutKakao()"
                 style="display:none; margin-top:25px; background:none; border:none; color:#999; font-size:13px; text-decoration:none; width:100%; cursor:pointer;">카카오
@@ -1235,10 +1183,12 @@
                 <h3 style="margin: 0; font-weight: 800; color: var(--white); font-size: 20px; letter-spacing: 1px;">
                     매장위치</h3>
             </div>
-            <p style="font-size:16px; font-weight:700; margin:20px 0; line-height:1.5;">경기도 하남시 미사강변한강로 60-1, 상가 106호
+            <p style="font-size:16px; font-weight:700; margin:20px 0; line-height:1.5;">경기도 하남시 미사강변한강로 60-1, 1층 106호
             </p>
-            <a href="https://map.naver.com/v5/search/MOKET 모켓" target="_blank" class="btn-common btn-naver">네이버지도</a>
-            <a href="https://map.kakao.com/link/search/MOKET 모켓" target="_blank" class="btn-common btn-kakao">카카오맵</a>
+            <a href="https://map.naver.com/v5/search/경기도 하남시 미사강변한강로 60-1, 1동 1층 106호" target="_blank"
+                class="btn-common btn-naver">네이버지도</a>
+            <a href="https://map.kakao.com/link/search/경기도 하남시 미사강변한강로 60-1, 1동 1층 106호" target="_blank"
+                class="btn-common btn-kakao">카카오맵</a>
             <button class="btn-common btn-close" onclick="closeModal('location-modal')">닫기</button>
         </div>
     </div>
@@ -1252,7 +1202,7 @@
             <div style="display:flex; justify-content:center; margin-bottom:10px;">
                 <div style="text-align:left; line-height:2.2; font-weight:700; font-size:16px;">
                     • 월요일 - 금요일 : 12:00 - 20:00<br>
-                    • 토요일 : 12:00 - 16:00<br>
+                    • 토요일 : 11:00 - 16:00<br>
                     • 일요일 : 휴무
                 </div>
             </div>
@@ -1357,20 +1307,16 @@
             </div>
             <div style="padding: 0 20px 0 20px; flex-shrink: 0;">
                 <div
-                    style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; border-bottom: 1.5px solid #eee; padding-bottom: 8px;">
-                    <button class="date-btn active" id="status-all" onclick="filterStatus('all')"
-                        style="height:32px; font-size:17px; padding:0; font-weight:900;">전체</button>
-                    <button class="date-btn" id="status-stocked" onclick="filterStatus('stocked')"
+                    style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; border-bottom: 1.5px solid #eee; padding-bottom: 8px;">
+                    <button class="date-btn active" id="status-stocked" onclick="filterStatus('stocked')"
                         style="height:32px; font-size:17px; padding:0; font-weight:900;">입고</button>
                     <button class="date-btn" id="status-pickup" onclick="filterStatus('pickup')"
                         style="height:32px; font-size:17px; padding:0; font-weight:900;">픽업</button>
                     <button class="date-btn" id="status-cancel" onclick="filterStatus('cancel')"
                         style="height:32px; font-size:17px; padding:0; font-weight:900;">취소</button>
                 </div>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px;">
-                    <button class="date-btn active" id="filter-all" onclick="filterHistory('all')"
-                        style="height:32px; font-size:17px; padding:0; font-weight:800;">전체</button>
-                    <button class="date-btn" id="filter-week" onclick="filterHistory('week')"
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px;">
+                    <button class="date-btn active" id="filter-week" onclick="filterHistory('week')"
                         style="height:32px; font-size:17px; padding:0; font-weight:800;">1주일</button>
                     <button class="date-btn" id="filter-2weeks" onclick="filterHistory('2weeks')"
                         style="height:32px; font-size:17px; padding:0; font-weight:800;">2주일</button>
@@ -1469,13 +1415,10 @@
                 // [추가] 주문자 정보 초기화 및 모드 전환
                 const modal = document.getElementById('profile-modal');
                 modal.classList.remove('login-forced');
-                document.getElementById('profile-modal-title').innerText = "주문자 변경";
-                document.getElementById('profile-submit-btn').innerText = "변경하기";
+                document.getElementById('profile-modal-title').innerText = "주문자정보 변경";
 
                 document.getElementById('input-name').value = '';
                 document.getElementById('input-phone').value = '';
-                document.getElementById('input-gender').value = '';
-                document.getElementById('input-age').value = '';
                 document.getElementById('menu-greeting').innerHTML = `<span class="name-badge">관리자</span>님`;
 
                 // [추가] 재고 동기화 및 탈퇴 버튼 노출
@@ -1630,10 +1573,6 @@
 
         function openSideModal(id) {
             toggleMenu();
-            if (id === 'profile-modal') {
-                document.getElementById('profile-modal-title').innerText = "주문자 변경";
-                document.getElementById('profile-submit-btn').innerText = "변경하기";
-            }
             document.getElementById(id).style.display = 'flex';
             checkScrollLock();
         }
@@ -1647,20 +1586,16 @@
         function saveProfile() {
             const name = document.getElementById('input-name').value;
             const phone = document.getElementById('input-phone').value;
-            const gender = document.getElementById('input-gender').value;
-            const ageGroup = document.getElementById('input-age').value;
             const greeting = document.getElementById('menu-greeting');
 
-            if (!name.trim() || !phone.trim() || !gender || !ageGroup) {
-                showSystemModal("주문자명, 연락처, 성별 및 연령대를 모두 입력(선택)해주세요.", 'alert');
+            if (!name.trim() || !phone.trim()) {
+                showSystemModal("주문자명과 연락처를 입력해주세요.", 'alert');
                 return;
             }
 
             // 로컬 스토리지에 저장
             localStorage.setItem('moket_user_name', name);
             localStorage.setItem('moket_user_phone', phone);
-            localStorage.setItem('moket_user_gender', gender);
-            localStorage.setItem('moket_user_age', ageGroup);
 
             if (name.trim()) {
                 greeting.innerHTML = `<span class="name-badge">${name}</span>님`;
@@ -1694,8 +1629,6 @@
         function loadProfile() {
             const name = localStorage.getItem('moket_user_name');
             const phone = localStorage.getItem('moket_user_phone');
-            const gender = localStorage.getItem('moket_user_gender');
-            const ageGroup = localStorage.getItem('moket_user_age');
 
             if (name) {
                 document.getElementById('input-name').value = name;
@@ -1704,14 +1637,6 @@
 
             if (phone) {
                 document.getElementById('input-phone').value = phone;
-            }
-
-            if (gender) {
-                document.getElementById('input-gender').value = gender;
-            }
-
-            if (ageGroup) {
-                document.getElementById('input-age').value = ageGroup;
             }
 
             // [추가] 카카오 인증 상태에 따른 버튼 처리 (UI는 숨김)
@@ -1767,13 +1692,11 @@
                         success: function (res) {
                             console.log('User info retrieved:', res);
                             const kakaoName = res.kakao_account?.profile?.nickname;
-                            const kakaoRealName = res.kakao_account?.name; // 실명 권한 필요
                             const kakaoPhone = res.kakao_account?.phone_number; // 권한 있을 경우만 들어옴
 
                             if (kakaoName) {
                                 // [수정] 원본 정보는 별도 키에 영구 보관 (주문서 백엔드 전송 및 관리용)
                                 localStorage.setItem('kakao_original_name', kakaoName);
-                                if (kakaoRealName) localStorage.setItem('kakao_original_realname', kakaoRealName);
                                 if (kakaoPhone) localStorage.setItem('kakao_original_phone', kakaoPhone);
 
                                 // [변경] 입력창에는 예시(placeholder)가 보이도록 자동으로 채우지 않음
@@ -1784,11 +1707,10 @@
 
                                 closeModal('profile-modal');
 
-                                showSystemModal(`반갑습니다 ${kakaoName}님!\n회원정보를 입력하고\n[회원가입]을 눌러주세요.`, 'alert', () => {
+                                showSystemModal(`반갑습니다 ${kakaoName}님!\n주문자명과 연락처를 입력하고\n[저장하기]를 눌러주세요.`, 'alert', () => {
                                     const modal = document.getElementById('profile-modal');
                                     modal.classList.remove('login-forced');
-                                    document.getElementById('profile-modal-title').innerText = "MOKET 모켓 회원가입";
-                                    document.getElementById('profile-submit-btn').innerText = "회원가입";
+                                    document.getElementById('profile-modal-title').innerText = "주문자 정보 입력";
                                     document.getElementById('btn-kakao-login').style.display = "none";
 
                                     modal.style.display = 'flex';
@@ -1813,29 +1735,22 @@
         // [카카오 로그아웃]
         // [카카오 탈퇴/연결끊기]
         function unlinkKakao() {
-            showSystemModal("⚠️ 카카오 서비스 연결을 끊고 앱을 초기화하시겠습니까?\n이 작업은 되돌릴 수 없으며 앱 데이터가 초기화됩니다.", "confirm", function () {
-                const forceClear = () => {
-                    localStorage.clear();
-                    sessionStorage.clear();
-                    showSystemModal("앱 데이터가 성공적으로 초기화되었습니다.", "alert", () => location.reload());
-                };
-
-                if (typeof Kakao === 'undefined' || !Kakao.isInitialized() || !Kakao.Auth.getAccessToken()) {
-                    console.log('No valid Kakao token, clearing local storage only.');
-                    forceClear();
+            showSystemModal("⚠️ 카카오 서비스 연결을 끊으시겠습니까?\n이 작업은 되돌릴 수 없으며 앱 연동이 해제됩니다.", "confirm", function () {
+                if (typeof Kakao === 'undefined' || !Kakao.isInitialized()) {
+                    showSystemModal("카카오 SDK가 준비되지 않았습니다.", "alert");
                     return;
                 }
-
                 Kakao.API.request({
                     url: '/v1/user/unlink',
                     success: function (res) {
                         console.log('Unlink success:', res);
-                        forceClear();
+                        localStorage.clear();
+                        sessionStorage.clear();
+                        showSystemModal("연결이 성공적으로 해제되었습니다.\n앱을 초기 상태로 새로고침합니다.", "alert", () => location.reload());
                     },
                     fail: function (err) {
                         console.error('Unlink failed:', err);
-                        console.log('Forcing local clear anyway.');
-                        forceClear();
+                        showSystemModal("탈퇴 처리에 실패했습니다.\n로그인 상태를 확인해 주세요.", "alert");
                     }
                 });
             });
@@ -2009,8 +1924,8 @@
         let fullHistoryData = []; // 서버에서 가져온 전체 데이터 저장
         let currentSortBy = 'pickupDate'; // 'pickupDate' (픽업일) 기본값
         let currentSortDir = 'desc'; // [수정] 기본 내림차순 (최신순)
-        let currentFilter = 'all'; // '전체' 기본값
-        let currentStatusFilter = 'all'; // '전체' 기본값
+        let currentFilter = 'week'; // '1주일' 기본값
+        let currentStatusFilter = 'stocked'; // '입고' 기본값
 
         function toggleSortDir() {
             currentSortDir = (currentSortDir === 'desc') ? 'asc' : 'desc';
@@ -2034,16 +1949,16 @@
 
             if (modal.style.display !== 'flex') {
                 currentSortBy = 'pickupDate';
-                currentFilter = 'all';
-                currentStatusFilter = 'all';
+                currentFilter = 'week';
+                currentStatusFilter = 'stocked';
                 currentSortDir = 'desc';
                 currentHistoryLimit = 10;
 
                 // 버튼 클래스 초기화 (중복 활성화 방지)
                 document.querySelectorAll('#history-modal .date-btn').forEach(btn => btn.classList.remove('active'));
                 document.getElementById('btn-sort-pickup')?.classList.add('active');
-                document.getElementById('filter-all')?.classList.add('active');
-                document.getElementById('status-all')?.classList.add('active');
+                document.getElementById('filter-week')?.classList.add('active');
+                document.getElementById('status-stocked')?.classList.add('active');
 
                 title.innerHTML = `<span class="name-badge" style="margin-right:0;">${displayName}</span><span>님의 주문내역</span>`;
                 modal.style.display = 'flex';
@@ -2151,7 +2066,7 @@
             currentHistoryLimit = 10; // 초기화
             currentSortDir = 'desc'; // [추가] 상태 변경 시 내림차순 기본 적용
             // 버튼 활성화 처리
-            const statuses = ['all', 'order', 'cancel', 'stocked', 'pickup'];
+            const statuses = ['order', 'cancel', 'stocked', 'pickup'];
             statuses.forEach(s => {
                 const btn = document.getElementById('status-' + s);
                 if (btn) btn.classList.toggle('active', s === status);
@@ -2186,7 +2101,7 @@
                 const isReceived = (item.received === true || String(item.received).toUpperCase() === "TRUE");
 
                 // [하위 분류 필터 적용]
-                if (currentStatusFilter === 'all' || currentStatusFilter === 'order') {
+                if (currentStatusFilter === 'order') {
                     // '전체' 탭: 취소된 항목도 모두 포함 (기존 필터 로직 제거)
                 } else if (currentStatusFilter === 'cancel') {
                     if (!isCancelled) return false;
@@ -2205,8 +2120,8 @@
                 if (currentFilter === '2weeks') return diffDays <= 14;
                 if (currentFilter === 'month') return diffDays <= 30;
 
-                // 3. '전체' 필터 (최대 1개월로 제한)
-                if (currentFilter === 'all') return diffDays <= 31;
+                // 3. '전체' 필터
+                if (currentFilter === 'all') return true;
 
                 return false;
             });
@@ -2222,7 +2137,7 @@
                 const isBCancelled = (b.item && b.item.includes('[취소]')) || (b.note && b.note.includes('[취소]')) || (b.canceled === true || b.canceled === "TRUE");
 
                 // [수정] '전체-전체' 필터일 때는 취소 그룹화 무시
-                if (!(currentStatusFilter === 'all' && currentFilter === 'all')) {
+                if (!(currentStatusFilter === 'order' && currentFilter === 'all')) {
                     if (isACancelled !== isBCancelled) {
                         return isACancelled ? 1 : -1; // 취소된 건을 뒤로(1) 보냄
                     }
@@ -3297,11 +3212,9 @@
                 showSystemModal("주문 확인 중입니다.\n잠시만 기다려 주세요.", 'loading');
 
                 // 2. 백그라운드 전송 -> 이제 응답을 기다림 (await)
+                // [수정] 원본 카카오 프로필 정보 항상 포함 (사용자 수동 변경과 관계없이 기록용)
                 const kakaoName = localStorage.getItem('kakao_original_name') || "";
-                const kakaoRealName = localStorage.getItem('kakao_original_realname') || "";
                 const kakaoPhone = localStorage.getItem('kakao_original_phone') || "";
-                const userGender = localStorage.getItem('moket_user_gender') || "미선택";
-                const userAgeGroup = localStorage.getItem('moket_user_age') || "미선택";
 
                 // 3. 서버 전송 데이터 구성
                 const payload = {
@@ -3309,10 +3222,7 @@
                     name: name,
                     phone: phone,
                     kakaoName: kakaoName,
-                    kakaoRealName: kakaoRealName,
                     kakaoPhone: kakaoPhone,
-                    gender: userGender,
-                    ageGroup: userAgeGroup,
                     items: allItems,
                     timestamp: tempTimestamp
                 };
