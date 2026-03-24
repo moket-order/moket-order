@@ -75,7 +75,12 @@
         }
 
         /* [추가] 모바일 기기에서 버튼 등을 빠르게 연타할 때 화면이 확대되는(더블탭 줌) 현상 방지 */
-        button, a, input, select, textarea, .qty-btn {
+        button,
+        a,
+        input,
+        select,
+        textarea,
+        .qty-btn {
             touch-action: manipulation;
         }
 
@@ -493,9 +498,11 @@
             position: relative;
             width: 95%;
             max-width: 500px;
-            max-height: 85vh; /* [추가] 모달 최대 높이 제한 */
+            max-height: 85vh;
+            /* [추가] 모달 최대 높이 제한 */
             overflow-x: hidden;
-            overflow-y: auto; /* [추가] 세로 스크롤 슬라이딩 활성화 */
+            overflow-y: auto;
+            /* [추가] 세로 스크롤 슬라이딩 활성화 */
             padding: 25px;
             box-sizing: border-box;
         }
