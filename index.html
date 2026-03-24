@@ -488,7 +488,9 @@
             position: relative;
             width: 95%;
             max-width: 500px;
-            overflow: hidden;
+            max-height: 85vh; /* [추가] 모달 최대 높이 제한 */
+            overflow-x: hidden;
+            overflow-y: auto; /* [추가] 세로 스크롤 슬라이딩 활성화 */
             padding: 25px;
             box-sizing: border-box;
         }
@@ -1764,7 +1766,7 @@
 
                                 closeModal('profile-modal');
 
-                                showSystemModal(`반갑습니다 ${kakaoName}님!\n주문자명과 연락처를 입력하고\n[회원가입]을 눌러주세요.`, 'alert', () => {
+                                showSystemModal(`반갑습니다 ${kakaoName}님!\n회원정보를 입력하고\n[회원가입]을 눌러주세요.`, 'alert', () => {
                                     const modal = document.getElementById('profile-modal');
                                     modal.classList.remove('login-forced');
                                     document.getElementById('profile-modal-title').innerText = "MOKET 모켓 회원가입";
