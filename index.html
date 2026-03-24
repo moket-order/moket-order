@@ -2191,8 +2191,8 @@
                 if (currentFilter === '2weeks') return diffDays <= 14;
                 if (currentFilter === 'month') return diffDays <= 30;
 
-                // 3. '전체' 필터
-                if (currentFilter === 'all') return true;
+                // 3. '전체' 필터 (최대 1개월로 제한)
+                if (currentFilter === 'all') return diffDays <= 31;
 
                 return false;
             });
