@@ -74,6 +74,16 @@
             word-break: keep-all;
         }
 
+        /* [추가] 모바일 기기에서 버튼 등을 빠르게 연타할 때 화면이 확대되는(더블탭 줌) 현상 방지 */
+        button,
+        a,
+        input,
+        select,
+        textarea,
+        .qty-btn {
+            touch-action: manipulation;
+        }
+
         /* 헤더: 햄버거 메뉴를 위해 정렬만 추가 */
         .header {
             background: var(--moket-green);
@@ -488,9 +498,11 @@
             position: relative;
             width: 95%;
             max-width: 500px;
-            max-height: 85vh; /* [추가] 모달 최대 높이 제한 */
+            max-height: 85vh;
+            /* [추가] 모달 최대 높이 제한 */
             overflow-x: hidden;
-            overflow-y: auto; /* [추가] 세로 스크롤 슬라이딩 활성화 */
+            overflow-y: auto;
+            /* [추가] 세로 스크롤 슬라이딩 활성화 */
             padding: 25px;
             box-sizing: border-box;
         }
@@ -1345,16 +1357,20 @@
             </div>
             <div style="padding: 0 20px 0 20px; flex-shrink: 0;">
                 <div
-                    style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; border-bottom: 1.5px solid #eee; padding-bottom: 8px;">
-                    <button class="date-btn active" id="status-stocked" onclick="filterStatus('stocked')"
+                    style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; border-bottom: 1.5px solid #eee; padding-bottom: 8px;">
+                    <button class="date-btn active" id="status-all" onclick="filterStatus('all')"
+                        style="height:32px; font-size:17px; padding:0; font-weight:900;">전체</button>
+                    <button class="date-btn" id="status-stocked" onclick="filterStatus('stocked')"
                         style="height:32px; font-size:17px; padding:0; font-weight:900;">입고</button>
                     <button class="date-btn" id="status-pickup" onclick="filterStatus('pickup')"
                         style="height:32px; font-size:17px; padding:0; font-weight:900;">픽업</button>
                     <button class="date-btn" id="status-cancel" onclick="filterStatus('cancel')"
                         style="height:32px; font-size:17px; padding:0; font-weight:900;">취소</button>
                 </div>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px;">
-                    <button class="date-btn active" id="filter-week" onclick="filterHistory('week')"
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px;">
+                    <button class="date-btn active" id="filter-all" onclick="filterHistory('all')"
+                        style="height:32px; font-size:17px; padding:0; font-weight:800;">전체</button>
+                    <button class="date-btn" id="filter-week" onclick="filterHistory('week')"
                         style="height:32px; font-size:17px; padding:0; font-weight:800;">1주일</button>
                     <button class="date-btn" id="filter-2weeks" onclick="filterHistory('2weeks')"
                         style="height:32px; font-size:17px; padding:0; font-weight:800;">2주일</button>
@@ -1991,8 +2007,8 @@
         let fullHistoryData = []; // 서버에서 가져온 전체 데이터 저장
         let currentSortBy = 'pickupDate'; // 'pickupDate' (픽업일) 기본값
         let currentSortDir = 'desc'; // [수정] 기본 내림차순 (최신순)
-        let currentFilter = 'week'; // '1주일' 기본값
-        let currentStatusFilter = 'stocked'; // '입고' 기본값
+        let currentFilter = 'all'; // '전체' 기본값
+        let currentStatusFilter = 'all'; // '전체' 기본값
 
         function toggleSortDir() {
             currentSortDir = (currentSortDir === 'desc') ? 'asc' : 'desc';
@@ -2016,16 +2032,16 @@
 
             if (modal.style.display !== 'flex') {
                 currentSortBy = 'pickupDate';
-                currentFilter = 'week';
-                currentStatusFilter = 'stocked';
+                currentFilter = 'all';
+                currentStatusFilter = 'all';
                 currentSortDir = 'desc';
                 currentHistoryLimit = 10;
 
                 // 버튼 클래스 초기화 (중복 활성화 방지)
                 document.querySelectorAll('#history-modal .date-btn').forEach(btn => btn.classList.remove('active'));
                 document.getElementById('btn-sort-pickup')?.classList.add('active');
-                document.getElementById('filter-week')?.classList.add('active');
-                document.getElementById('status-stocked')?.classList.add('active');
+                document.getElementById('filter-all')?.classList.add('active');
+                document.getElementById('status-all')?.classList.add('active');
 
                 title.innerHTML = `<span class="name-badge" style="margin-right:0;">${displayName}</span><span>님의 주문내역</span>`;
                 modal.style.display = 'flex';
@@ -2133,7 +2149,7 @@
             currentHistoryLimit = 10; // 초기화
             currentSortDir = 'desc'; // [추가] 상태 변경 시 내림차순 기본 적용
             // 버튼 활성화 처리
-            const statuses = ['order', 'cancel', 'stocked', 'pickup'];
+            const statuses = ['all', 'order', 'cancel', 'stocked', 'pickup'];
             statuses.forEach(s => {
                 const btn = document.getElementById('status-' + s);
                 if (btn) btn.classList.toggle('active', s === status);
@@ -2168,7 +2184,7 @@
                 const isReceived = (item.received === true || String(item.received).toUpperCase() === "TRUE");
 
                 // [하위 분류 필터 적용]
-                if (currentStatusFilter === 'order') {
+                if (currentStatusFilter === 'all' || currentStatusFilter === 'order') {
                     // '전체' 탭: 취소된 항목도 모두 포함 (기존 필터 로직 제거)
                 } else if (currentStatusFilter === 'cancel') {
                     if (!isCancelled) return false;
@@ -2187,8 +2203,8 @@
                 if (currentFilter === '2weeks') return diffDays <= 14;
                 if (currentFilter === 'month') return diffDays <= 30;
 
-                // 3. '전체' 필터
-                if (currentFilter === 'all') return true;
+                // 3. '전체' 필터 (최대 1개월로 제한)
+                if (currentFilter === 'all') return diffDays <= 31;
 
                 return false;
             });
@@ -2204,7 +2220,7 @@
                 const isBCancelled = (b.item && b.item.includes('[취소]')) || (b.note && b.note.includes('[취소]')) || (b.canceled === true || b.canceled === "TRUE");
 
                 // [수정] '전체-전체' 필터일 때는 취소 그룹화 무시
-                if (!(currentStatusFilter === 'order' && currentFilter === 'all')) {
+                if (!(currentStatusFilter === 'all' && currentFilter === 'all')) {
                     if (isACancelled !== isBCancelled) {
                         return isACancelled ? 1 : -1; // 취소된 건을 뒤로(1) 보냄
                     }
