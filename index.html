@@ -1128,7 +1128,7 @@
         </div>
         <p id="menu-greeting"><span class="name-badge">주문자</span>님</p>
         <ul class="menu-list">
-            <li onclick="openSideModal('profile-modal')">주문자정보 변경</li>
+            <li onclick="openSideModal('profile-modal')">주문자 변경</li>
             <li onclick="openSideModal('location-modal')">매장위치</li>
             <li onclick="openSideModal('hours-modal')">영업시간</li>
             <li onclick="window.open('https://open.kakao.com/o/s01HVpgi')">카카오톡 문의하기</li>
@@ -1141,7 +1141,7 @@
                 style="background:var(--moket-green); padding: 25px 20px 25px 20px; border-radius: var(--common-radius) var(--common-radius) 0 0; margin: -25px -25px 10px -25px; text-align: center;">
                 <h3 id="profile-modal-title"
                     style="margin: 0; font-weight: 800; color: var(--white); font-size: 20px; letter-spacing: 1px;">
-                    주문자정보 변경</h3>
+                    주문자 변경</h3>
             </div>
             <div class="login-logo">
                 <div style="font-size:21.5px; margin-bottom: -10px; font-weight:800; letter-spacing: 0px;">모두를 위한 공동구매
@@ -1196,7 +1196,7 @@
                 class="login-privacy">
                 개인정보처리방침
             </a>
-            <button class="btn-common btn-primary" onclick="saveProfile()">회원가입</button>
+            <button id="profile-submit-btn" class="btn-common btn-primary" onclick="saveProfile()">회원가입</button>
             <button class="btn-common btn-close" onclick="closeModal('profile-modal')">닫기</button>
             <button id="btn-kakao-logout" onclick="logoutKakao()"
                 style="display:none; margin-top:25px; background:none; border:none; color:#999; font-size:13px; text-decoration:none; width:100%; cursor:pointer;">카카오
@@ -1451,7 +1451,8 @@
                 // [추가] 주문자 정보 초기화 및 모드 전환
                 const modal = document.getElementById('profile-modal');
                 modal.classList.remove('login-forced');
-                document.getElementById('profile-modal-title').innerText = "주문자정보 변경";
+                document.getElementById('profile-modal-title').innerText = "주문자 변경";
+                document.getElementById('profile-submit-btn').innerText = "변경하기";
 
                 document.getElementById('input-name').value = '';
                 document.getElementById('input-phone').value = '';
@@ -1611,6 +1612,10 @@
 
         function openSideModal(id) {
             toggleMenu();
+            if (id === 'profile-modal') {
+                document.getElementById('profile-modal-title').innerText = "주문자 변경";
+                document.getElementById('profile-submit-btn').innerText = "변경하기";
+            }
             document.getElementById(id).style.display = 'flex';
             checkScrollLock();
         }
@@ -1763,6 +1768,7 @@
                                     const modal = document.getElementById('profile-modal');
                                     modal.classList.remove('login-forced');
                                     document.getElementById('profile-modal-title').innerText = "MOKET 모켓 회원가입";
+                                    document.getElementById('profile-submit-btn').innerText = "회원가입";
                                     document.getElementById('btn-kakao-login').style.display = "none";
 
                                     modal.style.display = 'flex';
