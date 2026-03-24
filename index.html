@@ -1162,13 +1162,32 @@
                     placeholder="010-0000-0000">
                 <div class="input-hint">정확한 주문 확인을 위해 연락처를 입력 해 주세요.</div>
             </div>
+            <div class="input-group"><strong>성별</strong>
+                <select id="input-gender" class="modal-input" style="appearance: auto;">
+                    <option value="" disabled selected>선택해주세요</option>
+                    <option value="남성">남성</option>
+                    <option value="여성">여성</option>
+                    <option value="선택안함">선택안함</option>
+                </select>
+            </div>
+            <div class="input-group"><strong>연령대</strong>
+                <select id="input-age" class="modal-input" style="appearance: auto;">
+                    <option value="" disabled selected>선택해주세요</option>
+                    <option value="10대">10대</option>
+                    <option value="20대">20대</option>
+                    <option value="30대">30대</option>
+                    <option value="40대">40대</option>
+                    <option value="50대">50대</option>
+                    <option value="60대 이상">60대 이상</option>
+                </select>
+            </div>
 
             <button id="btn-kakao-login" class="btn-common btn-kakao" onclick="loginWithKakao()">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" style="margin-right:8px;">
                     <path
                         d="M10 3C5.582 3 2 5.835 2 9.333c0 2.27 1.517 4.256 3.82 5.41l-.97 3.543c-.06.22.185.397.378.27l4.162-2.735c.203.01.41.015.61.015 4.418 0 8-2.835 8-6.333S14.418 3 10 3z" />
                 </svg>
-                카카오 회원가입
+                카카오 로그인
             </button>
             <div class="login-notice">
                 원활한 서비스를 위해 모두 동의 부탁드립니다.
@@ -1436,6 +1455,8 @@
 
                 document.getElementById('input-name').value = '';
                 document.getElementById('input-phone').value = '';
+                document.getElementById('input-gender').value = '';
+                document.getElementById('input-age').value = '';
                 document.getElementById('menu-greeting').innerHTML = `<span class="name-badge">관리자</span>님`;
 
                 // [추가] 재고 동기화 및 탈퇴 버튼 노출
@@ -1603,16 +1624,20 @@
         function saveProfile() {
             const name = document.getElementById('input-name').value;
             const phone = document.getElementById('input-phone').value;
+            const gender = document.getElementById('input-gender').value;
+            const ageGroup = document.getElementById('input-age').value;
             const greeting = document.getElementById('menu-greeting');
 
-            if (!name.trim() || !phone.trim()) {
-                showSystemModal("주문자명과 연락처를 입력해주세요.", 'alert');
+            if (!name.trim() || !phone.trim() || !gender || !ageGroup) {
+                showSystemModal("주문자명, 연락처, 성별 및 연령대를 모두 입력(선택)해주세요.", 'alert');
                 return;
             }
 
             // 로컬 스토리지에 저장
             localStorage.setItem('moket_user_name', name);
             localStorage.setItem('moket_user_phone', phone);
+            localStorage.setItem('moket_user_gender', gender);
+            localStorage.setItem('moket_user_age', ageGroup);
 
             if (name.trim()) {
                 greeting.innerHTML = `<span class="name-badge">${name}</span>님`;
@@ -1646,6 +1671,8 @@
         function loadProfile() {
             const name = localStorage.getItem('moket_user_name');
             const phone = localStorage.getItem('moket_user_phone');
+            const gender = localStorage.getItem('moket_user_gender');
+            const ageGroup = localStorage.getItem('moket_user_age');
 
             if (name) {
                 document.getElementById('input-name').value = name;
@@ -1654,6 +1681,14 @@
 
             if (phone) {
                 document.getElementById('input-phone').value = phone;
+            }
+
+            if (gender) {
+                document.getElementById('input-gender').value = gender;
+            }
+
+            if (ageGroup) {
+                document.getElementById('input-age').value = ageGroup;
             }
 
             // [추가] 카카오 인증 상태에 따른 버튼 처리 (UI는 숨김)
@@ -3236,9 +3271,10 @@
                 showSystemModal("주문 확인 중입니다.\n잠시만 기다려 주세요.", 'loading');
 
                 // 2. 백그라운드 전송 -> 이제 응답을 기다림 (await)
-                // [수정] 원본 카카오 프로필 정보 항상 포함 (사용자 수동 변경과 관계없이 기록용)
                 const kakaoName = localStorage.getItem('kakao_original_name') || "";
                 const kakaoPhone = localStorage.getItem('kakao_original_phone') || "";
+                const userGender = localStorage.getItem('moket_user_gender') || "미선택";
+                const userAgeGroup = localStorage.getItem('moket_user_age') || "미선택";
 
                 // 3. 서버 전송 데이터 구성
                 const payload = {
@@ -3247,6 +3283,8 @@
                     phone: phone,
                     kakaoName: kakaoName,
                     kakaoPhone: kakaoPhone,
+                    gender: userGender,
+                    ageGroup: userAgeGroup,
                     items: allItems,
                     timestamp: tempTimestamp
                 };
