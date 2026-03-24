@@ -1687,14 +1687,6 @@
                 document.getElementById('input-phone').value = phone;
             }
 
-            if (gender) {
-                document.getElementById('input-gender').value = gender;
-            }
-
-            if (ageGroup) {
-                document.getElementById('input-age').value = ageGroup;
-            }
-
             // [추가] 카카오 인증 상태에 따른 버튼 처리 (UI는 숨김)
             const certName = localStorage.getItem('kakao_original_name');
             const promptDiv = document.getElementById('kakao-login-prompt');
