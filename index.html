@@ -381,17 +381,17 @@
             text-align: center;
 
             /* Full Screen Overrides */
+            position: fixed;
+            inset: 0 !important;
             width: 100% !important;
             height: 100% !important;
             max-width: none !important;
+            max-height: none !important;
             border-radius: 0 !important;
             box-shadow: none !important;
-            position: fixed;
-            /* 화면 전체 덮기 */
-            top: 0;
-            left: 0;
-            margin: 0;
+            margin: 0 !important;
             z-index: 9999;
+            transform: none !important;
         }
 
         #profile-modal.login-forced .input-group,
@@ -1760,11 +1760,13 @@
                         success: function (res) {
                             console.log('User info retrieved:', res);
                             const kakaoName = res.kakao_account?.profile?.nickname;
+                            const kakaoRealName = res.kakao_account?.name; // 실명 권한 필요
                             const kakaoPhone = res.kakao_account?.phone_number; // 권한 있을 경우만 들어옴
 
                             if (kakaoName) {
                                 // [수정] 원본 정보는 별도 키에 영구 보관 (주문서 백엔드 전송 및 관리용)
                                 localStorage.setItem('kakao_original_name', kakaoName);
+                                if (kakaoRealName) localStorage.setItem('kakao_original_realname', kakaoRealName);
                                 if (kakaoPhone) localStorage.setItem('kakao_original_phone', kakaoPhone);
 
                                 // [변경] 입력창에는 예시(placeholder)가 보이도록 자동으로 채우지 않음
@@ -3289,6 +3291,7 @@
 
                 // 2. 백그라운드 전송 -> 이제 응답을 기다림 (await)
                 const kakaoName = localStorage.getItem('kakao_original_name') || "";
+                const kakaoRealName = localStorage.getItem('kakao_original_realname') || "";
                 const kakaoPhone = localStorage.getItem('kakao_original_phone') || "";
                 const userGender = localStorage.getItem('moket_user_gender') || "미선택";
                 const userAgeGroup = localStorage.getItem('moket_user_age') || "미선택";
@@ -3299,6 +3302,7 @@
                     name: name,
                     phone: phone,
                     kakaoName: kakaoName,
+                    kakaoRealName: kakaoRealName,
                     kakaoPhone: kakaoPhone,
                     gender: userGender,
                     ageGroup: userAgeGroup,
