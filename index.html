@@ -74,6 +74,11 @@
             word-break: keep-all;
         }
 
+        /* [추가] 모바일 기기에서 버튼 등을 빠르게 연타할 때 화면이 확대되는(더블탭 줌) 현상 방지 */
+        button, a, input, select, textarea, .qty-btn {
+            touch-action: manipulation;
+        }
+
         /* 헤더: 햄버거 메뉴를 위해 정렬만 추가 */
         .header {
             background: var(--moket-green);
