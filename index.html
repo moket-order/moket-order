@@ -1061,19 +1061,23 @@
             position: absolute;
             top: calc(20px + env(safe-area-inset-top));
             right: calc(20px + env(safe-area-inset-right));
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.2);
+            width: 44px;
+            height: 44px;
+            background: rgba(0, 0, 0, 0.5);
+            /* 어두운 배경으로 변경 */
             color: white;
-            border: none;
-            border-radius: var(--btn-radius);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            /* 원형으로 변경하여 더 모던하게 */
             font-size: 24px;
             z-index: 7101;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(8px);
+            /* 블러 효과 강화 */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
         /* 정보변경 모달용 입력창 */
