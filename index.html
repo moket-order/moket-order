@@ -1149,6 +1149,7 @@
             <li onclick="openSideModal('profile-modal')">주문자 변경</li>
             <li onclick="openSideModal('location-modal')">매장위치</li>
             <li onclick="openSideModal('hours-modal')">영업시간</li>
+            <li onclick="openSideModal('bank-modal')">계좌번호</li>
             <li onclick="window.open('https://open.kakao.com/o/s01HVpgi')">카카오톡 문의하기</li>
 
         </ul>
@@ -1242,6 +1243,23 @@
                 </div>
             </div>
             <button class="btn-common btn-close" onclick="closeModal('hours-modal')">닫기</button>
+        </div>
+    </div>
+    <div id="bank-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div
+                style="background:var(--moket-green); padding: 25px 20px 25px 20px; border-radius: var(--common-radius) var(--common-radius) 0 0; margin: -25px -25px 10px -25px; text-align: center;">
+                <h3 style="margin: 0; font-weight: 800; color: var(--white); font-size: 20px; letter-spacing: 1px;">
+                    계좌번호 안내</h3>
+            </div>
+            <div style="display:flex; justify-content:center; margin:20px 0;">
+                <div style="text-align:center; line-height:1.8; font-weight:700; font-size:17px; color:var(--item-black);">
+                    토스뱅크<br>
+                    <span style="font-size:20px; color:var(--moket-green); letter-spacing:0.5px;">100246344656</span><br>
+                    예금주 : 강X민(모켓(MOKET))
+                </div>
+            </div>
+            <button class="btn-common btn-close" onclick="closeModal('bank-modal')">닫기</button>
         </div>
     </div>
     <div class="sticky-header-group">
