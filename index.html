@@ -591,6 +591,23 @@
             pointer-events: none;
         }
 
+        .illust-guide {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.4);
+            color: #fff;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: 500;
+            pointer-events: none;
+            z-index: 10;
+            backdrop-filter: blur(2px);
+            border: 0.5px solid rgba(255, 255, 255, 0.2);
+        }
+
         /* [추가] 좌우 슬라이드 안내 가이드 */
         .slide-guide {
             position: absolute;
@@ -1286,6 +1303,7 @@
                         </div>
                         <div class="slide-guide-text">좌우로 슬라이드</div>
                     </div>
+                    <div class="illust-guide">이해를 돕기 위한 이미지입니다.</div>
                     <div class="touch-guide">탭하여 확대보기</div>
                 </div>
                 <div class="detail-body">
