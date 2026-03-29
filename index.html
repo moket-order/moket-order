@@ -2680,11 +2680,10 @@
                         displayDate: p.date ? formatDateWithDay(p.date) : "",
                         images: Array.isArray(p.images) ? p.images : []
                     };
-                }).map(p => {
                     // [추가] Firebase 전역 변동분 합산
                     const adjKey = fSafeKey(p.matchKey) + "_" + fSafeKey(p.name);
                     const adj = globalAdjustments[adjKey] || 0;
-                    if (adj !== 0) {
+                    if (adj !== 0 && p.stock !== "") {
                         p.stock = Math.max(0, parseInt(p.stock || 0) + adj);
                     }
                     return p;
