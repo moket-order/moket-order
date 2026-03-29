@@ -2677,20 +2677,22 @@
                     let mKey = (p.matchKey || p.date || "").trim();
                     if (mKey === "no-date") mKey = ""; // 가짜 데이터 제거
 
+                    // [추가] Firebase 전역 변동분 합산
+                    const adjKey = fSafeKey(mKey) + "_" + fSafeKey(p.name);
+                    const adj = globalAdjustments[adjKey] || 0;
+                    let currentStock = p.stock;
+                    if (adj !== 0 && p.stock !== "") {
+                        currentStock = Math.max(0, parseInt(p.stock || 0) + adj);
+                    }
+
                     return {
                         ...p,
                         name: (p.name || "").trim(),
                         matchKey: mKey,
+                        stock: currentStock,
                         displayDate: p.date ? formatDateWithDay(p.date) : "",
                         images: Array.isArray(p.images) ? p.images : []
                     };
-                    // [추가] Firebase 전역 변동분 합산
-                    const adjKey = fSafeKey(p.matchKey) + "_" + fSafeKey(p.name);
-                    const adj = globalAdjustments[adjKey] || 0;
-                    if (adj !== 0 && p.stock !== "") {
-                        p.stock = Math.max(0, parseInt(p.stock || 0) + adj);
-                    }
-                    return p;
                 });
 
                 console.log("[Data Sync] 최종 유효 데이터:", freshData);
@@ -2773,9 +2775,10 @@
             console.log(`이미지 배경 로드 시작 (총 ${sortPriority.length}개 항목, 날짜순 우선순위 적용)`);
 
             for (const p of sortPriority) {
-                if (!p.isFullLoaded) {
+                // [수정] 이미 로드되었다고 되어있어도 이미지가 없는 경우 또는 folderId가 있는 경우 재시도 허용
+                if (!p.isFullLoaded || (p.images && p.images.length === 0 && p.folderId)) {
                     try {
-                        const res = await fetch(`${API_URL}?action=fetchProductImages&name=${encodeURIComponent(p.name)}`);
+                        const res = await fetch(`${API_URL}?action=fetchProductImages&name=${encodeURIComponent(p.name)}&folderId=${p.folderId || ''}`);
                         const allImages = await res.json();
 
                         if (Array.isArray(allImages)) {
@@ -3072,17 +3075,20 @@
             if (detailScrollArea) detailScrollArea.scrollTop = 0;
 
             // 2. 만약 아직 폴더 이미지를 '완벽하게' 로드하지 않았다면 서버에 요청 (Lazy Loading)
-            if (!p.isFullLoaded) {
+            // [수정] isFullLoaded가 true이더라도 이미지가 없거나 1개 이하인데 folderId가 있다면 재시도 (캐시 오류 방지)
+            if (!p.isFullLoaded || (p.images && p.images.length <= 1 && p.folderId)) {
                 try {
                     const res = await fetch(`${API_URL}?action=fetchProductImages&name=${encodeURIComponent(p.name)}&folderId=${p.folderId || ''}`);
                     const allImages = await res.json();
 
-                    if (Array.isArray(allImages)) {
+                    if (Array.isArray(allImages) && allImages.length > 0) {
                         // "폴더 이미지만 보여줘" 요청 반영: 폴더 내용을 사용하여 기존 시트 이미지ID 무시
                         p.images = allImages;
                         p.isFullLoaded = true; // 체크 완료 표시
                         localStorage.setItem('moket_products_cache_v2', JSON.stringify(productsData));
                         renderImgs(); // 이미지 다시 그리기
+                    } else if (Array.isArray(allImages)) {
+                        p.isFullLoaded = true; // 결과가 빈 배열이어도 체크 완료로 표시 (무한 재요청 방지)
                     }
                 } catch (e) {
                     console.error("상세 이미지 로드 실패:", e);
