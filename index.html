@@ -2377,23 +2377,46 @@
                 return timeB - timeA;
             });
 
-            // [더보기 기능] 현재 limit만큼만 보여줌
-            const pagedItems = filtered.slice(0, currentHistoryLimit);
+            // [그룹화] 동일한 주문 시간(timestamp)을 가진 항목들을 하나의 예약 번호처럼 그룹화
+            const groupedTransactions = [];
+            filtered.forEach(item => {
+                const key = item.timestamp || item.rawTimestamp || 'unknown';
+                let group = groupedTransactions.find(g => g.key === key);
+                if (!group) {
+                    group = {
+                        key: key,
+                        timestamp: item.timestamp,
+                        items: [],
+                        totalQty: 0,
+                        totalPrice: 0,
+                        pickupDate: item.pickupDate,
+                        name: item.name
+                    };
+                    groupedTransactions.push(group);
+                }
+                group.items.push(item);
+                
+                // 취소되지 않은 항목들만 합계에 포함 (UI 표시용)
+                const isCancelled = (item.item && item.item.includes('[취소]')) ||
+                    (item.received === "canceled" || item.received === "취소완료") ||
+                    (item.canceled === true || String(item.canceled).toUpperCase() === "TRUE");
+                
+                if (!isCancelled) {
+                    group.totalQty += parseInt(item.qty || 0);
+                    group.totalPrice += parseInt(item.total || 0);
+                }
+            });
+
+            // [더보기 기능] 현재 limit만큼 그룹 단위로 보여줌
+            const pagedGroups = groupedTransactions.slice(0, currentHistoryLimit);
             let htmlBuffer = '';
 
-            pagedItems.forEach(order => {
-                const isCancelled = (order.item && order.item.includes('[취소]')) ||
-                    (order.note && order.note.includes('[취소]')) ||
-                    order.received === "canceled" ||
-                    order.received === "취소완료" ||
-                    (order.canceled === true || String(order.canceled).toUpperCase() === "TRUE");
-                const isProcessing = order.isProcessing === true;
-
-                // [안전장치] 데이터 형식이 예전과 다를 경우(예: timestamp가 없는 경우)를 보호
+            pagedGroups.forEach(group => {
+                const firstItem = group.items[0];
                 let orderTime = '정보없음';
-                let orderTimeFull = '';
+                let orderTimeFull = group.timestamp || '';
+                
                 try {
-                    orderTimeFull = order.timestamp || order.orderDate || ''; // orderDate 호환성 추가
                     const d = parseKRDate(orderTimeFull);
                     const y = String(d.getFullYear()).slice(-2);
                     const m = d.getMonth() + 1;
@@ -2401,17 +2424,12 @@
                     const w = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
                     const h = String(d.getHours()).padStart(2, '0');
                     const min = String(d.getMinutes()).padStart(2, '0');
-
                     orderTime = `${y}년 ${m}월 ${day}일 (${w}) ${h}:${min}`;
-                } catch (e) { console.error("날짜 형식 도중 오류:", e, order); }
+                } catch (e) { console.error("날짜 형식 도중 오류:", e); }
 
-                const isReceived = (order.received === true || String(order.received).toUpperCase() === "TRUE");
-                const isStocked = (order.isStocked === true || String(order.isStocked).toUpperCase() === "TRUE");
-
-                // 픽업일 표시 최적화
-                let pickupDisp = (order.pickupDate || '정보없음').trim();
+                // 픽업일 표시
+                let pickupDisp = (group.pickupDate || '정보없음').trim();
                 if (pickupDisp.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                    // "2024-02-06" 형태면 포맷팅
                     const pd = new Date(pickupDisp);
                     const py = String(pd.getFullYear()).slice(-2);
                     const pm = pd.getMonth() + 1;
@@ -2422,78 +2440,88 @@
                     pickupDisp = pickupDisp.replace(/^20(\d{2}년)/, '$1');
                 }
 
-                // 상품명 안전 처리 (새 방식은 order.item, 예전 방식은 order.items 배열)
-                let displayItem = order.item || "";
-                let displayQty = order.qty || 0;
-                if (!displayItem && Array.isArray(order.items)) {
-                    displayItem = order.items.join(", ");
-                    // 예전 방식은 총액은 있지만 개별 qty가 없으므로 총액 기준 표시
-                    displayQty = "합계";
-                }
-
                 const orderDateStyle = currentSortBy === 'timestamp' ? 'color:var(--nego-orange); font-weight:700;' : 'color:#455464;';
                 const pickupDateStyle = currentSortBy === 'pickupDate' ? 'color:var(--nego-orange); font-weight:700;' : 'color:#455464;';
 
-                const isOrderToday = parseKRDate(orderTimeFull).toDateString() === new Date().toDateString();
-                const canDelete = isOrderToday && !isCancelled && !isReceived && !isProcessing && !isStocked && !order.onSite;
-
-                // [상태 텍스트/색상 결정]
-                let statusText = '';
-                let statusColor = '';
-
-                if (isProcessing) {
-                    statusText = '취소중...';
-                    statusColor = '#666';
-                } else if (isCancelled) {
-                    statusText = '취소완료';
-                    statusColor = '#999';
-                } else if (isReceived) {
-                    statusText = '픽업완료';
-                    statusColor = '#4CAF50';
-                } else if (isStocked) {
-                    statusText = '입고완료';
-                    statusColor = 'var(--nego-orange)'; // var 사용
-                } else {
-                    statusText = '미입고';
-                    statusColor = '#AAA';
-                }
-
-
-
-                const safeTime = escapeArg(orderTimeFull);
-                const safeName = escapeArg(order.name);
-                const safeItem = escapeArg(order.item);
-                const safePickup = escapeArg(order.pickupDate);
-                const safeMatch = escapeArg(order.matchKey);
-
+                // 그룹 시작 HTML (카드 형태)
                 htmlBuffer += `
-                    <div style="border-bottom: 1px solid #eee; padding: 12px 0; ${(isCancelled || order.onSite) ? 'opacity:0.6; text-decoration:line-through;' : ''} ${isProcessing ? 'opacity:0.7;' : ''}">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                            <div style="flex:1; padding-right:10px;">
-                                <div style="font-size:18px; font-weight:800; color:var(--item-black); line-height:1.2; margin-bottom:6px; white-space: pre-wrap;">${displayItem}</div>
-                                <div style="font-size:14px; display:flex; flex-direction:column; gap:2px;">
-                                    <div style="${orderDateStyle}">주문일: ${orderTime}</div>
-                                    <div style="${pickupDateStyle}">픽업일: ${pickupDisp}</div>
-                                </div>
+                    <div style="background:var(--white); border: 1.5px solid #eee; border-radius:var(--common-radius); margin-bottom:15px; overflow:hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
+                        <div style="background:#f9fafb; padding:12px 15px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <div style="font-size:12px; color:#999; margin-bottom:2px;">주문일시</div>
+                                <div style="font-size:14px; font-weight:700; ${orderDateStyle}">${orderTime}</div>
                             </div>
-                            <div style="text-align:right; min-width:100px; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-                                <div style="font-size:17px; color:#455464; font-weight:700; display:flex; align-items:center; justify-content:flex-end; gap:0; width:100%;">
-                                    <span style="white-space:nowrap; min-width:38px; text-align:right;">${displayQty}${typeof displayQty === 'number' ? '개' : ''}</span>
-                                    <span style="color:#eee; font-weight:300; margin: 0 2px;">|</span>
-                                    <span style="min-width:70px; text-align:right;">${String(order.total || 0).includes(',') ? order.total : parseInt(order.total || 0).toLocaleString()}원</span>
-                                </div>
-                                ${order.onSite ? `<div style="font-size:18px; font-weight:800; color:#999; margin-bottom:-2px;">현장판매</div>` : `<div style="font-size:18px; font-weight:800; color:${statusColor};">${statusText}</div>`}
-                                ${canDelete ? `<button onclick="deleteOrderServer('${safeTime}', '${safeName}', '${safeItem}', '${safePickup}', '${safeMatch}')" 
-                                     style="margin-top:4px; width:100%; height:28px; background:#eff2f5; color:#666; border:none; border-radius:var(--btn-radius); font-size:15px; font-weight:700; cursor:pointer;">주문취소</button>` : ''}
-                                 ${isProcessing ? `<div style="margin-top:4px; width:100%; height:28px; display:flex; align-items:center; justify-content:center; background:#f5f5f5; color:#999; border-radius:var(--common-radius); font-size:15px; font-weight:700;">취소중</div>` : ''}
+                            <div style="text-align:right;">
+                                <div style="font-size:12px; color:#999; margin-bottom:2px;">희망 픽업일</div>
+                                <div style="font-size:14px; font-weight:700; ${pickupDateStyle}">${pickupDisp}</div>
                             </div>
                         </div>
-                    </div>
+                        <div style="padding:5px 15px;">
                 `;
+
+                group.items.forEach((order, idx) => {
+                    const isCancelled = (order.item && order.item.includes('[취소]')) ||
+                        (order.note && order.note.includes('[취소]')) ||
+                        order.received === "canceled" ||
+                        order.received === "취소완료" ||
+                        (order.canceled === true || String(order.canceled).toUpperCase() === "TRUE");
+                    const isProcessing = order.isProcessing === true;
+                    const isReceived = (order.received === true || String(order.received).toUpperCase() === "TRUE");
+                    const isStocked = (order.isStocked === true || String(order.isStocked).toUpperCase() === "TRUE");
+                    
+                    const isOrderToday = parseKRDate(orderTimeFull).toDateString() === new Date().toDateString();
+                    const canDelete = isOrderToday && !isCancelled && !isReceived && !isProcessing && !isStocked && !order.onSite;
+
+                    let statusText = '';
+                    let statusColor = '';
+                    if (isProcessing) { statusText = '취소중...'; statusColor = '#666'; }
+                    else if (isCancelled) { statusText = '취소완료'; statusColor = '#999'; }
+                    else if (isReceived) { statusText = '픽업완료'; statusColor = '#4CAF50'; }
+                    else if (isStocked) { statusText = '입고완료'; statusColor = 'var(--nego-orange)'; }
+                    else { statusText = '미입고'; statusColor = '#AAA'; }
+
+                    const safeTime = escapeArg(orderTimeFull);
+                    const safeName = escapeArg(order.name);
+                    const safeItem = escapeArg(order.item);
+                    const safePickup = escapeArg(order.pickupDate);
+                    const safeMatch = escapeArg(order.matchKey);
+
+                    htmlBuffer += `
+                        <div style="padding: 12px 0; ${idx !== group.items.length - 1 ? 'border-bottom: 1px dashed #eee;' : ''} ${(isCancelled || order.onSite) ? 'opacity:0.6; text-decoration:line-through;' : ''} ${isProcessing ? 'opacity:0.7;' : ''}">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div style="flex:1;">
+                                    <div style="font-size:16px; font-weight:800; color:var(--item-black); line-height:1.2; margin-bottom:4px;">${order.item}</div>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <div style="font-size:14px; font-weight:700; color:#455464;">${order.qty}개</div>
+                                        <div style="font-size:14px; font-weight:700; color:var(--item-black);">${parseInt(order.total || 0).toLocaleString()}원</div>
+                                    </div>
+                                </div>
+                                <div style="text-align:right; min-width:80px;">
+                                    <div style="font-size:14px; font-weight:800; color:${statusColor}; margin-bottom:4px;">${order.onSite ? '현장판매' : statusText}</div>
+                                    ${canDelete ? `<button onclick="deleteOrderServer('${safeTime}', '${safeName}', '${safeItem}', '${safePickup}', '${safeMatch}')" 
+                                         style="width:70px; height:26px; background:#eff2f5; color:#666; border:none; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;">취소</button>` : ''}
+                                    ${isProcessing ? `<div style="width:70px; height:26px; display:flex; align-items:center; justify-content:center; background:#f5f5f5; color:#999; border-radius:4px; font-size:12px; font-weight:700;">대기중</div>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                // 그룹 합계 표시
+                if (group.items.length > 1) {
+                    htmlBuffer += `
+                        <div style="background:#fffcf5; padding:10px 0; margin: 0; border-top:1px solid #eee; display:flex; justify-content:flex-end; align-items:center; gap:10px;">
+                            <span style="font-size:13px; color:#999;">총 주문 합계:</span>
+                            <span style="font-size:16px; font-weight:900; color:var(--nego-orange);">${group.totalPrice.toLocaleString()}원</span>
+                        </div>
+                    `;
+                }
+
+                htmlBuffer += `</div></div>`;
             });
 
-            // 더보기 버튼 추가
-            if (filtered.length > currentHistoryLimit) {
+            // 더보기 버튼 추가 (그룹 단위 기준)
+            if (groupedTransactions.length > currentHistoryLimit) {
                 htmlBuffer += `
                     <div style="text-align:center; padding:20px 0;">
                         <button onclick="loadMoreHistory()" style="background:#f5f5f5; border:none; border-radius:var(--btn-radius); padding:10px 25px; font-weight:800; color:#555; cursor:pointer;">더보기 +</button>
