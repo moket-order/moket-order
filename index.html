@@ -1380,7 +1380,7 @@
                 <div>&emsp;&ensp;이외에는 입고일 포함 3일(휴무일 제외)까지 픽업 가능합니다.</div>
                 <div>✅ 픽업기간 이후에는 현장 판매로 전환되어 픽업이 불가능합니다.</div>
                 <div>✅ 픽업기간 이후 수령을 원하시면 카카오톡으로 문의 바랍니다.</div>
-                <div>✅ 협력업체 및 물류상황에 따라 입고일이 변동 될 수 있습니다.</div>
+                <div>✅ 협력업체 및 물류상황에 따라 입고일 변동 및 주문취소가 될 수 있습니다.</div>
             </div>
             <div
                 style="margin-bottom:20px; font-weight:700; font-size:13px; color:#455464; display:flex; align-items:center; justify-content:center; gap:6px;">
@@ -3291,12 +3291,17 @@
                 </div>
             `;
 
+            let totalSum = 0;
+            let totalQty = 0;
+
             // 장바구니(cart) 상태를 기준으로 확인 창 표시
             for (const name in cart) {
                 const q = cart[name];
                 const product = productsData.find(p => p.name === name);
                 if (product && q > 0) {
                     const sub = q * parseInt(product.price || 0);
+                    totalSum += sub;
+                    totalQty += q;
                     list.innerHTML += `
                         <div style="display:flex; justify-content:space-between; align-items:center; font-size:15px; margin-bottom:8px;">
                             <span style="color:var(--item-black); font-weight:800; flex:1; padding-right:6px; word-break:keep-all; line-height:1.2; white-space: pre-wrap;">${name}</span>
@@ -3308,6 +3313,17 @@
                         </div>`;
                 }
             }
+
+            // 합계 요약 추가
+            list.innerHTML += `
+                <div style="margin-top:15px; padding-top:12px; border-top:1.5px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:16px; font-weight:800; color:var(--item-black);">최종 합계</span>
+                    <div style="text-align:right;">
+                        <span style="font-size:14px; color:#999; font-weight:700;">총 ${totalQty}개</span>
+                        <span style="font-size:20px; font-weight:900; color:var(--nego-orange); margin-left:8px;">${totalSum.toLocaleString()}원</span>
+                    </div>
+                </div>
+            `;
 
             // [추가] 주문 버튼 상태 초기화 (이전 주문의 '처리 중...' 상태 제거)
             const submitBtn = document.getElementById('btn-submit-order');
