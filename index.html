@@ -3087,7 +3087,7 @@
                 footer.classList.remove('visible');
             }
 
-            document.getElementById('total-qty-text').innerHTML = `총 <span style="color:var(--nego-orange);">${tQ}</span>개 선택`;
+            document.getElementById('total-qty-text').innerHTML = `총 <span style="color:var(--nego-orange);">${tQ}</span>개 선택 <span style="color:#ddd; margin:0 8px; font-weight:normal;">|</span> 합계 <span style="color:var(--nego-orange);">${tP.toLocaleString()}</span>원`;
         }
 
         function resetCart() {
