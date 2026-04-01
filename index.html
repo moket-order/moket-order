@@ -45,6 +45,7 @@
     <link rel="stylesheet" as="style" crossorigin
         href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <script src="https://t1.kakaocdn.net/kakao_js_sdk/1.43.0/kakao.min.js"></script>
+    <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
     <style>
         /* [1] 원본 주문서2.html 스타일 변수 및 레이아웃 완벽 보존 */
         :root {
@@ -1219,6 +1220,17 @@
                     placeholder="010-0000-0000">
                 <div class="input-hint">정확한 주문 확인을 위해 연락처를 입력 해 주세요.</div>
             </div>
+            <div class="input-group" style="margin-bottom: 20px;">
+                <strong>주소</strong>
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                    <input id="input-address" type="text" class="modal-input" placeholder="주소입력" readonly
+                        style="margin-top:0; flex:1;">
+                    <button class="btn-common btn-primary" onclick="searchAddress()"
+                        style="margin-top:0; width:75px; height:50px; font-size:15px; border-radius: var(--common-radius); flex-shrink:0;">검색</button>
+                </div>
+                <input id="input-address-detail" type="text" class="modal-input" placeholder="상세주소(동, 호수)를 입력해 주세요">
+                <input id="input-entrance" type="text" class="modal-input" placeholder="공동현관 비밀번호 (예: #1234*)">
+            </div>
 
             <button id="btn-kakao-login" class="btn-common btn-kakao" onclick="loginWithKakao()">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" style="margin-right:8px;">
@@ -1712,20 +1724,57 @@
             checkScrollLock();
         }
 
+        // [주소 검색]
+        function searchAddress() {
+            new daum.Postcode({
+                oncomplete: function (data) {
+                    var addr = '';
+                    var extraAddr = '';
+
+                    if (data.userSelectedType === 'R') {
+                        addr = data.roadAddress;
+                    } else {
+                        addr = data.jibunAddress;
+                    }
+
+                    if (data.userSelectedType === 'R') {
+                        if (data.bname !== '' && /[동|로|가]$/g.test(data.bname)) {
+                            extraAddr += data.bname;
+                        }
+                        if (data.buildingName !== '' && data.apartment === 'Y') {
+                            extraAddr += (extraAddr !== '' ? ', ' + data.buildingName : data.buildingName);
+                        }
+                        if (extraAddr !== '') {
+                            extraAddr = ' (' + extraAddr + ')';
+                        }
+                    }
+
+                    document.getElementById("input-address").value = addr + extraAddr;
+                    document.getElementById("input-address-detail").focus();
+                }
+            }).open();
+        }
+
         // [프로필] 저장 및 로드
         function saveProfile() {
             const name = document.getElementById('input-name').value;
             const phone = document.getElementById('input-phone').value;
+            const address = document.getElementById('input-address').value;
+            const addressDetail = document.getElementById('input-address-detail').value;
+            const entrance = document.getElementById('input-entrance').value;
             const greeting = document.getElementById('menu-greeting');
 
-            if (!name.trim() || !phone.trim()) {
-                showSystemModal("주문자명과 연락처를 모두 입력해주세요.", 'alert');
+            if (!name.trim() || !phone.trim() || !address.trim()) {
+                showSystemModal("주문자명, 연락처, 주소를 모두 입력해주세요.", 'alert');
                 return;
             }
 
             // 로컬 스토리지에 저장
             localStorage.setItem('moket_user_name', name);
             localStorage.setItem('moket_user_phone', phone);
+            localStorage.setItem('moket_user_address', address);
+            localStorage.setItem('moket_user_address_detail', addressDetail);
+            localStorage.setItem('moket_user_entrance', entrance);
 
             if (name.trim()) {
                 greeting.innerHTML = `<span class="name-badge">${name}</span>님`;
@@ -1759,6 +1808,9 @@
         function loadProfile() {
             const name = localStorage.getItem('moket_user_name');
             const phone = localStorage.getItem('moket_user_phone');
+            const address = localStorage.getItem('moket_user_address');
+            const addressDetail = localStorage.getItem('moket_user_address_detail');
+            const entrance = localStorage.getItem('moket_user_entrance');
             const gender = localStorage.getItem('moket_user_gender');
             const ageGroup = localStorage.getItem('moket_user_age');
 
@@ -1769,6 +1821,16 @@
 
             if (phone) {
                 document.getElementById('input-phone').value = phone;
+            }
+
+            if (address) {
+                document.getElementById('input-address').value = address;
+            }
+            if (addressDetail) {
+                document.getElementById('input-address-detail').value = addressDetail;
+            }
+            if (entrance) {
+                document.getElementById('input-entrance').value = entrance;
             }
 
             // [추가] 카카오 인증 상태에 따른 버튼 처리 (UI는 숨김)
@@ -3381,12 +3443,18 @@
                 const kakaoRealName = localStorage.getItem('kakao_real_name') || "";
                 const userGender = localStorage.getItem('moket_user_gender') || "미선택";
                 const userAgeGroup = localStorage.getItem('moket_user_age') || "미선택";
+                const userAddress = localStorage.getItem('moket_user_address') || "";
+                const userAddressDetail = localStorage.getItem('moket_user_address_detail') || "";
+                const userEntrance = localStorage.getItem('moket_user_entrance') || "";
 
                 // 3. 서버 전송 데이터 구성
                 const payload = {
                     header: 'order',
                     name: name,
                     phone: phone,
+                    address: userAddress,
+                    addressDetail: userAddressDetail,
+                    entrance: userEntrance,
                     kakaoName: kakaoName,
                     kakaoRealName: kakaoRealName,
                     kakaoPhone: kakaoPhone,
