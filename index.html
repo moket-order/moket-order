@@ -542,14 +542,14 @@
         }
 
         #history-modal .modal-content {
-            width: 95%;
-            max-width: 580px;
-            height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px);
+            width: 100%;
+            max-width: none;
+            height: 100%;
             padding: 0;
             display: flex;
             flex-direction: column;
-            margin-top: calc(10px + env(safe-area-inset-top));
-            margin-bottom: calc(10px + env(safe-area-inset-bottom));
+            margin: 0;
+            border-radius: 0;
         }
 
         .slider-wrapper {
@@ -1415,10 +1415,10 @@
         </div>
     </div>
     <!-- 주문내역 모달 -->
-    <div id="history-modal" class="modal-overlay">
+    <div id="history-modal" class="modal-overlay" style="align-items: flex-start;">
         <div class="modal-content">
             <div
-                style="background:var(--moket-green); padding: 15px 14px 12px 14px; border-radius: var(--common-radius) var(--common-radius) 0 0; margin: 0 0 10px 0; text-align: center;">
+                style="background:var(--moket-green); padding: calc(15px + env(safe-area-inset-top)) 14px 12px 14px; border-radius: 0; margin: 0 0 10px 0; text-align: center;">
                 <h3 id="history-modal-title"
                     style="margin: 0; font-weight: 800; color: var(--white); font-size: 20px; letter-spacing: 0.5px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; line-height: 1.4; gap: 4px; word-break: break-all;">
                     주문내역</h3>
