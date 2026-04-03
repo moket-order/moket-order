@@ -1377,12 +1377,12 @@
             </div>
             <div
                 style="text-align:left; font-size:13px; margin: 1px -10px 10px 0; color:#455464; line-height:1.6; padding:0; font-weight:700;">
-                <div>✅ 주문취소는 당일 24시(당일 입고 상품은 입고 전)까지입니다.</div>
-                <div>✅ 픽업기간은 과일, 야채 등 신선식품은 입고 당일까지이며,</div>
+                <div>✅ 주문취소는 익일 09시(당일 입고 상품은 입고 전)까지입니다.</div>
+                <div>✅ 픽업기간의 경우 과일, 야채 등 신선식품은 입고 당일까지이며,</div>
                 <div>&emsp;&ensp;이외에는 입고일 포함 3일(휴무일 제외)까지 픽업 가능합니다.</div>
                 <div>✅ 픽업기간 이후에는 현장 판매로 전환되어 픽업이 불가능합니다.</div>
                 <div>✅ 픽업기간 이후 수령을 원하시면 카카오톡으로 문의 바랍니다.</div>
-                <div>✅ 업체 및 물류 상황에 따라 일정 변경 또는 취소될 수 있습니다.</div>
+                <div>✅ 업체 및 물류 상황에 따라 일정이 변경 또는 취소될 수 있습니다.</div>
             </div>
             <div
                 style="margin-bottom:20px; font-weight:700; font-size:13px; color:#455464; display:flex; align-items:center; justify-content:center; gap:6px;">
@@ -2497,8 +2497,9 @@
                     const isReceived = (order.received === true || String(order.received).toUpperCase() === "TRUE");
                     const isStocked = (order.isStocked === true || String(order.isStocked).toUpperCase() === "TRUE");
                     
-                    const isOrderToday = parseKRDate(orderTimeFull).toDateString() === new Date().toDateString();
-                    const canDelete = isOrderToday && !isCancelled && !isReceived && !isProcessing && !isStocked && !order.onSite;
+                    const orderDate = parseKRDate(orderTimeFull);
+                    const deadline = new Date(orderDate.getFullYear(), orderDate.getMonth(), orderDate.getDate() + 1, 9, 0, 0);
+                    const canDelete = (new Date() < deadline) && !isCancelled && !isReceived && !isProcessing && !isStocked && !order.onSite;
 
                     let statusText = '';
                     let statusColor = '';
