@@ -2402,6 +2402,7 @@
                     (item.received === "canceled" || item.received === "취소완료") ||
                     (item.canceled === true || String(item.canceled).toUpperCase() === "TRUE");
                 const isReceived = (item.received === true || String(item.received).toUpperCase() === "TRUE");
+                const isDelivered = (item.delivered === true || String(item.delivered).toUpperCase() === "TRUE");
 
                 // [하위 분류 필터 적용]
                 if (currentStatusFilter === 'all' || currentStatusFilter === 'order') {
@@ -2410,9 +2411,10 @@
                     if (!isCancelled) return false;
                 } else if (currentStatusFilter === 'stocked') {
                     // [수정] '입고완료'뿐만 아니라 '미입고' 상품도 함께 표시 (수령 전 & 취소 아님)
-                    if (isCancelled || isReceived) return false;
+                    if (isCancelled || isReceived || isDelivered) return false;
                 } else if (currentStatusFilter === 'pickup') {
-                    if (!isReceived || isCancelled) return false;
+                    // [수정] 매장픽업 또는 배달완료인 경우 모두 표시
+                    if ((!isReceived && !isDelivered) || isCancelled) return false;
                 }
 
                 // [기간 필터 적용] 주문일시(timestamp)와 현재 시간의 차이(diffDays)를 기준으로 통일
@@ -3507,17 +3509,55 @@
                 submitBtn.disabled = false;
                 submitBtn.innerText = "주문확정";
                 submitBtn.style.opacity = "1";
+                isHistoryProcessing = false; // 플래그 초기화
                 return;
             }
+
+            // [추가] 배달 주문 시 최소 금액(3만원) 체크 및 배달비 안내
+            const totalSum = allItems.reduce((acc, it) => acc + it.subtotal, 0);
+            if (shippingMethod === '배달주문' && totalSum < 30000) {
+                const msg = `주문 금액이 30,000원 미만인 경우 3,000원의 배달비가 발생합니다.\n(현재 주문금액: ${totalSum.toLocaleString()}원)\n\n배달비를 추가하여 배달주문 하시겠습니까?`;
+                showSystemModal(msg, 'confirm', () => {
+                    // 확인 클릭 시 배달비 항목 추가 후 진행
+                    allItems.push({
+                        name: "배달비",
+                        qty: 1,
+                        price: 3000,
+                        subtotal: 3000,
+                        date: allItems[0] ? allItems[0].date : ""
+                    });
+                    executeOrder(allItems, name, phone, shippingMethod);
+                }, () => {
+                    // 취소 클릭 시 상태 초기화
+                    isHistoryProcessing = false;
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = "주문확정";
+                        submitBtn.style.opacity = "1";
+                    }
+                });
+                return;
+            }
+
+            // 3만원 이상이거나 매장픽업인 경우 바로 진행
+            executeOrder(allItems, name, phone, shippingMethod);
+        }
+
+        // 실질적인 주문 전송 로직 분리 (배달비 확인 후 실행을 위함)
+        async function executeOrder(allItems, name, phone, shippingMethod) {
+            const submitBtn = document.getElementById('btn-submit-order');
 
             if (!name || !phone) {
                 showSystemModal("주문자명과 연락처를 입력해주세요.", 'alert', () => {
                     closeModal('confirm-overlay');
                     document.getElementById('profile-modal').style.display = 'flex';
                 });
-                submitBtn.disabled = false;
-                submitBtn.innerText = "주문확정";
-                submitBtn.style.opacity = "1";
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = "주문확정";
+                    submitBtn.style.opacity = "1";
+                }
+                isHistoryProcessing = false;
                 return;
             }
 
@@ -3543,11 +3583,9 @@
                 cart = {};
                 updateFooter();
 
-                // [UI 갱신] 장바구니가 비워졌으므로 리스트도 다시 그려서 수량 0으로 초기화
                 const activeBtn = document.querySelector('.date-btn.active');
                 if (activeBtn) renderList(activeBtn.dataset.date);
 
-                // 1. 날짜 포맷팅 헬퍼 정의 (JS용)
                 const jsFormatDate = (d) => {
                     const y = d.getFullYear();
                     const m = d.getMonth() + 1;
@@ -3559,10 +3597,11 @@
                     return `${y}년 ${m}월 ${day}일 (${w}) ${h}:${min}:${s}`;
                 };
 
-                // [수정] 픽업일 포맷팅 헬퍼 ("2024-02-06" -> "2024년 2월 6일 (화)")
                 const jsFormatPickup = (dateStr) => {
                     if (!dateStr) return "";
+                    if (dateStr === "배달비") return ""; // 배달비는 픽업일 없음
                     const d = new Date(dateStr);
+                    if (isNaN(d.getTime())) return dateStr;
                     const y = d.getFullYear();
                     const m = d.getMonth() + 1;
                     const day = d.getDate();
@@ -3570,24 +3609,21 @@
                     return `${y}년 ${m}월 ${day}일 (${w})`;
                 };
 
-                // 2. 새로운 히스토리 아이템 생성
                 const newHistoryItems = allItems.map(it => ({
                     timestamp: jsFormatDate(new Date(tempTimestamp)),
                     item: it.name,
                     qty: it.qty,
                     price: it.price,
                     total: it.subtotal,
-                    pickupDate: jsFormatPickup(it.date), // 즉시 포맷팅 적용
+                    pickupDate: it.name === "배달비" ? "" : jsFormatPickup(it.date),
                     received: false,
-                    delivered: false, // [추가]
-                    shippingMethod: shippingMethod, // [추가]
+                    delivered: false,
+                    shippingMethod: shippingMethod,
                     name: name,
                     rawTimestamp: tempTimestamp,
-                    matchKey: it.date // matchKey 추가 (동일 상품 구분용)
+                    matchKey: it.date
                 }));
 
-                // 3. 전역 변수에 추가 (맨 앞에)
-                // [수정] 기존 데이터가 없으면 캐시에서 먼저 로드 (덮어쓰기 방지)
                 const cacheKey_hist = `history_cache_${name}_${phone}`;
                 if (!fullHistoryData || fullHistoryData.length === 0) {
                     const cached = localStorage.getItem(cacheKey_hist);
@@ -3596,15 +3632,11 @@
 
                 if (typeof fullHistoryData !== 'undefined' && Array.isArray(fullHistoryData)) {
                     fullHistoryData = [...newHistoryItems, ...fullHistoryData];
-                    // [최적화] 로컬 스토리지 즉시 갱신 (역사 창 열 때 서버 대기 없이 바로 뜨게 함)
                     localStorage.setItem(cacheKey_hist, JSON.stringify(fullHistoryData));
                 }
 
-                // 성공 메시지 (기존 Optimistic UI용 모달 제거 또는 변경)
-                // 대신 '주문 확인 중' 모달을 띄우고 서버 응답 후 완료 모달로 전환
                 showSystemModal("주문 확인 중입니다.\n잠시만 기다려 주세요.", 'loading');
 
-                // 2. 백그라운드 전송 -> 이제 응답을 기다림 (await)
                 const kakaoName = localStorage.getItem('kakao_original_name') || "";
                 const kakaoPhone = localStorage.getItem('kakao_original_phone') || "";
                 const kakaoRealName = localStorage.getItem('kakao_real_name') || "";
@@ -3614,7 +3646,6 @@
                 const userAddressDetail = localStorage.getItem('moket_user_address_detail') || "";
                 const userEntrance = localStorage.getItem('moket_user_entrance') || "";
 
-                // 3. 서버 전송 데이터 구성
                 const payload = {
                     header: 'order',
                     name: name,
@@ -3622,7 +3653,7 @@
                     address: userAddress,
                     addressDetail: userAddressDetail,
                     entrance: userEntrance,
-                    shippingMethod: shippingMethod, // [추가]
+                    shippingMethod: shippingMethod,
                     kakaoName: kakaoName,
                     kakaoRealName: kakaoRealName,
                     kakaoPhone: kakaoPhone,
@@ -3632,24 +3663,21 @@
                     timestamp: tempTimestamp
                 };
 
-                // [Fast Order] Firebase에 우선 기록 (항목별 개별 저장으로 변경)
                 const cleanPhone = normP(phone);
 
                 allItems.forEach(it => {
-                    const safeDate = fSafeKey(it.date);
-                    const safeName = fSafeKey(it.name);
                     const formattedTimestamp = jsFormatDate(new Date(tempTimestamp));
-                    const orderKey = fSafeKey(formattedTimestamp) + "_" + safeName;
+                    const orderKey = fSafeKey(formattedTimestamp) + "_" + fSafeKey(it.name);
                     const fbItemUrl = `${FIREBASE_DB_URL}orders/${cleanPhone}/${orderKey}.json`;
 
                     const itemPayload = {
                         ...payload,
-                        timestamp: formattedTimestamp, // GAS 포맷과 동일하게 저장
+                        timestamp: formattedTimestamp,
                         item: it.name,
                         qty: it.qty,
                         price: it.price,
                         total: it.price * it.qty,
-                        pickupDate: jsFormatPickup(it.date) // GAS 포맷과 동일하게 저장
+                        pickupDate: it.name === "배달비" ? "" : jsFormatPickup(it.date)
                     };
                     delete itemPayload.items;
 
@@ -3659,8 +3687,9 @@
                     });
                 });
 
-                // [추가] Firebase 전역 재고 차감 (- 처리)
+                // 재고 차감 (배달비 항목 제외)
                 allItems.forEach(it => {
+                    if (it.name === "배달비") return;
                     const adjKey = fSafeKey(it.date) + "_" + fSafeKey(it.name);
                     const diff = -it.qty;
                     fetch(`${FIREBASE_DB_URL}global_stock/${adjKey}.json`)
@@ -3674,7 +3703,6 @@
                         });
                 });
 
-                // [전통 방식] GAS에도 배경전송 (백업 및 스프레드시트 즉시 반영용)
                 fetch(API_URL, {
                     method: 'POST',
                     redirect: 'follow',
@@ -3683,12 +3711,11 @@
                     .then(res => console.log("GAS 동기화 결과:", res))
                     .catch(err => console.error("GAS 동기화 실패:", err));
 
-                // [UI 즉시 완료] 서버 응답을 기다리지 않고 즉시 성공 메시지 표시
                 isHistoryProcessing = false;
                 document.getElementById('system-modal').style.display = 'none';
 
-                // [재고 즉시 반영]
                 allItems.forEach(it => {
+                    if (it.name === "배달비") return;
                     const p = productsData.find(pd => pd.matchKey === it.date && pd.name === it.name);
                     if (p) {
                         p.stock = parseInt(p.stock || 0) - (parseInt(it.qty) || 0);
@@ -3700,7 +3727,6 @@
                     }
                 });
 
-                // [UI 즉시 반영] 변경된 재고 데이터로 리스트 즉시 다시 그리기
                 const activeDateBtn = document.querySelector('.date-btn.active');
                 if (activeDateBtn) renderList(activeDateBtn.dataset.date);
 
@@ -3712,13 +3738,13 @@
                 console.error(err);
                 document.getElementById('system-modal').style.display = 'none';
                 alert("주문 처리 중 오류가 발생했습니다.\n내용: " + err.message);
+                isHistoryProcessing = false;
                 if (submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.innerText = "주문확정 (재시도)";
                 }
             }
         }
-
 
         // window.onload 대신 DOMContentLoaded 사용 (훨씬 빠름)
         document.addEventListener('DOMContentLoaded', () => {
