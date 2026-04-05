@@ -3054,37 +3054,47 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            // 오늘 날짜 이후 데이터만 필터링 (엄격)
+            // 필터 처리: 날짜 형식인 경우 오늘 이후만, 일반 텍스트인 경우 무조건 포함
             const futureData = data.filter(p => {
-                const cleanKey = String(p.matchKey).replace(/\./g, '-');
-                const parts = cleanKey.split('-');
-                if (parts.length < 3) {
-                    console.error("[Filter] 날짜 형식 부족:", p.matchKey);
-                    return false;
+                const cleanKey = String(p.matchKey || "").trim();
+                if (!cleanKey) return false;
+
+                const cleanDate = cleanKey.replace(/\./g, '-');
+                const parts = cleanDate.split('-');
+                if (parts.length === 3) {
+                    const pDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    if (!isNaN(pDate.getTime())) {
+                        pDate.setHours(0, 0, 0, 0);
+                        return pDate >= today;
+                    }
                 }
-
-                // 로컬 시간 기준으로 정확히 생성 (연, 월-1, 일)
-                const pDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                if (isNaN(pDate.getTime())) return false;
-
-                pDate.setHours(0, 0, 0, 0);
-                const isFutureOrToday = pDate >= today;
-
-                if (!isFutureOrToday) console.log(`[Filter] 과거 날짜 제외: ${p.name} (${p.matchKey})`);
-                return isFutureOrToday;
+                // 날짜가 아닌 일반 텍스트 필터(예: 상시판매)는 무조건 포함
+                return true;
             });
 
-            const uniqueDates = [...new Set(futureData.map(p => p.matchKey))].sort((a, b) => new Date(a) - new Date(b));
+            // 필터 추출 및 정렬 (날짜 우선순위 -> 텍스트 가나다순)
+            const uniqueFilters = [...new Set(futureData.map(p => p.matchKey))].sort((a, b) => {
+                const dateA = new Date(a).getTime();
+                const dateB = new Date(b).getTime();
+                const isDateA = !isNaN(dateA) && a.includes('-');
+                const isDateB = !isNaN(dateB) && b.includes('-');
+
+                if (isDateA && isDateB) return dateA - dateB;
+                if (isDateA) return -1;
+                if (isDateB) return 1;
+                return a.localeCompare(b);
+            });
+
             const filterArea = document.getElementById('date-filters');
 
-            // 현재 활성화된 날짜 기억
+            // 현재 활성화된 필터 기억
             const activeBtn = filterArea.querySelector('.date-btn.active');
-            const activeDate = activeBtn ? activeBtn.dataset.date : (uniqueDates.length > 0 ? uniqueDates[0] : null);
+            const activeFilter = activeBtn ? activeBtn.dataset.date : (uniqueFilters.length > 0 ? uniqueFilters[0] : null);
 
             filterArea.innerHTML = '';
-            uniqueDates.forEach((date, idx) => {
+            uniqueFilters.forEach((date, idx) => {
                 const btn = document.createElement('button');
-                btn.className = `date-btn ${((!activeDate && idx === 0) || date === activeDate) ? 'active' : ''}`;
+                btn.className = `date-btn ${((!activeFilter && idx === 0) || date === activeFilter) ? 'active' : ''}`;
                 btn.dataset.date = date;
                 btn.innerText = futureData.find(p => p.matchKey === date).displayDate;
                 btn.onclick = () => {
@@ -3097,15 +3107,15 @@
                 filterArea.appendChild(btn);
             });
 
-            if (activeDate && uniqueDates.includes(activeDate)) {
-                renderList(activeDate);
-                // [추가] 초기 로딩 시에도 활성 버튼이 보이지 않는다면 위치 조정
+            if (activeFilter && uniqueFilters.includes(activeFilter)) {
+                renderList(activeFilter);
+                // [추가] 초기 로딩 시에도 활성 버튼이 보이도록 위치 조정
                 setTimeout(() => {
-                    const target = filterArea.querySelector(`[data-date="${activeDate}"]`);
+                    const target = filterArea.querySelector(`[data-date="${activeFilter}"]`);
                     if (target) target.scrollIntoView({ inline: 'center', block: 'nearest' });
                 }, 100);
             }
-            else if (uniqueDates.length > 0) renderList(uniqueDates[0]);
+            else if (uniqueFilters.length > 0) renderList(uniqueFilters[0]);
             else {
                 document.getElementById('product-list').innerHTML = '<div style="text-align:center; padding:50px 0; color:#999;">현재 주문 가능한 상품이 없습니다.</div>';
             }
@@ -3635,7 +3645,8 @@
                     localStorage.setItem(cacheKey_hist, JSON.stringify(fullHistoryData));
                 }
 
-                showSystemModal("주문 확인 중입니다.\n잠시만 기다려 주세요.", 'loading');
+                // [Optimistic UI] 로딩 메시지 대신 '접수 완료'를 먼저 띄움
+                showSystemModal("주문이 완료되었습니다!\n(데이터 동기화 중입니다...)", 'loading');
 
                 const kakaoName = localStorage.getItem('kakao_original_name') || "";
                 const kakaoPhone = localStorage.getItem('kakao_original_phone') || "";
@@ -3730,8 +3741,13 @@
                 const activeDateBtn = document.querySelector('.date-btn.active');
                 if (activeDateBtn) renderList(activeDateBtn.dataset.date);
 
-                showSystemModal("주문이 완료되었습니다!", 'alert');
-                setTimeout(() => closeModal('system-modal'), 1200);
+                // 최종 완료 처리
+                setTimeout(() => {
+                    document.getElementById('system-modal').style.display = 'none';
+                    showSystemModal("주문이 완료되었습니다!", 'alert');
+                    setTimeout(() => closeModal('system-modal'), 1200);
+                }, 1000);
+                
                 setTimeout(() => loadData(), 2000);
 
             } catch (err) {
