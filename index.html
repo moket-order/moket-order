@@ -1794,7 +1794,12 @@
         }
 
         function closeModal(id) {
-            document.getElementById(id).style.display = 'none';
+            const el = document.getElementById(id);
+            if (el) {
+                el.style.display = 'none';
+                // [추가] 높아졌던 Z-Index 초기화
+                if (id === 'profile-modal') el.style.zIndex = "";
+            }
             checkScrollLock();
         }
 
@@ -3532,11 +3537,14 @@
 
                 if (!userAddress.trim() || !userDetail.trim() || !userEntrance.trim()) {
                     showSystemModal("배달을 위해서는 주소, 상세주소, 공동현관 정보를 모두 입력 해 주세요.", 'alert', () => {
-                        // [수정] 주문 확인 창을 먼저 닫고 주문자 변경 창 열기
-                        closeModal('confirm-overlay');
+                        // [수정] 주문 확인 창을 닫지 않고 그 위에 주문자 변경 창을 띄움
+                        const profileModal = document.getElementById('profile-modal');
                         document.getElementById('profile-modal-title').innerText = "주문자 변경";
                         document.getElementById('profile-submit-btn').innerText = "변경하기";
-                        document.getElementById('profile-modal').style.display = 'flex';
+                        
+                        // Z-Index를 높여서 주문 확인 창 위로 올림
+                        profileModal.style.zIndex = "8000";
+                        profileModal.style.display = 'flex';
                         checkScrollLock();
                     });
                     submitBtn.disabled = false;
