@@ -1279,11 +1279,11 @@
             <button id="btn-reset-stock" onclick="resetGlobalStock()"
                 style="display:none; margin-top:40px; background:none; border:1px solid #ddd; color:#999; font-size:12px; padding:8px; border-radius:var(--btn-radius); width:100%; cursor:pointer;">재고
                 동기화</button>
-            <div id="admin-delivery-box" style="display:none; gap:8px;">
+            <div id="admin-delivery-box" style="display:none !important; gap:8px; margin: 10px 0;">
                 <button id="btn-delivery-on" onclick="adminToggleDelivery(true)"
-                    style="flex:1; margin-top:10px; background:none; border:1.5px solid var(--moket-green); color:var(--moket-green); font-size:12px; padding:8px; border-radius:var(--btn-radius); font-weight:800; cursor:pointer;">🚚 배달 켜기</button>
+                    style="flex:1; background:white; border:1.5px solid var(--moket-green); color:var(--moket-green); font-size:12px; padding:10px; border-radius:var(--btn-radius); font-weight:800; cursor:pointer;">🚚 배달 켜기</button>
                 <button id="btn-delivery-off" onclick="adminToggleDelivery(false)"
-                    style="flex:1; margin-top:10px; background:none; border:1.5px solid #ff4d4d; color:#ff4d4d; font-size:12px; padding:8px; border-radius:var(--btn-radius); font-weight:800; cursor:pointer;">🚫 배달 끄기</button>
+                    style="flex:1; background:white; border:1.5px solid #ff4d4d; color:#ff4d4d; font-size:12px; padding:10px; border-radius:var(--btn-radius); font-weight:800; cursor:pointer;">🚫 배달 끄기</button>
             </div>
             <button id="btn-unlink-kakao" onclick="unlinkKakao()"
                 style="display:none; margin-top:10px; background:none; border:1px solid #ddd; color:#999; font-size:12px; padding:8px; border-radius:var(--btn-radius); width:100%; cursor:pointer;">카카오
@@ -1617,7 +1617,9 @@
 
                 // [신규] 관리자 배달 제어 버튼 노출
                 const deliveryBox = document.getElementById('admin-delivery-box');
-                if (deliveryBox) deliveryBox.style.display = 'flex';
+                if (deliveryBox) {
+                    deliveryBox.style.setProperty('display', 'flex', 'important');
+                }
 
                 bypassCount = 0;
             }
