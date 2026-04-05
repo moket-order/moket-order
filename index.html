@@ -1221,6 +1221,7 @@
                     style="margin: 0; font-weight: 800; color: var(--white); font-size: 18px; letter-spacing: 0.5px;">
                     주문자 변경</h3>
             </div>
+
             <div class="login-logo">
                 <div style="font-size:21.5px; margin-bottom: -10px; font-weight:800; letter-spacing: 0px;">모두를 위한 공동구매
                     마켓
@@ -1279,11 +1280,11 @@
             <button id="btn-reset-stock" onclick="resetGlobalStock()"
                 style="display:none; margin-top:40px; background:none; border:1px solid #ddd; color:#999; font-size:12px; padding:8px; border-radius:var(--btn-radius); width:100%; cursor:pointer;">재고
                 동기화</button>
+            <button id="ADMIN_DELIVERY_ON" onclick="adminToggleDelivery(true)"
+                style="display:none; margin-top:15px; background:white; border:1.5px solid var(--moket-green); color:var(--moket-green); font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">🚚 배달 버튼 켜기 (활성화)</button>
+            <button id="ADMIN_DELIVERY_OFF" onclick="adminToggleDelivery(false)"
+                style="display:none; margin-top:8px; background:white; border:1.5px solid #ff4d4d; color:#ff4d4d; font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">🚫 배달 버튼 끄기 (비활성화)</button>
             
-            <button id="btn-delivery-on" onclick="adminToggleDelivery(true)"
-                style="display:none; margin-top:10px; background:white; border:1.5px solid var(--moket-green); color:var(--moket-green); font-size:12px; padding:10px; border-radius:var(--btn-radius); font-weight:800; cursor:pointer; width:100%;">🚚 배달 주문 켜기 (활성화)</button>
-            <button id="btn-delivery-off" onclick="adminToggleDelivery(false)"
-                style="display:none; margin-top:8px; background:white; border:1.5px solid #ff4d4d; color:#ff4d4d; font-size:12px; padding:10px; border-radius:var(--btn-radius); font-weight:800; cursor:pointer; width:100%;">🚫 배달 주문 끄기 (비활성화)</button>
 
             <button id="btn-unlink-kakao" onclick="unlinkKakao()"
                 style="display:none; margin-top:10px; background:none; border:1px solid #ddd; color:#999; font-size:12px; padding:8px; border-radius:var(--btn-radius); width:100%; cursor:pointer;">카카오
@@ -1606,20 +1607,16 @@
                 const submitBtn = document.getElementById('profile-submit-btn');
                 if (submitBtn) submitBtn.innerText = "변경하기";
 
-                const greeting = document.getElementById('menu-greeting');
-                if (greeting) greeting.innerHTML = `<span class="name-badge">관리자</span>님`;
-
-                // [추가] 재고 동기화 및 탈퇴 버튼 노출
+                // [신규] 관리자 메뉴 모든 버튼 노출
+                const delOn = document.getElementById('ADMIN_DELIVERY_ON');
+                const delOff = document.getElementById('ADMIN_DELIVERY_OFF');
                 const stockBtn = document.getElementById('btn-reset-stock');
                 const unlinkBtn = document.getElementById('btn-unlink-kakao');
-                if (stockBtn) stockBtn.style.display = 'block';
-                if (unlinkBtn) unlinkBtn.style.display = 'block';
 
-                // [신규] 관리자 배달 제어 버튼 노출
-                const delOn = document.getElementById('btn-delivery-on');
-                const delOff = document.getElementById('btn-delivery-off');
-                if (delOn) delOn.style.display = 'block';
-                if (delOff) delOff.style.display = 'block';
+                if (delOn) delOn.style.setProperty('display', 'block', 'important');
+                if (delOff) delOff.style.setProperty('display', 'block', 'important');
+                if (stockBtn) stockBtn.style.setProperty('display', 'block', 'important');
+                if (unlinkBtn) unlinkBtn.style.setProperty('display', 'block', 'important');
 
                 bypassCount = 0;
             }
