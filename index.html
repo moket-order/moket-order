@@ -2573,9 +2573,9 @@
 
                     const orderDate = parseKRDate(orderTimeFull);
                     const deadline = new Date(orderDate.getFullYear(), orderDate.getMonth(), orderDate.getDate() + 1, 9, 0, 0);
-                    const canDelete = (new Date() < deadline) && !isCancelled && !isReceived && !isProcessing && !isStocked && !order.onSite;
-
                     const isDelivered = (order.delivered === true || String(order.delivered).toUpperCase() === "TRUE");
+                    
+                    const canDelete = (new Date() < deadline) && !isCancelled && !isReceived && !isProcessing && !isStocked && !order.onSite && !isDelivered;
 
                     let statusText = '';
                     let statusColor = '';
