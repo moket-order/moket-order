@@ -1438,9 +1438,9 @@
             </div>
             <div style="padding: 0 20px 25px 20px;">
                 <div style="display: flex; gap: 15px; margin-bottom: 5px;">
-                    <button class="btn-common" 
-                        style="flex: 1; background: #f5f5f5; color: #aaa; margin: 0; cursor: pointer; border: 1.5px solid #eee; font-size:16px; opacity: 0.8;"
-                        onclick="showSystemModal('배달 서비스는 추후 오픈 예정입니다.', 'alert')">
+                    <button class="btn-common btn-primary" 
+                        style="flex: 1; margin: 0; font-size:16px; background:#4CAF50;"
+                        onclick="completeOrder('배달주문')">
                         배달주문
                     </button>
                     <button class="btn-common btn-primary" style="flex: 1; margin: 0; font-size:16px;"
@@ -2558,10 +2558,13 @@
                     const deadline = new Date(orderDate.getFullYear(), orderDate.getMonth(), orderDate.getDate() + 1, 9, 0, 0);
                     const canDelete = (new Date() < deadline) && !isCancelled && !isReceived && !isProcessing && !isStocked && !order.onSite;
 
+                    const isDelivered = (order.delivered === true || String(order.delivered).toUpperCase() === "TRUE");
+
                     let statusText = '';
                     let statusColor = '';
                     if (isProcessing) { statusText = '취소중...'; statusColor = '#666'; }
                     else if (isCancelled) { statusText = '취소완료'; statusColor = '#999'; }
+                    else if (isDelivered) { statusText = '배달완료'; statusColor = '#4CAF50'; }
                     else if (isReceived) { statusText = '픽업완료'; statusColor = '#4CAF50'; }
                     else if (isStocked) { statusText = '입고완료'; statusColor = 'var(--nego-orange)'; }
                     else { statusText = '미입고'; statusColor = '#AAA'; }
@@ -3567,6 +3570,8 @@
                     total: it.subtotal,
                     pickupDate: jsFormatPickup(it.date), // 즉시 포맷팅 적용
                     received: false,
+                    delivered: false, // [추가]
+                    shippingMethod: shippingMethod, // [추가]
                     name: name,
                     rawTimestamp: tempTimestamp,
                     matchKey: it.date // matchKey 추가 (동일 상품 구분용)
@@ -3608,6 +3613,7 @@
                     address: userAddress,
                     addressDetail: userAddressDetail,
                     entrance: userEntrance,
+                    shippingMethod: shippingMethod, // [추가]
                     kakaoName: kakaoName,
                     kakaoRealName: kakaoRealName,
                     kakaoPhone: kakaoPhone,
