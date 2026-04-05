@@ -779,7 +779,7 @@
         }
 
         .product-card.has-stock {
-            gap: 28px;
+            gap: 4px;
             /* 안내문(주문가능수량) 있을 때만 여백 확대 */
         }
 
@@ -925,7 +925,8 @@
         .item-price-val {
             color: var(--nego-orange);
             font-weight: 900;
-            font-size: 19px;
+            font-size: 22px;
+            /* 19px에서 약 15% 상향 */
             width: 100%;
             text-align: right;
         }
@@ -3079,13 +3080,13 @@
                 const imgId = p.images[0];
                 const thumbUrl = imgId ? getImgUrl(imgId, 300) : '';
 
-                const card = document.createElement('div');
-                card.className = `product-card ${stockText ? 'has-stock' : ''}`;
-
                 const currentQty = cart[p.name] || 0;
                 const stock = p.stock !== undefined && p.stock !== "" ? parseInt(p.stock) : Infinity;
                 const isSoldOut = stock <= 0;
                 const stockText = isFinite(stock) ? (isSoldOut ? "품절" : (stock < 10 ? `주문가능수량 <span style="color:var(--nego-orange);">${stock}</span>개` : "")) : "";
+
+                const card = document.createElement('div');
+                card.className = `product-card ${stockText ? 'has-stock' : ''}`;
 
                 card.innerHTML = `<div class="card-top">` +
                     `<div class="thumb">${imgId ? `<img src="${getImgUrl(imgId, 300)}" loading="lazy" referrerpolicy="no-referrer" style="width:100%; height:100%; object-fit:contain;" onerror="this.onerror=null; this.src=getImgUrl('${imgId}', 300, true);">` : 'No Image'}</div>` +
