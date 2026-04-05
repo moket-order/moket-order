@@ -1815,25 +1815,6 @@
         // [제어] 햄버거 메뉴 및 모달
         let adminClickCount = 0;
         let adminTimer = null;
-        function handleAdminClick() {
-            adminClickCount++;
-            if (adminTimer) clearTimeout(adminTimer);
-
-            if (adminClickCount >= 10) {
-                document.getElementById('btn-reset-stock').style.display = 'block';
-                document.getElementById('btn-unlink-kakao').style.display = 'block';
-                showSystemModal("관리자 모드가 활성화되었습니다.", 'alert');
-                adminClickCount = 0;
-                return;
-            }
-
-            // 500ms 동안 추가 클릭이 없으면 일반 기능(새로고침/닫기) 수행
-            adminTimer = setTimeout(() => {
-                adminClickCount = 0;
-                loadData(true);
-                toggleMenu();
-            }, 500);
-        }
 
         function toggleMenu() {
             const side = document.getElementById('side-menu');
