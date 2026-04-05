@@ -3510,12 +3510,17 @@
                 const q = cart[itemName];
                 const pData = productsData.find(p => p.name === itemName);
                 if (q > 0 && pData) {
+                    const mKey = pData.matchKey || "";
+                    // 날짜 형식이 아니면(카테고리 필터) 서버에서 오늘 날짜로 처리할 수 있도록 정보 포함
+                    const isCategorized = !/^\d{4}-\d{2}-\d{2}$/.test(mKey);
+                    
                     allItems.push({
                         name: itemName,
                         qty: q,
                         price: parseInt(pData.price),
                         subtotal: q * parseInt(pData.price),
-                        date: pData.matchKey
+                        date: mKey, // 시트/재고 매칭용 키
+                        isCategorized: isCategorized
                     });
                 }
             }
