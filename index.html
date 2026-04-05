@@ -1422,9 +1422,34 @@
                     <button class="btn-common btn-close"
                         onclick="document.getElementById('confirm-notice-check').checked = false; closeModal('confirm-overlay')"
                         style="margin-top: 0; flex: 1;">취소</button>
-                    <button id="btn-submit-order" class="btn-common btn-primary" onclick="completeOrder()"
+                    <button id="btn-submit-order" class="btn-common btn-primary" onclick="openShippingSelection()"
                         style="margin-top: 0; flex: 1;">주문확정</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- [추가] 수령방법 선택 모달 -->
+    <div id="shipping-overlay" class="modal-overlay">
+        <div class="modal-content" style="padding: 0; text-align:center; max-width:320px; overflow: hidden;">
+            <div
+                style="background: var(--moket-green); color: #fff; padding: 20px; font-size: 20px; font-weight: 900; margin-bottom: 25px;">
+                수령방법 선택
+            </div>
+            <div style="padding: 0 20px 25px 20px;">
+                <div style="display: flex; gap: 15px; margin-bottom: 5px;">
+                    <button class="btn-common" 
+                        style="flex: 1; background: #f5f5f5; color: #aaa; margin: 0; cursor: pointer; border: 1.5px solid #eee; font-size:16px; opacity: 0.8;"
+                        onclick="showSystemModal('배달 서비스는 추후 오픈 예정입니다.', 'alert')">
+                        배달주문
+                    </button>
+                    <button class="btn-common btn-primary" style="flex: 1; margin: 0; font-size:16px;"
+                        onclick="completeOrder('매장픽업')">
+                        매장픽업
+                    </button>
+                </div>
+                <button class="btn-common btn-close" onclick="closeModal('shipping-overlay')"
+                    style="margin-top: 15px; height:44px; font-size:15px;">취소</button>
             </div>
         </div>
     </div>
@@ -3414,13 +3439,20 @@
             checkScrollLock();
         }
 
-        async function completeOrder() {
-            // [추가] 안내사항 확인 체크 여부 검사
+        function openShippingSelection() {
+            // 안내사항 확인 체크 여부 검사
             const noticeCheck = document.getElementById('confirm-notice-check');
             if (noticeCheck && !noticeCheck.checked) {
                 showSystemModal("안내 내용을 확인하고 동의해주세요.", 'alert');
                 return;
             }
+            document.getElementById('shipping-overlay').style.display = 'flex';
+            checkScrollLock();
+        }
+
+        async function completeOrder(shippingMethod) {
+            // [추가] 수령방법 선택 모달 닫기
+            closeModal('shipping-overlay');
 
             // [추가] 중복 처리 방지 (데이터 꼬임 방지)
             if (isHistoryProcessing) {
