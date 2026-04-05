@@ -1194,7 +1194,7 @@
     <div id="side-menu-overlay" class="side-menu-overlay" onclick="toggleMenu()"></div>
     <div id="side-menu" class="side-menu">
         <div class="side-menu-header" style="text-align: center;">
-            <div onclick="handleAdminClick();" style="cursor: pointer;">
+            <div onclick="handleAdminClick(event);" style="cursor: pointer;">
                 <div class="slogan"
                     style="font-size: 14px; color: rgba(255,255,255,0.9); letter-spacing: 0.5px; margin-bottom: -2px;">
                     모두를
@@ -1213,7 +1213,7 @@
 
         </ul>
     </div>
-    <div id="profile-modal" class="modal-overlay" onclick="handleBypassClick(event)">
+    <div id="profile-modal" class="modal-overlay">
         <div class="modal-content" style="padding-top: 0; padding-bottom: 20px;">
             <div
                 style="background:var(--moket-green); padding: 12px 20px 10px 20px; border-radius: var(--common-radius) var(--common-radius) 0 0; margin: 0 -25px 15px -25px; text-align: center;">
@@ -1585,11 +1585,9 @@
         // [추가] 10번 클릭 시 로그인 무시 바이패스
         let bypassCount = 0;
         let lastBypassTime = 0;
-        function handleBypassClick(e) {
-            // 버튼이나 입력창, 또는 인터랙티브한 요소 클릭은 카운트에서 제외
-            if (e && (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.closest('button') || e.target.closest('.modal-input'))) {
-                return;
-            }
+        function handleAdminClick(e) {
+            // 이벤트 전파 방지 (로고 클릭 시 메뉴 닫기 등 방지)
+            if (e && e.stopPropagation) e.stopPropagation();
 
             const now = Date.now();
             if (now - lastBypassTime > 2000) bypassCount = 0; // 2초 넘으면 초기화
@@ -1600,13 +1598,16 @@
 
                 // [추가] 주문자 정보 초기화 및 모드 전환
                 const modal = document.getElementById('profile-modal');
-                modal.classList.remove('login-forced');
-                document.getElementById('profile-modal-title').innerText = "주문자 변경";
-                document.getElementById('profile-submit-btn').innerText = "변경하기";
+                if (modal) modal.classList.remove('login-forced');
+                
+                const title = document.getElementById('profile-modal-title');
+                if (title) title.innerText = "주문자 변경";
+                
+                const submitBtn = document.getElementById('profile-submit-btn');
+                if (submitBtn) submitBtn.innerText = "변경하기";
 
-                document.getElementById('input-name').value = '';
-                document.getElementById('input-phone').value = '';
-                document.getElementById('menu-greeting').innerHTML = `<span class="name-badge">관리자</span>님`;
+                const greeting = document.getElementById('menu-greeting');
+                if (greeting) greeting.innerHTML = `<span class="name-badge">관리자</span>님`;
 
                 // [추가] 재고 동기화 및 탈퇴 버튼 노출
                 const stockBtn = document.getElementById('btn-reset-stock');
@@ -1620,7 +1621,6 @@
                 if (deliveryOnBtn) deliveryOnBtn.style.display = 'block';
                 if (deliveryOffBtn) deliveryOffBtn.style.display = 'block';
 
-                closeModal('profile-modal');
                 bypassCount = 0;
             }
         }
