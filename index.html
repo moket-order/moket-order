@@ -2368,6 +2368,15 @@
             renderHistory();
         }
 
+        // [추가] 연락처 정규화 함수 (8210 -> 010)
+        function normP(p) {
+            if (!p || p === "비인증") return "";
+            let s = String(p).replace(/\D/g, "");
+            if (s.startsWith("82")) s = "0" + s.substring(2);
+            if ((s.length === 10 || s.length === 11) && !s.startsWith("0")) return "0" + s;
+            return s;
+        }
+
         function renderHistory() {
             const list = document.getElementById('history-list');
             list.innerHTML = '';
@@ -3624,7 +3633,7 @@
                 };
 
                 // [Fast Order] Firebase에 우선 기록 (항목별 개별 저장으로 변경)
-                const cleanPhone = phone.replace(/\D/g, "");
+                const cleanPhone = normP(phone);
 
                 allItems.forEach(it => {
                     const safeDate = fSafeKey(it.date);
