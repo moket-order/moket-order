@@ -1277,14 +1277,13 @@
             <button id="btn-kakao-logout" onclick="logoutKakao()"
                 style="display:none; margin-top:25px; background:none; border:none; color:#999; font-size:13px; text-decoration:none; width:100%; cursor:pointer;">카카오
                 로그아웃</button>
-            <button id="btn-reset-stock" onclick="resetGlobalStock()"
-                style="display:none; margin-top:40px; background:none; border:1px solid #ddd; color:#999; font-size:12px; padding:8px; border-radius:var(--btn-radius); width:100%; cursor:pointer;">재고
-                동기화</button>
             <button id="ADMIN_DELIVERY_ON" onclick="adminToggleDelivery(true)"
-                style="display:none; margin-top:15px; background:white; border:1.5px solid var(--moket-green); color:var(--moket-green); font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">🚚 배달 버튼 켜기 (활성화)</button>
+                style="display:none; margin-top:15px; background:white; border:1.5px solid var(--moket-green); color:var(--moket-green); font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">🚚
+                배달 버튼 켜기 (활성화)</button>
             <button id="ADMIN_DELIVERY_OFF" onclick="adminToggleDelivery(false)"
-                style="display:none; margin-top:8px; background:white; border:1.5px solid #ff4d4d; color:#ff4d4d; font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">🚫 배달 버튼 끄기 (비활성화)</button>
-            
+                style="display:none; margin-top:8px; background:white; border:1.5px solid #ff4d4d; color:#ff4d4d; font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">🚫
+                배달 버튼 끄기 (비활성화)</button>
+
 
             <button id="btn-unlink-kakao" onclick="unlinkKakao()"
                 style="display:none; margin-top:10px; background:none; border:1px solid #ddd; color:#999; font-size:12px; padding:8px; border-radius:var(--btn-radius); width:100%; cursor:pointer;">카카오
@@ -1446,8 +1445,7 @@
             </div>
             <div style="padding: 0 20px 25px 20px;">
                 <div style="display: flex; gap: 15px; margin-bottom: 5px;">
-                    <button id="btn-delivery-order" class="btn-common"
-                        style="flex: 1; margin: 0; font-size:16px;"
+                    <button id="btn-delivery-order" class="btn-common" style="flex: 1; margin: 0; font-size:16px;"
                         onclick="handleDeliveryOrderClick()">
                         배달주문
                     </button>
@@ -1600,22 +1598,20 @@
                 // [추가] 주문자 정보 초기화 및 모드 전환
                 const modal = document.getElementById('profile-modal');
                 if (modal) modal.classList.remove('login-forced');
-                
+
                 const title = document.getElementById('profile-modal-title');
                 if (title) title.innerText = "주문자 변경";
-                
+
                 const submitBtn = document.getElementById('profile-submit-btn');
                 if (submitBtn) submitBtn.innerText = "변경하기";
 
                 // [신규] 관리자 메뉴 모든 버튼 노출
                 const delOn = document.getElementById('ADMIN_DELIVERY_ON');
                 const delOff = document.getElementById('ADMIN_DELIVERY_OFF');
-                const stockBtn = document.getElementById('btn-reset-stock');
                 const unlinkBtn = document.getElementById('btn-unlink-kakao');
 
                 if (delOn) delOn.style.setProperty('display', 'block', 'important');
                 if (delOff) delOff.style.setProperty('display', 'block', 'important');
-                if (stockBtn) stockBtn.style.setProperty('display', 'block', 'important');
                 if (unlinkBtn) unlinkBtn.style.setProperty('display', 'block', 'important');
 
                 bypassCount = 0;
@@ -2807,25 +2803,6 @@
             });
         }
 
-        async function resetGlobalStock() {
-            showSystemModal("모든 앱 사용자의 실시간 재고 변동분을 초기화하시겠습니까?\n(스프레드시트에서 수량을 직접 수정한 후 실행해 주세요.)", 'confirm', async () => {
-                try {
-                    showSystemModal("초기화 중...", 'loading');
-                    const res = await fetch(`${FIREBASE_DB_URL}global_stock.json`, {
-                        method: 'DELETE'
-                    });
-                    if (res.ok) {
-                        showSystemModal("실시간 재고 변동분이 초기화되었습니다.\n이제 앱의 수량이 스프레드시트와 일치합니다.", 'alert');
-                        loadData(true);
-                    } else {
-                        throw new Error("네트워크 응답 오류");
-                    }
-                } catch (e) {
-                    console.error("재고 초기화 실패:", e);
-                    showSystemModal("초기화 실패: " + e.message, 'alert');
-                }
-            });
-        }
 
         // [날짜] 요일 표시 로직
         function formatDateWithDay(input) {
@@ -3608,12 +3585,14 @@
                 const msg = `주문 금액이 30,000원 미만인 경우 3,000원의 배달비가 발생합니다.\n(현재 주문금액: ${totalSum.toLocaleString()}원)\n\n배달비를 추가하여 주문 하시겠습니까?`;
                 showSystemModal(msg, 'confirm', () => {
                     // 확인 클릭 시 배달비 항목 추가 후 진행
+                    const firstItem = allItems[0];
                     allItems.push({
                         name: "배달비",
                         qty: 1,
                         price: 3000,
                         subtotal: 3000,
-                        date: allItems[0] ? allItems[0].date : ""
+                        date: firstItem ? firstItem.date : "",
+                        isCategorized: firstItem ? firstItem.isCategorized : false
                     });
                     executeOrder(allItems, name, phone, shippingMethod);
                 }, () => {
