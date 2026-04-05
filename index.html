@@ -3532,7 +3532,11 @@
 
                 if (!userAddress.trim() || !userDetail.trim() || !userEntrance.trim()) {
                     showSystemModal("배달을 위해서는 주소, 상세주소, 공동현관 정보를 모두 입력 해 주세요.", 'alert', () => {
+                        // [수정] 주문자 변경 모드로 프로필 모달 열기
+                        document.getElementById('profile-modal-title').innerText = "주문자 변경";
+                        document.getElementById('profile-submit-btn').innerText = "변경하기";
                         document.getElementById('profile-modal').style.display = 'flex';
+                        checkScrollLock();
                     });
                     submitBtn.disabled = false;
                     submitBtn.innerText = "주문확정";
