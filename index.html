@@ -773,8 +773,14 @@
             flex-direction: column;
             align-items: stretch;
             gap: 12px;
+            /* 기본 여백 (안내문 없을 때) */
             box-sizing: border-box;
             transition: transform 0.2s ease;
+        }
+
+        .product-card.has-stock {
+            gap: 28px;
+            /* 안내문(주문가능수량) 있을 때만 여백 확대 */
         }
 
         .product-card:active {
@@ -859,10 +865,15 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            justify-content: space-between;
+            /* 위아래 끝으로 배치하여 가격 위치 고정 */
+            height: 110px;
+            /* 썸네일 높이와 동일하게 설정 */
             min-width: 0;
             align-items: flex-start;
             text-align: left;
+            padding-bottom: 2px;
+            box-sizing: border-box;
         }
 
         .item-controls-bottom-v {
@@ -871,8 +882,8 @@
             /* Revert to flex-end (fixed button position) */
             gap: 10px;
             width: 100%;
-            margin-top: 2px;
-            /* Adjusted from -10px to create space below thumbnail/name */
+            margin-top: 0;
+            /* card gap을 사용하므로 0으로 조정 */
         }
 
 
@@ -889,25 +900,26 @@
             align-items: center;
             gap: 6px;
             flex: 1.08;
-            /* Independent width control (change to adjust size relative to button) */
         }
 
         .stock-status {
-            font-size: 17px;
+            font-size: 15px;
             font-weight: 800;
             letter-spacing: -0.03em;
+            white-space: nowrap;
         }
 
         .item-name {
             font-weight: 800;
             font-size: 19px;
-            margin-top: 10px;
-            /* Slightly larger in vertical layout */
+            margin-top: 5px;
             color: var(--item-black);
-            line-height: 1.4;
-            word-break: break-all;
-            overflow-wrap: break-word;
-            white-space: pre-wrap;
+            line-height: 1.2;
+            white-space: nowrap;
+            /* 한 줄 유지 */
+            overflow: hidden;
+            /* 넘치는 부분 숨김 */
+            width: 100%;
         }
 
         .item-price-val {
@@ -1376,29 +1388,43 @@
         <div class="fullscreen-slider" id="fullscreen-slider-area" onclick="event.stopPropagation()"></div>
     </div>
     <div id="confirm-overlay" class="modal-overlay">
-        <div class="modal-content" style="text-align:center; padding: 25px 15px;">
-            <div id="confirm-item-list"
-                style="text-align:left; background:#f5f5f5; padding: 15px 8px; border-radius:var(--common-radius); margin:10px 0 20px 0; font-size:15px; line-height:1.7; max-height:350px; overflow-y:auto;">
+        <div class="modal-content"
+            style="padding: 20px; display: flex; flex-direction: column; text-align: center; max-height: 95vh; box-sizing: border-box;">
+            <!-- 상단 고정: 제목 및 주문자 정보 -->
+            <div id="confirm-header-area"></div>
+
+            <!-- 중앙 가변: 상품 리스트만 스크롤 -->
+            <div id="confirm-product-wrapper"
+                style="flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; background:#f5f5f5; border-radius:var(--common-radius); padding: 12px; margin-bottom: 15px;">
+                <div id="confirm-item-list" style="text-align:left; font-size:15px; line-height:1.7;">
+                </div>
             </div>
-            <div
-                style="text-align:left; font-size:13px; margin: 1px -10px 10px 0; color:#455464; line-height:1.6; padding:0; font-weight:700;">
-                <div>✅ 주문취소는 익일 09시(당일 입고 상품은 입고 전)까지입니다.</div>
-                <div>✅ 픽업기간의 경우 과일, 야채 등 신선식품은 입고 당일까지이며,</div>
-                <div>&emsp;&ensp;이외에는 입고일 포함 3일(휴무일 제외)까지 픽업 가능합니다.</div>
-                <div>✅ 픽업기간 이후에는 현장 판매로 전환되어 픽업이 불가능합니다.</div>
-                <div>✅ 픽업기간 이후 수령을 원하시면 카카오톡으로 문의 바랍니다.</div>
-                <div>✅ 업체 및 물류 상황에 따라 일정이 변경 또는 취소될 수 있습니다.</div>
+
+            <!-- 하단 고정: 합계, 안내사항, 체크박스, 버튼 -->
+            <div id="confirm-footer-area">
+                <div id="confirm-summary-area" style="margin-bottom: 12px;"></div>
+                <div
+                    style="text-align:left; font-size:13px; margin: 0 0 12px 0; color:#455464; line-height:1.5; padding:0; font-weight:700; border-top: 1px solid #eee; padding-top: 12px;">
+                    <div>✅ 주문취소는 익일 09시(당일 입고 상품은 입고 전)까지입니다.</div>
+                    <div>✅ 픽업기간의 경우 과일, 야채 등 신선식품은 입고 당일까지이며,</div>
+                    <div style="padding-left: 20px;">이외에는 입고일 포함 3일(휴무일 제외) 가능합니다.</div>
+                    <div>✅ 픽업기간 이후 현장 판매 전환되어 픽업 불가능합니다.</div>
+                    <div>✅ 업체 상황에 따라 일정이 변경 또는 취소될 수 있습니다.</div>
+                </div>
+                <div
+                    style="margin-bottom:15px; font-weight:700; font-size:14px; color:#455464; display:flex; align-items:center; justify-content:center; gap:8px;">
+                    <input type="checkbox" id="confirm-notice-check"
+                        style="width:18px; height:18px; margin:0; cursor:pointer;">
+                    <label for="confirm-notice-check" style="cursor:pointer;">위 내용을 확인하였습니다.</label>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-common btn-close"
+                        onclick="document.getElementById('confirm-notice-check').checked = false; closeModal('confirm-overlay')"
+                        style="margin-top: 0; flex: 1;">취소</button>
+                    <button id="btn-submit-order" class="btn-common btn-primary" onclick="completeOrder()"
+                        style="margin-top: 0; flex: 1;">주문확정</button>
+                </div>
             </div>
-            <div
-                style="margin-bottom:20px; font-weight:700; font-size:13px; color:#455464; display:flex; align-items:center; justify-content:center; gap:6px;">
-                <input type="checkbox" id="confirm-notice-check"
-                    style="width:18px; height:18px; margin:0; cursor:pointer;">
-                <label for="confirm-notice-check" style="cursor:pointer;">위 내용을 확인하였습니다.</label>
-            </div>
-            <div style="display:flex; gap:10px;"><button class="btn-common btn-close"
-                    onclick="document.getElementById('confirm-notice-check').checked = false; closeModal('confirm-overlay')"
-                    style="margin-top: 0;">취소</button><button id="btn-submit-order" class="btn-common btn-primary"
-                    onclick="completeOrder()" style="margin-top: 0;">주문확정</button></div>
         </div>
     </div>
     <div class="footer" id="main-footer">
@@ -3054,7 +3080,7 @@
                 const thumbUrl = imgId ? getImgUrl(imgId, 300) : '';
 
                 const card = document.createElement('div');
-                card.className = 'product-card';
+                card.className = `product-card ${stockText ? 'has-stock' : ''}`;
 
                 const currentQty = cart[p.name] || 0;
                 const stock = p.stock !== undefined && p.stock !== "" ? parseInt(p.stock) : Infinity;
@@ -3064,7 +3090,7 @@
                 card.innerHTML = `<div class="card-top">` +
                     `<div class="thumb">${imgId ? `<img src="${getImgUrl(imgId, 300)}" loading="lazy" referrerpolicy="no-referrer" style="width:100%; height:100%; object-fit:contain;" onerror="this.onerror=null; this.src=getImgUrl('${imgId}', 300, true);">` : 'No Image'}</div>` +
                     `<div class="item-info-top">` +
-                    `<div class="item-name" style="margin-bottom:2px;">${p.name}</div>` +
+                    `<div class="item-name">${p.name}</div>` +
                     `<div class="item-price-val">${parseInt(p.price || 0).toLocaleString()}원</div>` +
                     `</div></div>` +
                     `<div class="item-controls-bottom-v">` +
@@ -3077,6 +3103,18 @@
                     `<button class="qty-btn" onclick="qty(this, 1)">+</button>` +
                     `</div></div></div>`;
                 container.appendChild(card);
+
+                // [추가] 상품명 폰트 사이즈 자동 조절 (한 줄 유지)
+                const nameEl = card.querySelector('.item-name');
+                if (nameEl) {
+                    let fontSize = 19;
+                    nameEl.style.fontSize = fontSize + 'px';
+                    // 요소가 화면에 그려진 후 scrollWidth를 체크하기 위해 잠시 대기하거나 즉시 실행
+                    while (nameEl.scrollWidth > nameEl.offsetWidth && fontSize > 11) {
+                        fontSize -= 0.5;
+                        nameEl.style.fontSize = fontSize + 'px';
+                    }
+                }
             });
         }
 
@@ -3305,31 +3343,43 @@
 
             const name = document.getElementById('input-name').value || "입력되지 않음";
             const phone = document.getElementById('input-phone').value || "입력되지 않음";
+            const address = document.getElementById('input-address').value;
+            const addressDetail = document.getElementById('input-address-detail').value;
+            const fullAddress = address ? `${address} ${addressDetail}`.trim() : "입력되지 않음";
+            const entrance = document.getElementById('input-entrance').value || "정보없음";
 
-            const list = document.getElementById('confirm-item-list');
-            list.innerHTML = `
-                <div style="font-size:18px; font-weight:900; color:var(--item-black); margin-bottom:12px; text-align:center;">주문 내용을 확인해 주세요</div>
-                <div style="margin-bottom:15px; border-bottom:1px solid #ddd; padding-bottom:12px;">
-                    <div style="font-size:16px; font-weight:800; color:var(--item-black); margin-bottom:5px;">주문자 정보</div>
-                    <div style="font-size:15px; color:#000;">주문자명: <span style="font-weight:700; color:var(--nego-orange);">${name}</span></div>
-                    <div style="font-size:15px; color:#000;">연락처: <span style="font-weight:700; color:var(--nego-orange);">${phone}</span></div>
+            // 상단 주문자 정보 영역
+            const header = document.getElementById('confirm-header-area');
+            const displayAddress = fullAddress.replace("경기 하남시", "").trim();
+
+            header.innerHTML = `
+                <div style="font-size:18px; font-weight:900; color:var(--item-black); margin-bottom:10px;">주문 내용을 확인해 주세요</div>
+                <div style="text-align:left; background:#edf2f7; padding: 12px; border-radius:var(--common-radius); margin-bottom:10px; font-size:14px; line-height:1.6;">
+                    <div style="font-size:15px; font-weight:800; color:var(--item-black); margin-bottom:4px;">주문자 정보</div>
+                    <div>주문자명 : <span style="font-weight:700; color:var(--nego-orange);">${name}</span></div>
+                    <div>연락처 : <span style="font-weight:700; color:var(--nego-orange);">${phone}</span></div>
+                    <div style="word-break: keep-all;">주소 : <span style="font-weight:700; color:var(--nego-orange);">${displayAddress}</span></div>
+                    <div>공동현관 : <span style="font-weight:700; color:var(--nego-orange);">${entrance}</span></div>
                 </div>
             `;
+
+            const list = document.getElementById('confirm-item-list');
+            list.innerHTML = '';
 
             let totalSum = 0;
             let totalQty = 0;
 
             // 장바구니(cart) 상태를 기준으로 확인 창 표시
-            for (const name in cart) {
-                const q = cart[name];
-                const product = productsData.find(p => p.name === name);
+            for (const itemName in cart) {
+                const q = cart[itemName];
+                const product = productsData.find(p => p.name === itemName);
                 if (product && q > 0) {
                     const sub = q * parseInt(product.price || 0);
                     totalSum += sub;
                     totalQty += q;
                     list.innerHTML += `
-                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:15px; margin-bottom:8px;">
-                            <span style="color:var(--item-black); font-weight:800; flex:1; padding-right:6px; word-break:keep-all; line-height:1.2; white-space: pre-wrap;">${name}</span>
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:15px; margin-bottom:8px; border-bottom: 1px dashed #eee; padding-bottom:5px;">
+                            <span style="color:var(--item-black); font-weight:800; flex:1; padding-right:6px; word-break:keep-all; line-height:1.2; white-space: pre-wrap;">${itemName}</span>
                             <div style="display:flex; align-items:center; min-width:90px; justify-content:flex-end; flex-shrink:0;">
                                 <span style="color:#455464; font-size:15px; font-weight:700; text-align:right;">${q}개</span>
                                 <span style="color:#ccc; font-size:0.75rem; margin:0 4px;">/</span>
@@ -3339,18 +3389,19 @@
                 }
             }
 
-            // 합계 요약 추가
-            list.innerHTML += `
-                <div style="margin-top:15px; padding-top:12px; border-top:1.5px solid #eee; display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:16px; font-weight:800; color:var(--item-black);">합계</span>
+            // 하단 합계 영역
+            const summary = document.getElementById('confirm-summary-area');
+            summary.innerHTML = `
+                <div style="padding:10px; background:#fff9f2; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:16px; font-weight:800; color:var(--item-black);">최종 주문 합계</span>
                     <div style="text-align:right;">
-                        <span style="font-size:14px; color:#999; font-weight:700;">총 ${totalQty}개</span>
-                        <span style="font-size:20px; font-weight:900; color:var(--nego-orange); margin-left:8px;">${totalSum.toLocaleString()}원</span>
+                        <span style="font-size:13px; color:#666; font-weight:700;">총 ${totalQty}개</span>
+                        <span style="font-size:19px; font-weight:900; color:var(--nego-orange); margin-left:8px;">${totalSum.toLocaleString()}원</span>
                     </div>
                 </div>
             `;
 
-            // [추가] 주문 버튼 상태 초기화 (이전 주문의 '처리 중...' 상태 제거)
+            // [추가] 주문 버튼 상태 초기화
             const submitBtn = document.getElementById('btn-submit-order');
             if (submitBtn) {
                 submitBtn.disabled = false;
