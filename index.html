@@ -1279,6 +1279,12 @@
             <button id="btn-reset-stock" onclick="resetGlobalStock()"
                 style="display:none; margin-top:40px; background:none; border:1px solid #ddd; color:#999; font-size:12px; padding:8px; border-radius:var(--btn-radius); width:100%; cursor:pointer;">재고
                 동기화</button>
+            <div style="display:flex; gap:8px;">
+                <button id="btn-delivery-on" onclick="adminToggleDelivery(true)"
+                    style="display:none; flex:1; margin-top:10px; background:none; border:1.5px solid var(--moket-green); color:var(--moket-green); font-size:12px; padding:8px; border-radius:var(--btn-radius); font-weight:800; cursor:pointer;">🚚 배달 켜기</button>
+                <button id="btn-delivery-off" onclick="adminToggleDelivery(false)"
+                    style="display:none; flex:1; margin-top:10px; background:none; border:1.5px solid #ff4d4d; color:#ff4d4d; font-size:12px; padding:8px; border-radius:var(--btn-radius); font-weight:800; cursor:pointer;">🚫 배달 끄기</button>
+            </div>
             <button id="btn-unlink-kakao" onclick="unlinkKakao()"
                 style="display:none; margin-top:10px; background:none; border:1px solid #ddd; color:#999; font-size:12px; padding:8px; border-radius:var(--btn-radius); width:100%; cursor:pointer;">카카오
                 탈퇴하기</button>
@@ -1439,9 +1445,9 @@
             </div>
             <div style="padding: 0 20px 25px 20px;">
                 <div style="display: flex; gap: 15px; margin-bottom: 5px;">
-                    <button class="btn-common" 
-                        style="flex: 1; margin: 0; font-size:16px; background:#e0e0e0; color:#999; cursor:not-allowed;"
-                        onclick="showSystemModal('배달기능은 추후 오픈 예정입니다.', 'alert')">
+                    <button id="btn-delivery-order" class="btn-common"
+                        style="flex: 1; margin: 0; font-size:16px;"
+                        onclick="handleDeliveryOrderClick()">
                         배달주문
                     </button>
                     <button class="btn-common btn-primary" style="flex: 1; margin: 0; font-size:16px;"
@@ -1600,8 +1606,6 @@
 
                 document.getElementById('input-name').value = '';
                 document.getElementById('input-phone').value = '';
-                document.getElementById('input-gender').value = '';
-                document.getElementById('input-age').value = '';
                 document.getElementById('menu-greeting').innerHTML = `<span class="name-badge">관리자</span>님`;
 
                 // [추가] 재고 동기화 및 탈퇴 버튼 노출
@@ -1610,10 +1614,70 @@
                 if (stockBtn) stockBtn.style.display = 'block';
                 if (unlinkBtn) unlinkBtn.style.display = 'block';
 
+                // [신규] 관리자 배달 제어 버튼 노출
+                const deliveryOnBtn = document.getElementById('btn-delivery-on');
+                const deliveryOffBtn = document.getElementById('btn-delivery-off');
+                if (deliveryOnBtn) deliveryOnBtn.style.display = 'block';
+                if (deliveryOffBtn) deliveryOffBtn.style.display = 'block';
+
                 closeModal('profile-modal');
                 bypassCount = 0;
             }
         }
+
+        // [신규] 배달 기능 실시간 로드 및 제어 로직
+        let isDeliveryEnabled = false;
+
+        async function fetchDeliveryStatus() {
+            try {
+                const res = await fetch(FIREBASE_DB_URL + "delivery_status.json");
+                const status = await res.json();
+                isDeliveryEnabled = (status === true);
+                updateDeliveryUI();
+            } catch (e) { console.error("상태 로드 실패:", e); }
+        }
+
+        function updateDeliveryUI() {
+            const btn = document.getElementById('btn-delivery-order');
+            if (!btn) return;
+            if (isDeliveryEnabled) {
+                btn.style.background = "var(--moket-green)";
+                btn.style.color = "white";
+                btn.style.cursor = "pointer";
+            } else {
+                btn.style.background = "#e0e0e0";
+                btn.style.color = "#999";
+                btn.style.cursor = "not-allowed";
+            }
+        }
+
+        function handleDeliveryOrderClick() {
+            if (!isDeliveryEnabled) {
+                showSystemModal("현재 배달 주문이 마감되었거나 비활성 상태입니다.", "alert");
+                return;
+            }
+            const addr = document.getElementById('input-address').value;
+            if (!addr || addr.trim() === "") {
+                showSystemModal("배달 받으실 주소를 먼저 입력해 주세요.\n(메뉴 ➔ 주문자 변경)", "alert");
+                return;
+            }
+            completeOrder('배달주문');
+        }
+
+        async function adminToggleDelivery(status) {
+            try {
+                await fetch(FIREBASE_DB_URL + "delivery_status.json", {
+                    method: 'PUT',
+                    body: JSON.stringify(status)
+                });
+                isDeliveryEnabled = status;
+                updateDeliveryUI();
+                showSystemModal(`배달 기능이 ${status ? '활성화' : '비활성'}되었습니다.`, "alert");
+            } catch (e) { showSystemModal("실패: " + e.toString(), "alert"); }
+        }
+
+        // 페이지 로드 시 상태 확인
+        window.addEventListener('load', fetchDeliveryStatus);
 
         // [추가] Firebase 키에 사용할 수 없는 문자 세척 함수 (. # $ [ ] / 등 제거)
         function fSafeKey(s) {
@@ -2574,7 +2638,7 @@
                     const orderDate = parseKRDate(orderTimeFull);
                     const deadline = new Date(orderDate.getFullYear(), orderDate.getMonth(), orderDate.getDate() + 1, 9, 0, 0);
                     const isDelivered = (order.delivered === true || String(order.delivered).toUpperCase() === "TRUE");
-                    
+
                     const canDelete = (new Date() < deadline) && !isCancelled && !isReceived && !isProcessing && !isStocked && !order.onSite && !isDelivered;
 
                     let statusText = '';
@@ -3513,7 +3577,7 @@
                     const mKey = pData.matchKey || "";
                     // 날짜 형식이 아니면(카테고리 필터) 서버에서 오늘 날짜로 처리할 수 있도록 정보 포함
                     const isCategorized = !/^\d{4}-\d{2}-\d{2}$/.test(mKey);
-                    
+
                     allItems.push({
                         name: itemName,
                         qty: q,
@@ -3546,7 +3610,7 @@
                         const profileModal = document.getElementById('profile-modal');
                         document.getElementById('profile-modal-title').innerText = "주문자 변경";
                         document.getElementById('profile-submit-btn').innerText = "변경하기";
-                        
+
                         // Z-Index를 높여서 주문 확인 창 위로 올림
                         profileModal.style.zIndex = "8000";
                         profileModal.style.display = 'flex';
@@ -3785,7 +3849,7 @@
                     showSystemModal("주문이 완료되었습니다!", 'alert');
                     setTimeout(() => closeModal('system-modal'), 1200);
                 }, 1000);
-                
+
                 setTimeout(() => loadData(), 2000);
 
             } catch (err) {
