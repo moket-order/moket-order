@@ -3158,79 +3158,75 @@
             }
         }
 
+        // 날짜 필터 생성 및 초기 리스트 렌더링을 담당하는 공통 함수
         function processAndRender(data) {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            if (!data || data.length === 0) {
+                document.getElementById('product-list').innerHTML = '<div style="text-align:center; padding:50px 0; color:#999;">현재 주문 가능한 상품이 없습니다.</div>';
+                return;
+            }
 
-            // 1. 데이터 정리
-            const futureData = data.filter(p => !!p.matchKey);
-            productsData = futureData;
+            productsData = data;
 
-            // 2. 필터 추출 및 분류 (날짜 vs 상시판매)
-            const allFilters = [...new Set(futureData.map(p => p.matchKey))].sort((a, b) => {
-                const dateA = new Date(a).getTime();
-                const dateB = new Date(b).getTime();
-                const isDateA = !isNaN(dateA) && a.includes('-');
-                const isDateB = !isNaN(dateB) && b.includes('-');
-                if (isDateA && isDateB) return dateA - dateB;
-                if (isDateA) return -1;
-                if (isDateB) return 1;
+            // 1. 모든 필터 키 추출 및 정렬
+            const allFilters = [...new Set(data.map(p => p.matchKey))].sort((a, b) => {
+                const clean = (s) => s.replace(/[월일]/g, '-').replace(/\./g, '-').replace(/\s+/g, '').replace(/[\(\)가-힣]/g, '');
+                const dateA = new Date(clean(a)).getTime();
+                const dateB = new Date(clean(b)).getTime();
+                const isD1 = !isNaN(dateA) || a.includes('월') || a.includes('일');
+                const isD2 = !isNaN(dateB) || b.includes('월') || b.includes('일');
+                if (isD1 && isD2) {
+                    if (!isNaN(dateA) && !isNaN(dateB)) return dateA - dateB;
+                    return a.localeCompare(b);
+                }
+                if (isD1) return -1;
+                if (isD2) return 1;
                 return a.localeCompare(b);
             });
 
-            const row1Keys = allFilters.filter(k => k.includes('-')); 
-            const row2Keys = allFilters.filter(k => !k.includes('-'));
+            // 2. 날짜 vs 카테고리 분류 (유연한 날짜 판별)
+            const row1Keys = allFilters.filter(k => {
+                const clean = (s) => s.replace(/[월일]/g, '-').replace(/\./g, '-').replace(/\s+/g, '').replace(/[\(\)가-힣]/g, '');
+                const d = new Date(clean(k));
+                return !isNaN(d.getTime()) || k.includes('월') || k.includes('일');
+            });
+            const row2Keys = allFilters.filter(k => !row1Keys.includes(k));
 
             const row1 = document.getElementById('date-tabs-row1');
             const row2 = document.getElementById('date-tabs-row2');
             row1.innerHTML = '';
             row2.innerHTML = '';
 
-            // [헬퍼] 날짜/카테고리 표시명 변환
-            const getDisplayName = (key) => {
-                if (!key.includes('-')) return key;
-                try {
-                    const d = new Date(key);
-                    if (isNaN(d.getTime())) return key;
-                    const days = ['일','월','화','수','목','금','토'];
-                    return (d.getMonth()+1) + '.' + d.getDate() + '(' + days[d.getDay()] + ')';
-                } catch(e) { return key; }
-            };
-
             const prevActive = document.querySelector('.date-btn.active');
-            let targetFilter = prevActive ? prevActive.dataset.date : (row1Keys.length > 0 ? row1Keys[0] : (row2Keys.length > 0 ? row2Keys[0] : null));
+            let initialFilter = prevActive ? prevActive.dataset.date : (row1Keys.length > 0 ? row1Keys[0] : row2Keys[0]);
 
-            const createBtn = (date, container) => {
+            const createBtn = (key, container) => {
                 const btn = document.createElement('button');
-                const isActive = (date === targetFilter);
-                btn.className = `date-btn ${isActive ? 'active' : ''}`;
-                btn.dataset.date = date;
-                btn.innerText = getDisplayName(date);
+                btn.className = `date-btn ${key === initialFilter ? 'active' : ''}`;
+                btn.dataset.date = key;
+                
+                // [수정] 날짜 이름을 임의로 바꾸지 않고, 데이터에서 가져온 원본 텍스트 사용
+                const prod = data.find(p => p.matchKey === key);
+                btn.innerText = prod ? (prod.displayDate || key) : key;
+                
                 btn.onclick = () => {
                     document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
-                    renderList(date);
+                    renderList(key);
                     btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                 };
                 container.appendChild(btn);
-                
-                if (isActive) {
-                    setTimeout(() => {
-                        btn.scrollIntoView({ inline: 'center', block: 'nearest' });
-                    }, 200);
+
+                if (key === initialFilter) {
+                    setTimeout(() => btn.scrollIntoView({ inline: 'center', block: 'nearest' }), 100);
                 }
             };
-            
+
             row1Keys.forEach(k => createBtn(k, row1));
             row2Keys.forEach(k => createBtn(k, row2));
 
-            if (row2Keys.length === 0) row2.style.display = 'none';
-            else row2.style.display = 'flex';
+            row2.style.display = row2Keys.length === 0 ? 'none' : 'flex';
 
-            if (targetFilter) renderList(targetFilter);
-            else {
-                document.getElementById('product-list').innerHTML = '<div style="text-align:center; padding:50px 0; color:#999;">현재 주문 가능한 상품이 없습니다.</div>';
-            }
+            if (initialFilter) renderList(initialFilter);
         }
 
         function renderList(targetKey) {
