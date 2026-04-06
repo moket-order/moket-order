@@ -1681,16 +1681,19 @@
             const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
             
             return fullHistoryData.filter(item => {
-                if (!item.pickupDate) return false;
+                // [수정] 배달비 항목도 당일 주문이면 합산 목록에 포함시킴
+                const isDeliveryFee = (item.item === "배달비");
                 
                 // 날짜 정규화 (2026-04-06 (월) -> 2026-04-06)
-                let itemDate = String(item.pickupDate).split(' ')[0].replace(/\./g, '-');
+                let itemDate = item.pickupDate ? String(item.pickupDate).split(' ')[0].replace(/\./g, '-') : "";
                 
-                // [신규] 상시판매 여부 체크
+                // 주문일자 확인 (배달비는 픽업일이 없을 수 있으므로 주문시간 기준)
+                const orderDateFull = item.timestamp || "";
+                const isTodayOrder = orderDateFull.includes(todayStr) || orderDateFull.includes(todayStr.replace(/-/g, '.'));
+
                 const isRegularSale = String(item.pickupDate).includes("상시판매");
                 
-                // 제외 조건 체크: 취소, 수령완료(픽업), 배달완료, 현장판매전환
-                const isCancelled = (item.item && item.item.includes('[취소]')) || 
+                const isCancelled = (item.item && (item.item.includes('[취소]') || item.item.includes('[배달합산]'))) || 
                                    (item.received === "canceled" || item.received === "취소완료") ||
                                    item.canceled === true || (String(item.canceled).toUpperCase() === "TRUE");
                                    
@@ -1698,8 +1701,8 @@
                 const isDelivered = (item.delivered === true || String(item.delivered).toUpperCase() === "TRUE");
                 const isOnSite = (item.onSite === true || String(item.onSite).toUpperCase() === "TRUE");
 
-                // 오늘 픽업 예정이거나 상시판매 상품이면서, 위의 제외 조건에 해당하지 않는 경우만 포함
-                return (itemDate === todayStr || isRegularSale) && 
+                // 오늘 픽업 예정이거나, 오늘 주문한 배달비이거나, 상시판매 상품이면서 제외 조건에 해당하지 않는 경우
+                return ((itemDate === todayStr || isRegularSale) || (isDeliveryFee && isTodayOrder)) && 
                        !isCancelled && !isReceived && !isDelivered && !isOnSite;
             });
         }
@@ -2647,11 +2650,13 @@
                 `;
 
                 group.items.forEach((order, idx) => {
+                    const isCombined = (order.item && order.item.includes('[배달합산]'));
                     const isCancelled = (order.item && order.item.includes('[취소]')) ||
                         (order.note && order.note.includes('[취소]')) ||
                         order.received === "canceled" ||
                         order.received === "취소완료" ||
                         (order.canceled === true || String(order.canceled).toUpperCase() === "TRUE");
+                    
                     const isProcessing = order.isProcessing === true;
                     const isReceived = (order.received === true || String(order.received).toUpperCase() === "TRUE");
                     const isStocked = (order.isStocked === true || String(order.isStocked).toUpperCase() === "TRUE");
@@ -2660,11 +2665,12 @@
                     const deadline = new Date(orderDate.getFullYear(), orderDate.getMonth(), orderDate.getDate() + 1, 9, 0, 0);
                     const isDelivered = (order.delivered === true || String(order.delivered).toUpperCase() === "TRUE");
 
-                    const canDelete = (new Date() < deadline) && !isCancelled && !isReceived && !isProcessing && !isStocked && !order.onSite && !isDelivered;
+                    const canDelete = (new Date() < deadline) && !isCancelled && !isReceived && !isProcessing && !isStocked && !order.onSite && !isDelivered && !isCombined;
 
                     let statusText = '';
                     let statusColor = '';
                     if (isProcessing) { statusText = '취소중...'; statusColor = '#666'; }
+                    else if (isCombined) { statusText = '합산완료'; statusColor = '#2196F3'; }
                     else if (isCancelled) { statusText = '취소완료'; statusColor = '#999'; }
                     else if (isDelivered) { statusText = '배달완료'; statusColor = '#4CAF50'; }
                     else if (isReceived) { statusText = '픽업완료'; statusColor = '#4CAF50'; }
