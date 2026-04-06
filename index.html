@@ -3163,20 +3163,10 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            // 1. 미래 날짜 및 텍스트 필터 처리
+            // 1. 데이터 정리 (날짜 필터링 일시 해제하여 모든 상품 노출 보장)
             const futureData = data.filter(p => {
                 const cleanKey = String(p.matchKey || "").trim();
-                if (!cleanKey) return false;
-                const cleanDate = cleanKey.replace(/\./g, '-');
-                const parts = cleanDate.split('-');
-                if (parts.length === 3) {
-                    const pDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                    if (!isNaN(pDate.getTime())) {
-                        pDate.setHours(0, 0, 0, 0);
-                        return pDate >= today;
-                    }
-                }
-                return true; 
+                return !!cleanKey; // 키값이 있는 모든 데이터 포함
             });
 
             productsData = futureData;
