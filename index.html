@@ -3159,11 +3159,10 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            // 필터 처리: 날짜 형식인 경우 오늘 이후만, 일반 텍스트인 경우 무조건 포함
+            // 1. 미래 날짜 및 텍스트 필터 처리
             const futureData = data.filter(p => {
                 const cleanKey = String(p.matchKey || "").trim();
                 if (!cleanKey) return false;
-
                 const cleanDate = cleanKey.replace(/\./g, '-');
                 const parts = cleanDate.split('-');
                 if (parts.length === 3) {
@@ -3173,54 +3172,58 @@
                         return pDate >= today;
                     }
                 }
-                // 날짜가 아닌 일반 텍스트 필터(예: 상시판매)는 무조건 포함
-                return true;
+                return true; 
             });
 
-            // 필터 추출 및 정렬 (날짜 우선순위 -> 텍스트 가나다순)
-            const uniqueFilters = [...new Set(futureData.map(p => p.matchKey))].sort((a, b) => {
+            productsData = futureData;
+
+            // 2. 필터 추출 및 분류 (날짜 vs 상시판매)
+            const allFilters = [...new Set(futureData.map(p => p.matchKey))].sort((a, b) => {
                 const dateA = new Date(a).getTime();
                 const dateB = new Date(b).getTime();
                 const isDateA = !isNaN(dateA) && a.includes('-');
                 const isDateB = !isNaN(dateB) && b.includes('-');
-
                 if (isDateA && isDateB) return dateA - dateB;
                 if (isDateA) return -1;
                 if (isDateB) return 1;
                 return a.localeCompare(b);
             });
 
-            const filterArea = document.getElementById('date-filters');
+            const row1Keys = allFilters.filter(k => k.includes('-')); // 날짜 형식
+            const row2Keys = allFilters.filter(k => !k.includes('-')); // 상시판매 등 텍스트 형식
 
-            // 현재 활성화된 필터 기억
-            const activeBtn = filterArea.querySelector('.date-btn.active');
-            const activeFilter = activeBtn ? activeBtn.dataset.date : (uniqueFilters.length > 0 ? uniqueFilters[0] : null);
+            const row1 = document.getElementById('date-tabs-row1');
+            const row2 = document.getElementById('date-tabs-row2');
+            row1.innerHTML = '';
+            row2.innerHTML = '';
 
-            filterArea.innerHTML = '';
-            uniqueFilters.forEach((date, idx) => {
+            // 이전 활성 필터 보존 시도
+            const prevActive = document.querySelector('.date-btn.active');
+            let targetFilter = prevActive ? prevActive.dataset.date : (row1Keys.length > 0 ? row1Keys[0] : (row2Keys.length > 0 ? row2Keys[0] : null));
+
+            const createBtn = (date, container) => {
                 const btn = document.createElement('button');
-                btn.className = `date-btn ${((!activeFilter && idx === 0) || date === activeFilter) ? 'active' : ''}`;
+                btn.className = `date-btn ${date === targetFilter ? 'active' : ''}`;
                 btn.dataset.date = date;
                 btn.innerText = futureData.find(p => p.matchKey === date).displayDate;
                 btn.onclick = () => {
                     document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                     renderList(date);
-                    // [추가] 클릭한 버튼이 화면 밖으로 나갔다면 중앙으로 슬라이드 (사용자 요청)
                     btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                 };
-                filterArea.appendChild(btn);
-            });
+                container.appendChild(btn);
+            };
 
-            if (activeFilter && uniqueFilters.includes(activeFilter)) {
-                renderList(activeFilter);
-                // [추가] 초기 로딩 시에도 활성 버튼이 보이도록 위치 조정
-                setTimeout(() => {
-                    const target = filterArea.querySelector(`[data-date="${activeFilter}"]`);
-                    if (target) target.scrollIntoView({ inline: 'center', block: 'nearest' });
-                }, 100);
-            }
-            else if (uniqueFilters.length > 0) renderList(uniqueFilters[0]);
+            // 렌더링
+            row1Keys.forEach(k => createBtn(k, row1));
+            row2Keys.forEach(k => createBtn(k, row2));
+
+            // 데이터박스 노출 여부
+            if (row2Keys.length === 0) row2.style.display = 'none';
+            else row2.style.display = 'flex';
+
+            if (targetFilter) renderList(targetFilter);
             else {
                 document.getElementById('product-list').innerHTML = '<div style="text-align:center; padding:50px 0; color:#999;">현재 주문 가능한 상품이 없습니다.</div>';
             }
