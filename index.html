@@ -1352,9 +1352,21 @@
     </div>
     <div class="sticky-header-group">
         <div class="date-section-title">픽업일별 상품목록</div>
-        <div id="date-tabs-row1" class="date-filter-container"></div>
-        <div id="date-tabs-row2" class="date-filter-container" style="border-top: 1px solid #f0f0f0;"></div>
+        <div id="date-tabs-row1" class="date-filter-container" style="padding: 10px 14px;"></div>
+        <div id="date-tabs-row2" class="date-filter-container" style="padding: 10px 14px; border-top: 1px solid #f0f0f0; justify-content: flex-start; gap: 8px;"></div>
     </div>
+    <style>
+        #date-tabs-row2 .date-btn {
+            flex: 0 0 calc(33.3% - 10px);
+            min-width: unset;
+            padding: 8px 5px;
+            font-size: 14px;
+            margin: 0; /* 여백 중첩 방지 */
+        }
+        #date-tabs-row1 .date-btn {
+            margin: 0; /* 여백 중첩 방지 */
+        }
+    </style>
     <div class="container" id="product-list"></div>
     <div id="detail-overlay" class="modal-overlay" onclick="if(event.target === this) closeModal('detail-overlay')">
         <div class="modal-content">
@@ -3197,15 +3209,18 @@
             row1.innerHTML = '';
             row2.innerHTML = '';
 
-            // 이전 활성 필터 보존 시도
+            // 이전 활성 필터 보존 시도 혹은 최우선 순위 날짜 자동 선택
             const prevActive = document.querySelector('.date-btn.active');
-            let targetFilter = prevActive ? prevActive.dataset.date : (row1Keys.length > 0 ? row1Keys[0] : (row2Keys.length > 0 ? row2Keys[0] : null));
+            let targetFilter = (prevActive && allFilters.includes(prevActive.dataset.date)) ? prevActive.dataset.date : (allFilters.length > 0 ? allFilters[0] : null);
 
             const createBtn = (date, container) => {
                 const btn = document.createElement('button');
                 btn.className = `date-btn ${date === targetFilter ? 'active' : ''}`;
                 btn.dataset.date = date;
-                btn.innerText = futureData.find(p => p.matchKey === date).displayDate;
+                
+                const pData = futureData.find(p => p.matchKey === date);
+                btn.innerText = pData ? pData.displayDate : date;
+
                 btn.onclick = () => {
                     document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
@@ -3223,7 +3238,14 @@
             if (row2Keys.length === 0) row2.style.display = 'none';
             else row2.style.display = 'flex';
 
-            if (targetFilter) renderList(targetFilter);
+            if (targetFilter) {
+                renderList(targetFilter);
+                // [추가] 초기 로딩 시 활성 버튼이 중앙에 보이게 함
+                setTimeout(() => {
+                    const activeBtn = document.querySelector('.date-btn.active');
+                    if (activeBtn) activeBtn.scrollIntoView({ inline: 'center', block: 'nearest' });
+                }, 100);
+            }
             else {
                 document.getElementById('product-list').innerHTML = '<div style="text-align:center; padding:50px 0; color:#999;">현재 주문 가능한 상품이 없습니다.</div>';
             }
