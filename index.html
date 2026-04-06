@@ -3167,28 +3167,11 @@
 
             productsData = data;
 
-            // 1. 모든 필터 키 추출 및 정렬
-            const allFilters = [...new Set(data.map(p => p.matchKey))].sort((a, b) => {
-                const clean = (s) => s.replace(/[월일]/g, '-').replace(/\./g, '-').replace(/\s+/g, '').replace(/[\(\)가-힣]/g, '');
-                const dateA = new Date(clean(a)).getTime();
-                const dateB = new Date(clean(b)).getTime();
-                const isD1 = !isNaN(dateA) || a.includes('월') || a.includes('일');
-                const isD2 = !isNaN(dateB) || b.includes('월') || b.includes('일');
-                if (isD1 && isD2) {
-                    if (!isNaN(dateA) && !isNaN(dateB)) return dateA - dateB;
-                    return a.localeCompare(b);
-                }
-                if (isD1) return -1;
-                if (isD2) return 1;
-                return a.localeCompare(b);
-            });
+            // 1. 모든 필터 키 추출 (원본 그대로)
+            const allFilters = [...new Set(data.map(p => p.matchKey))];
 
-            // 2. 날짜 vs 카테고리 분류 (유연한 날짜 판별)
-            const row1Keys = allFilters.filter(k => {
-                const clean = (s) => s.replace(/[월일]/g, '-').replace(/\./g, '-').replace(/\s+/g, '').replace(/[\(\)가-힣]/g, '');
-                const d = new Date(clean(k));
-                return !isNaN(d.getTime()) || k.includes('월') || k.includes('일');
-            });
+            // 2. 날짜 vs 카테고리 단순 분류 (숫자나 날짜 기호가 있으면 1번 줄)
+            const row1Keys = allFilters.filter(k => /[0-9월일\.\-]/.test(k));
             const row2Keys = allFilters.filter(k => !row1Keys.includes(k));
 
             const row1 = document.getElementById('date-tabs-row1');
@@ -3200,13 +3183,11 @@
             let initialFilter = prevActive ? prevActive.dataset.date : (row1Keys.length > 0 ? row1Keys[0] : row2Keys[0]);
 
             const createBtn = (key, container) => {
+                if (!key) return;
                 const btn = document.createElement('button');
                 btn.className = `date-btn ${key === initialFilter ? 'active' : ''}`;
                 btn.dataset.date = key;
-                
-                // [수정] 날짜 이름을 임의로 바꾸지 않고, 데이터에서 가져온 원본 텍스트 사용
-                const prod = data.find(p => p.matchKey === key);
-                btn.innerText = prod ? (prod.displayDate || key) : key;
+                btn.innerText = key; // 스프레드시트 이름 그대로 사용
                 
                 btn.onclick = () => {
                     document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
