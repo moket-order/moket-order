@@ -3193,8 +3193,8 @@
                 return a.localeCompare(b);
             });
 
-            const row1Keys = allFilters.filter(k => k.includes('-')); // 날짜 형식
-            const row2Keys = allFilters.filter(k => !k.includes('-')); // 상시판매 등 텍스트 형식
+            const row1Keys = allFilters.filter(k => k.includes('-')); 
+            const row2Keys = allFilters.filter(k => !k.includes('-'));
 
             const row1 = document.getElementById('date-tabs-row1');
             const row2 = document.getElementById('date-tabs-row2');
@@ -3210,7 +3210,8 @@
                 const isActive = (date === targetFilter);
                 btn.className = `date-btn ${isActive ? 'active' : ''}`;
                 btn.dataset.date = date;
-                btn.innerText = futureData.find(p => p.matchKey === date).displayDate;
+                // [수정] displayDate 속성 대신 formatDateWithDay 헬퍼 사용
+                btn.innerText = formatDateWithDay(date);
                 btn.onclick = () => {
                     document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
@@ -3219,7 +3220,6 @@
                 };
                 container.appendChild(btn);
                 
-                // 초기 로드 시 활성 버튼이 화면 밖이라면 중앙으로 스크롤
                 if (isActive) {
                     setTimeout(() => {
                         btn.scrollIntoView({ inline: 'center', block: 'nearest' });
@@ -3227,11 +3227,9 @@
                 }
             };
             
-            // 렌더링
             row1Keys.forEach(k => createBtn(k, row1));
             row2Keys.forEach(k => createBtn(k, row2));
 
-            // 데이터박스 노출 여부
             if (row2Keys.length === 0) row2.style.display = 'none';
             else row2.style.display = 'flex';
 
