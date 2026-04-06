@@ -3594,6 +3594,13 @@
                 showSystemModal("안내 내용을 확인하신 후 동의해주세요.", 'alert');
                 return;
             }
+
+            // [수정] 배달 버튼이 꺼져있다면(비활성화) 수령방법 선택 없이 바로 매장픽업으로 진행
+            if (!isDeliveryEnabled) {
+                completeOrder('매장픽업');
+                return;
+            }
+
             document.getElementById('shipping-overlay').style.display = 'flex';
             checkScrollLock();
         }
