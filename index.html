@@ -725,11 +725,15 @@
         }
 
         .date-filter-container {
-            padding: 4px 10px 8px 10px;
+            padding: 4px 10px 4px 10px;
             display: flex;
             gap: 6px;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
+        }
+
+        .date-filter-container:last-child {
+            padding-bottom: 8px;
         }
 
         .date-filter-container::-webkit-scrollbar {
@@ -1353,6 +1357,7 @@
     <div class="sticky-header-group">
         <div class="date-section-title">픽업일별 상품목록</div>
         <div class="date-filter-container" id="date-filters"></div>
+        <div class="date-filter-container" id="date-filters-categories" style="display:none; border-top: 1px solid #f9f9f9;"></div>
     </div>
     <div class="container" id="product-list"></div>
     <div id="detail-overlay" class="modal-overlay" onclick="if(event.target === this) closeModal('detail-overlay')">
@@ -1660,7 +1665,7 @@
             if (todayPickupItems.length > 0) {
                 let itemNames = todayPickupItems.map(it => `• ${it.item} (${it.qty}개)`).join('<br>');
                 let msg = `오늘 픽업예약된 상품이 있습니다.<br><div style="background:#f5f5f5; padding:10px; border-radius:8px; margin:10px 0; text-align:left; font-size:14px; font-weight:700; color:var(--item-black);">${itemNames}</div>같이 배달주문 하시겠습니까?`;
-                
+
                 showSystemModal(msg, 'confirm', () => {
                     completeOrder('배달주문', todayPickupItems);
                     return true; // completeOrder에서 새 모달을 띄우므로 현재 모달을 즉시 닫지 않음
@@ -1676,34 +1681,34 @@
         // [신규] 오늘 픽업 예정 상품 필터링 유틸
         function getTodayPickupItems() {
             if (!fullHistoryData || fullHistoryData.length === 0) return [];
-            
+
             const now = new Date();
             const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-            
+
             return fullHistoryData.filter(item => {
                 // [수정] 배달비 항목도 당일 주문이면 합산 목록에 포함시킴
                 const isDeliveryFee = (item.item === "배달비");
-                
+
                 // 날짜 정규화 (2026-04-06 (월) -> 2026-04-06)
                 let itemDate = item.pickupDate ? String(item.pickupDate).split(' ')[0].replace(/\./g, '-') : "";
-                
+
                 // 주문일자 확인 (배달비는 픽업일이 없을 수 있으므로 주문시간 기준)
                 const orderDateFull = item.timestamp || "";
                 const isTodayOrder = orderDateFull.includes(todayStr) || orderDateFull.includes(todayStr.replace(/-/g, '.'));
 
                 const isRegularSale = String(item.pickupDate).includes("상시판매");
-                
-                const isCancelled = (item.item && (item.item.includes('[취소]') || item.item.includes('[배달합산]'))) || 
-                                   (item.received === "canceled" || item.received === "취소완료") ||
-                                   item.canceled === true || (String(item.canceled).toUpperCase() === "TRUE");
-                                   
+
+                const isCancelled = (item.item && (item.item.includes('[취소]') || item.item.includes('[배달합산]'))) ||
+                    (item.received === "canceled" || item.received === "취소완료") ||
+                    item.canceled === true || (String(item.canceled).toUpperCase() === "TRUE");
+
                 const isReceived = (item.received === true || String(item.received).toUpperCase() === "TRUE");
                 const isDelivered = (item.delivered === true || String(item.delivered).toUpperCase() === "TRUE");
                 const isOnSite = (item.onSite === true || String(item.onSite).toUpperCase() === "TRUE");
 
                 // 오늘 픽업 예정이거나, 오늘 주문한 배달비이거나, 상시판매 상품이면서 제외 조건에 해당하지 않는 경우
-                return ((itemDate === todayStr || isRegularSale) || (isDeliveryFee && isTodayOrder)) && 
-                       !isCancelled && !isReceived && !isDelivered && !isOnSite;
+                return ((itemDate === todayStr || isRegularSale) || (isDeliveryFee && isTodayOrder)) &&
+                    !isCancelled && !isReceived && !isDelivered && !isOnSite;
             });
         }
 
@@ -2567,7 +2572,7 @@
                 // [수정] 상시판매인 경우 괄호 등에 상관없이 동일한 키로 묶어 같은 카드로 표시
                 let pDateKey = (item.pickupDate || '');
                 if (pDateKey.includes("상시판매")) pDateKey = "상시판매";
-                
+
                 const key = (item.timestamp || item.rawTimestamp || 'unknown') + "_" + pDateKey;
 
                 let group;
@@ -2580,7 +2585,7 @@
                         const pDate = g.items[0] ? parseKRDate(g.items[0].pickupDate) : null;
                         return pDate && pDate.toLocaleDateString() === orderDatePart;
                     });
-                    
+
                     if (!group) group = siblings[0]; // 당일 픽업이 없으면 첫 번째 카드로
                 } else {
                     group = groupedTransactions.find(g => g.key === key);
@@ -2682,7 +2687,7 @@
                         order.received === "canceled" ||
                         order.received === "취소완료" ||
                         (order.canceled === true || String(order.canceled).toUpperCase() === "TRUE");
-                    
+
                     const isProcessing = order.isProcessing === true;
                     const isReceived = (order.received === true || String(order.received).toUpperCase() === "TRUE");
                     const isStocked = (order.isStocked === true || String(order.isStocked).toUpperCase() === "TRUE");
@@ -3189,14 +3194,24 @@
                 return a.localeCompare(b);
             });
 
-            const filterArea = document.getElementById('date-filters');
+            const filterAreaDates = document.getElementById('date-filters');
+            const filterAreaCategories = document.getElementById('date-filters-categories');
 
-            // 현재 활성화된 필터 기억
-            const activeBtn = filterArea.querySelector('.date-btn.active');
+            // [수정] 두 영역 모두에서 현재 활성화된 필터 기억
+            const activeBtn = document.querySelector('.date-btn.active');
             const activeFilter = activeBtn ? activeBtn.dataset.date : (uniqueFilters.length > 0 ? uniqueFilters[0] : null);
 
-            filterArea.innerHTML = '';
+            filterAreaDates.innerHTML = '';
+            filterAreaCategories.innerHTML = '';
+            filterAreaCategories.style.display = 'none';
+
             uniqueFilters.forEach((date, idx) => {
+                // 상시판매 카테고리 여부 체크 (날짜 형식이 아니면 카테고리)
+                const isCat = !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(date).trim());
+                const targetArea = isCat ? filterAreaCategories : filterAreaDates;
+                
+                if (isCat) filterAreaCategories.style.display = 'flex';
+
                 const btn = document.createElement('button');
                 btn.className = `date-btn ${((!activeFilter && idx === 0) || date === activeFilter) ? 'active' : ''}`;
                 btn.dataset.date = date;
@@ -3208,7 +3223,7 @@
                     // [추가] 클릭한 버튼이 화면 밖으로 나갔다면 중앙으로 슬라이드 (사용자 요청)
                     btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                 };
-                filterArea.appendChild(btn);
+                targetArea.appendChild(btn);
             });
 
             if (activeFilter && uniqueFilters.includes(activeFilter)) {
@@ -3628,7 +3643,7 @@
                 extraItems.forEach(it => {
                     const mKey = it.matchKey || it.pickupDate || "";
                     const isCategorized = !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(mKey);
-                    
+
                     // 동일 이름 중복 시 뒤에 숫자를 붙여 Firebase 키 충돌 방지
                     let baseName = it.item + " (배달합산)";
                     let displayName = baseName;
@@ -3671,15 +3686,15 @@
             if (shippingMethod === '배달주문') {
                 const now = new Date();
                 const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-                
+
                 const hasNonToday = allItems.some(it => {
-                    if (it.isCategorized) return false; 
+                    if (it.isCategorized) return false;
                     if (String(it.date || "").includes("상시판매")) return false; // 상시판매 상품은 날짜 체크 제외
-                    
+
                     // 날짜 정규화 (24.02.10 -> 2024-02-10)
                     let dStr = String(it.date || "").replace(/\./g, '-').trim();
                     if (dStr.match(/^\d{2}-\d{1,2}-\d{1,2}$/)) dStr = "20" + dStr;
-                    
+
                     // 월/일 2자리 패딩 (2024-2-9 -> 2024-02-09)
                     const parts = dStr.split('-');
                     if (parts.length === 3) {
