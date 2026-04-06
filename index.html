@@ -1644,38 +1644,9 @@
             }
         }
 
-        // [신규] 오늘 픽업 예정인 상품 확인용 헬퍼
-        async function getTodayPickupOrders() {
-            if (!fullHistoryData || fullHistoryData.length === 0) return [];
-            
-            const today = new Date();
-            const todayStr = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
-
-            return fullHistoryData.filter(order => {
-                // 상시판매 상품(날짜가 없는 경우)은 픽업일이 오늘 날짜인 일반 날짜와 다를 수 있으므로 정규화하여 체크
-                const isPickup = order.shippingMethod === '매장픽업';
-                const isReceived = (order.received === true || String(order.received).toUpperCase() === "TRUE");
-                const isCanceled = String(order.item || "").includes("[취소]") || 
-                                 order.canceled === true || 
-                                 String(order.canceled).toUpperCase() === "TRUE" || 
-                                 order.received === "canceled" || 
-                                 order.received === "취소완료";
-                
-                if (!isPickup || isReceived || isCanceled) return false;
-
-                // 날짜 비교 (parseKRDate 활용)
-                const pDate = parseKRDate(order.pickupDate);
-                const tDate = new Date();
-                tDate.setHours(0,0,0,0);
-                pDate.setHours(0,0,0,0);
-                
-                return pDate.getTime() === tDate.getTime();
-            });
-        }
-
-        async function handleDeliveryOrderClick() {
+        function handleDeliveryOrderClick() {
             if (!isDeliveryEnabled) {
-                showSystemModal("배달주문이 마감되었습니다.", "alert");
+                showSystemModal("배달주문은 추후 제공 예정입니다.", "alert");
                 return;
             }
             const addr = document.getElementById('input-address').value;
@@ -1683,32 +1654,7 @@
                 showSystemModal("배달 받으실 주소를 먼저 입력해 주세요.\n(메뉴 ➔ 주문자 변경)", "alert");
                 return;
             }
-
-            // [신규] 오늘 픽업 예약된 상품이 있는지 확인
-            const todayPickups = await getTodayPickupOrders();
-            if (todayPickups.length > 0) {
-                // 픽업 상품 내역 HTML 생성 (프리미엄 스타일 적용)
-                let listHtml = '<div style="margin-top:15px; text-align:left;">';
-                listHtml += '<div style="font-size:13px; font-weight:800; color:#4CAF20; margin-bottom:8px;">[오늘 픽업 예정 상품]</div>';
-                listHtml += '<div style="background:#f8f9fa; border:1px solid #eee; border-radius:8px; padding:12px; font-size:14px; line-height:1.6; color:#455464;">';
-                todayPickups.forEach((it, idx) => {
-                    listHtml += `<div style="${idx > 0 ? 'margin-top:8px; border-top:1px dashed #eee; padding-top:8px;' : ''}">`;
-                    listHtml += `<span style="font-weight:700; color:#1a1a1a;">${it.item}</span><br>`;
-                    listHtml += `<span style="font-size:13px;">${it.qty}개 / ${parseInt(it.total).toLocaleString()}원</span>`;
-                    listHtml += `</div>`;
-                });
-                listHtml += '</div>';
-                listHtml += '</div>';
-
-                const modalMsg = `오늘 픽업예약된 상품이 있습니다.<br><b>같이 배달주문 하시겠습니까?</b>${listHtml}`;
-                
-                showSystemModal(modalMsg, 'confirm', 
-                    () => completeOrder('배달주문', todayPickups), // 같이 배달 (합산금액 적용)
-                    () => completeOrder('배달주문', []) // 오늘 것만 배달
-                );
-            } else {
-                completeOrder('배달주문');
-            }
+            completeOrder('배달주문');
         }
 
         async function adminToggleDelivery(status) {
@@ -3553,7 +3499,7 @@
             checkScrollLock();
         }
 
-        async function completeOrder(shippingMethod, combinedPickupItems = []) {
+        async function completeOrder(shippingMethod) {
             // [추가] 수령방법 선택 모달 닫기
             closeModal('shipping-overlay');
 
@@ -3665,18 +3611,9 @@
             }
 
             // [추가] 배달 주문 시 최소 금액(3만원) 체크 및 배달비 안내
-            const currentTotal = allItems.reduce((acc, it) => acc + it.subtotal, 0);
-            const pickupTotal = (combinedPickupItems || []).reduce((acc, it) => acc + (parseInt(it.total) || 0), 0);
-            const totalSumForCheck = currentTotal + pickupTotal; // 합계로 3만원 체크
-
-            if (shippingMethod === '배달주문' && totalSumForCheck < 30000) {
-                let msg = "";
-                if (combinedPickupItems.length > 0) {
-                    msg = `배달주문 상품(${currentTotal.toLocaleString()}원)과 오늘 픽업 예약 상품(${pickupTotal.toLocaleString()}원)의 <b>합계 금액이 30,000원 미만</b>인 경우 3,000원의 배달비가 발생합니다.\n(현재 합계금액: ${totalSumForCheck.toLocaleString()}원)\n\n배달비를 추가하여 주문 하시겠습니까?`;
-                } else {
-                    msg = `당일 배송 상품의 주문 금액이 30,000원 미만인 경우 3,000원의 배달비가 발생합니다.(픽업 예약 상품은 주문 금액 계산에서 제외됩니다.)\n(현재 주문금액: ${currentTotal.toLocaleString()}원)\n\n배달비를 추가하여 주문 하시겠습니까?`;
-                }
-
+            const totalSum = allItems.reduce((acc, it) => acc + it.subtotal, 0);
+            if (shippingMethod === '배달주문' && totalSum < 30000) {
+                const msg = `당일 배송 상품의 주문 금액이 30,000원 미만인 경우 3,000원의 배달비가 발생합니다.(픽업 예정 상품은 주문금액에서 제외됩니다.)\n(현재 주문금액: ${totalSum.toLocaleString()}원)\n\n배달비를 추가하여 주문 하시겠습니까?`;
                 showSystemModal(msg, 'confirm', () => {
                     // 확인 클릭 시 배달비 항목 추가 후 진행
                     const firstItem = allItems[0];
@@ -3688,7 +3625,7 @@
                         date: firstItem ? firstItem.date : "",
                         isCategorized: firstItem ? firstItem.isCategorized : false
                     });
-                    executeOrder(allItems, name, phone, shippingMethod, combinedPickupItems);
+                    executeOrder(allItems, name, phone, shippingMethod);
                 }, () => {
                     // 취소 클릭 시 상태 초기화
                     isHistoryProcessing = false;
@@ -3700,13 +3637,13 @@
                 });
                 return;
             }
-            
+
             // 3만원 이상이거나 매장픽업인 경우 바로 진행
-            executeOrder(allItems, name, phone, shippingMethod, combinedPickupItems);
+            executeOrder(allItems, name, phone, shippingMethod);
         }
 
         // 실질적인 주문 전송 로직 분리 (배달비 확인 후 실행을 위함)
-        async function executeOrder(allItems, name, phone, shippingMethod, combinedPickupItems = []) {
+        async function executeOrder(allItems, name, phone, shippingMethod) {
             const submitBtn = document.getElementById('btn-submit-order');
 
             if (!name || !phone) {
@@ -3810,12 +3747,6 @@
                 const userAddressDetail = isDelivery ? (localStorage.getItem('moket_user_address_detail') || "") : "";
                 const userEntrance = isDelivery ? (localStorage.getItem('moket_user_entrance') || "") : "";
 
-                // [신규] 같이 배달 주문된 픽업 상품 정보 생성 (비고란 활용용)
-                let combinedNote = "";
-                if (combinedPickupItems.length > 0) {
-                    combinedNote = "[같이 배달 요청] " + combinedPickupItems.map(p => `${p.item}(${p.qty}개)`).join(", ");
-                }
-
                 const payload = {
                     header: 'order',
                     name: name,
@@ -3830,8 +3761,7 @@
                     gender: userGender,
                     ageGroup: userAgeGroup,
                     items: allItems,
-                    timestamp: tempTimestamp,
-                    note: combinedNote // 픽업 함께 배달 메모 추가
+                    timestamp: tempTimestamp
                 };
 
                 const cleanPhone = normP(phone);
