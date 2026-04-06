@@ -1675,7 +1675,7 @@
 
         async function handleDeliveryOrderClick() {
             if (!isDeliveryEnabled) {
-                showSystemModal("배달 주문이 마감되었습니다.", "alert");
+                showSystemModal("배달주문이 마감되었습니다.", "alert");
                 return;
             }
             const addr = document.getElementById('input-address').value;
@@ -1700,7 +1700,7 @@
                 listHtml += '</div>';
                 listHtml += '</div>';
 
-                const modalMsg = `오늘 픽업예약된 상품이 있습니다.<br><b>같이 배달 주문 하시겠습니까?</b>${listHtml}`;
+                const modalMsg = `오늘 픽업예약된 상품이 있습니다.<br><b>같이 배달주문 하시겠습니까?</b>${listHtml}`;
                 
                 showSystemModal(modalMsg, 'confirm', 
                     () => completeOrder('배달주문', todayPickups), // 같이 배달 (합산금액 적용)
@@ -3672,9 +3672,9 @@
             if (shippingMethod === '배달주문' && totalSumForCheck < 30000) {
                 let msg = "";
                 if (combinedPickupItems.length > 0) {
-                    msg = `배달 주문 상품(${currentTotal.toLocaleString()}원)과 오늘 픽업 예정 상품(${pickupTotal.toLocaleString()}원)의 <b>합계 금액이 30,000원 미만</b>인 경우 3,000원의 배달비가 발생합니다.\n(현재 합계금액: ${totalSumForCheck.toLocaleString()}원)\n\n배달비를 추가하여 주문 하시겠습니까?`;
+                    msg = `배달주문 상품(${currentTotal.toLocaleString()}원)과 오늘 픽업 예약 상품(${pickupTotal.toLocaleString()}원)의 <b>합계 금액이 30,000원 미만</b>인 경우 3,000원의 배달비가 발생합니다.\n(현재 합계금액: ${totalSumForCheck.toLocaleString()}원)\n\n배달비를 추가하여 주문 하시겠습니까?`;
                 } else {
-                    msg = `당일 배송 상품의 주문 금액이 30,000원 미만인 경우 3,000원의 배달비가 발생합니다.\n(현재 주문금액: ${currentTotal.toLocaleString()}원)\n\n배달비를 추가하여 주문 하시겠습니까?`;
+                    msg = `당일 배송 상품의 주문 금액이 30,000원 미만인 경우 3,000원의 배달비가 발생합니다.(픽업 예약 상품은 주문 금액 계산에서 제외됩니다.)\n(현재 주문금액: ${currentTotal.toLocaleString()}원)\n\n배달비를 추가하여 주문 하시겠습니까?`;
                 }
 
                 showSystemModal(msg, 'confirm', () => {
