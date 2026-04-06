@@ -1663,8 +1663,10 @@
                 
                 showSystemModal(msg, 'confirm', () => {
                     completeOrder('배달주문', todayPickupItems);
+                    return true; // completeOrder에서 새 모달을 띄우므로 현재 모달을 즉시 닫지 않음
                 }, () => {
                     completeOrder('배달주문', []);
+                    return true;
                 });
             } else {
                 completeOrder('배달주문', []);
@@ -1687,14 +1689,18 @@
                 // [신규] 상시판매 여부 체크
                 const isRegularSale = String(item.pickupDate).includes("상시판매");
                 
-                // 취소 및 수령 여부 체크
+                // 제외 조건 체크: 취소, 수령완료(픽업), 배달완료, 현장판매전환
                 const isCancelled = (item.item && item.item.includes('[취소]')) || 
                                    (item.received === "canceled" || item.received === "취소완료") ||
                                    item.canceled === true || (String(item.canceled).toUpperCase() === "TRUE");
+                                   
                 const isReceived = (item.received === true || String(item.received).toUpperCase() === "TRUE");
+                const isDelivered = (item.delivered === true || String(item.delivered).toUpperCase() === "TRUE");
+                const isOnSite = (item.onSite === true || String(item.onSite).toUpperCase() === "TRUE");
 
-                // 오늘 픽업 예정이거나 상시판매 상품인 경우 포함
-                return (itemDate === todayStr || isRegularSale) && !isCancelled && !isReceived;
+                // 오늘 픽업 예정이거나 상시판매 상품이면서, 위의 제외 조건에 해당하지 않는 경우만 포함
+                return (itemDate === todayStr || isRegularSale) && 
+                       !isCancelled && !isReceived && !isDelivered && !isOnSite;
             });
         }
 
@@ -3682,6 +3688,7 @@
                         isCategorized: firstItem ? firstItem.isCategorized : false
                     });
                     executeOrder(allItems, name, phone, shippingMethod);
+                    return true; // loading 모달로 전환되므로 닫지 않음
                 }, () => {
                     // 취소 클릭 시 상태 초기화
                     isHistoryProcessing = false;
