@@ -725,7 +725,7 @@
         }
 
         .date-filter-container {
-            padding: 5px 10px;
+            padding: 4px 10px 8px 10px;
             display: flex;
             gap: 6px;
             overflow-x: auto;
@@ -749,10 +749,6 @@
             border: 1.5px solid #eee;
             cursor: pointer;
         }
-        #date-tabs-row2 .date-btn {
-    padding: 0 8px; /* 아랫줄 버튼들만 더 좁게 설정 */
-    font-size: 17px; /* 필요시 글씨 크기도 약간 줄일 수 있습니다 */
-}
 
         .date-btn.active {
             background: var(--moket-green);
@@ -1356,8 +1352,7 @@
     </div>
     <div class="sticky-header-group">
         <div class="date-section-title">픽업일별 상품목록</div>
-        <div id="date-tabs-row1" class="date-filter-container"></div>
-        <div id="date-tabs-row2" class="date-filter-container" style="border-top: 1px solid #f0f0f0;"></div>
+        <div class="date-filter-container" id="date-filters"></div>
     </div>
     <div class="container" id="product-list"></div>
     <div id="detail-overlay" class="modal-overlay" onclick="if(event.target === this) closeModal('detail-overlay')">
@@ -2997,7 +2992,7 @@
                     const adj = globalAdjustments[adjKey] || 0;
                     let currentStock = p.stock;
                     if (adj !== 0 && p.stock !== "") {
-                    currentStock = Math.max(0, parseInt(p.stock || 0) + adj);
+                        currentStock = Math.max(0, parseInt(p.stock || 0) + adj);
                     }
 
                     return {
@@ -3160,54 +3155,74 @@
 
         // 날짜 필터 생성 및 초기 리스트 렌더링을 담당하는 공통 함수
         function processAndRender(data) {
-            if (!data || data.length === 0) {
-                document.getElementById('product-list').innerHTML = '<div style="text-align:center; padding:50px 0; color:#999;">현재 주문 가능한 상품이 없습니다.</div>';
-                return;
-            }
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
 
-            productsData = data;
+            // 필터 처리: 날짜 형식인 경우 오늘 이후만, 일반 텍스트인 경우 무조건 포함
+            const futureData = data.filter(p => {
+                const cleanKey = String(p.matchKey || "").trim();
+                if (!cleanKey) return false;
 
-            // 1. 모든 필터 키 추출 (원본 그대로)
-            const allFilters = [...new Set(data.map(p => p.matchKey))];
+                const cleanDate = cleanKey.replace(/\./g, '-');
+                const parts = cleanDate.split('-');
+                if (parts.length === 3) {
+                    const pDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    if (!isNaN(pDate.getTime())) {
+                        pDate.setHours(0, 0, 0, 0);
+                        return pDate >= today;
+                    }
+                }
+                // 날짜가 아닌 일반 텍스트 필터(예: 상시판매)는 무조건 포함
+                return true;
+            });
 
-            // 2. 날짜 vs 카테고리 단순 분류 (숫자나 날짜 기호가 있으면 1번 줄)
-            const row1Keys = allFilters.filter(k => /[0-9월일\.\-]/.test(k));
-            const row2Keys = allFilters.filter(k => !row1Keys.includes(k));
+            // 필터 추출 및 정렬 (날짜 우선순위 -> 텍스트 가나다순)
+            const uniqueFilters = [...new Set(futureData.map(p => p.matchKey))].sort((a, b) => {
+                const dateA = new Date(a).getTime();
+                const dateB = new Date(b).getTime();
+                const isDateA = !isNaN(dateA) && a.includes('-');
+                const isDateB = !isNaN(dateB) && b.includes('-');
 
-            const row1 = document.getElementById('date-tabs-row1');
-            const row2 = document.getElementById('date-tabs-row2');
-            row1.innerHTML = '';
-            row2.innerHTML = '';
+                if (isDateA && isDateB) return dateA - dateB;
+                if (isDateA) return -1;
+                if (isDateB) return 1;
+                return a.localeCompare(b);
+            });
 
-            const prevActive = document.querySelector('.date-btn.active');
-            let initialFilter = prevActive ? prevActive.dataset.date : (row1Keys.length > 0 ? row1Keys[0] : row2Keys[0]);
+            const filterArea = document.getElementById('date-filters');
 
-            const createBtn = (key, container) => {
-                if (!key) return;
+            // 현재 활성화된 필터 기억
+            const activeBtn = filterArea.querySelector('.date-btn.active');
+            const activeFilter = activeBtn ? activeBtn.dataset.date : (uniqueFilters.length > 0 ? uniqueFilters[0] : null);
+
+            filterArea.innerHTML = '';
+            uniqueFilters.forEach((date, idx) => {
                 const btn = document.createElement('button');
-                btn.className = `date-btn ${key === initialFilter ? 'active' : ''}`;
-                btn.dataset.date = key;
-                btn.innerText = key; // 스프레드시트 이름 그대로 사용
-                
+                btn.className = `date-btn ${((!activeFilter && idx === 0) || date === activeFilter) ? 'active' : ''}`;
+                btn.dataset.date = date;
+                btn.innerText = futureData.find(p => p.matchKey === date).displayDate;
                 btn.onclick = () => {
                     document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
-                    renderList(key);
+                    renderList(date);
+                    // [추가] 클릭한 버튼이 화면 밖으로 나갔다면 중앙으로 슬라이드 (사용자 요청)
                     btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                 };
-                container.appendChild(btn);
+                filterArea.appendChild(btn);
+            });
 
-                if (key === initialFilter) {
-                    setTimeout(() => btn.scrollIntoView({ inline: 'center', block: 'nearest' }), 100);
-                }
-            };
-
-            row1Keys.forEach(k => createBtn(k, row1));
-            row2Keys.forEach(k => createBtn(k, row2));
-
-            row2.style.display = row2Keys.length === 0 ? 'none' : 'flex';
-
-            if (initialFilter) renderList(initialFilter);
+            if (activeFilter && uniqueFilters.includes(activeFilter)) {
+                renderList(activeFilter);
+                // [추가] 초기 로딩 시에도 활성 버튼이 보이도록 위치 조정
+                setTimeout(() => {
+                    const target = filterArea.querySelector(`[data-date="${activeFilter}"]`);
+                    if (target) target.scrollIntoView({ inline: 'center', block: 'nearest' });
+                }, 100);
+            }
+            else if (uniqueFilters.length > 0) renderList(uniqueFilters[0]);
+            else {
+                document.getElementById('product-list').innerHTML = '<div style="text-align:center; padding:50px 0; color:#999;">현재 주문 가능한 상품이 없습니다.</div>';
+            }
         }
 
         function renderList(targetKey) {
