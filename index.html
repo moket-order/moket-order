@@ -2549,7 +2549,12 @@
                     return currentSortDir === 'desc' ? valB - valA : valA - valB;
                 }
 
-                // [추가] 보조 정렬: 메인 기준이 동일할 경우 항상 '주문시간(timestamp)' 내림차순(최신순)으로 정렬
+                // [수정] 메인 정렬 기준이 동일할 경우:
+                // 1. 배달비 항목은 항상 다른 상품 뒤에 둠 (그룹화 안정성을 위함)
+                if (a.item === '배달비' && b.item !== '배달비') return 1;
+                if (a.item !== '배달비' && b.item === '배달비') return -1;
+
+                // 2. 주문시간(timestamp) 내림차순(최신순)으로 정렬
                 const timeA = parseKRDate(a.timestamp);
                 const timeB = parseKRDate(b.timestamp);
                 return timeB - timeA;
@@ -2559,7 +2564,23 @@
             const groupedTransactions = [];
             filtered.forEach(item => {
                 const key = (item.timestamp || item.rawTimestamp || 'unknown') + "_" + (item.pickupDate || '');
-                let group = groupedTransactions.find(g => g.key === key);
+                
+                let group;
+                if (item.item === '배달비') {
+                    // [수정] 배달비는 주문일(당일)과 픽업일이 일치하는 카드에 우선적으로 들어감
+                    const siblings = groupedTransactions.filter(g => g.timestamp === item.timestamp);
+                    const orderDatePart = parseKRDate(item.timestamp).toLocaleDateString();
+
+                    group = siblings.find(g => {
+                        const pDate = g.items[0] ? parseKRDate(g.items[0].pickupDate) : null;
+                        return pDate && pDate.toLocaleDateString() === orderDatePart;
+                    });
+                    
+                    if (!group) group = siblings[0]; // 당일 픽업이 없으면 첫 번째 카드로
+                } else {
+                    group = groupedTransactions.find(g => g.key === key);
+                }
+
                 if (!group) {
                     group = {
                         key: key,
