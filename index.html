@@ -3613,7 +3613,7 @@
             // [추가] 배달 주문 시 최소 금액(3만원) 체크 및 배달비 안내
             const totalSum = allItems.reduce((acc, it) => acc + it.subtotal, 0);
             if (shippingMethod === '배달주문' && totalSum < 30000) {
-                const msg = `당일 배송 상품의 주문 금액이 30,000원 미만인 경우 3,000원의 배달비가 발생합니다.(픽업 예정 상품은 주문금액에서 제외됩니다.)\n(현재 주문금액: ${totalSum.toLocaleString()}원)\n\n배달비를 추가하여 주문 하시겠습니까?`;
+                const msg = `당일 배송 상품의 주문 금액이 30,000원 미만인 경우 3,000원의 배달비가 발생합니다.\n(픽업 예약 상품은 주문금액에서 제외.)\n(현재 주문금액: ${totalSum.toLocaleString()}원)\n\n배달비를 추가하여 주문 하시겠습니까?`;
                 showSystemModal(msg, 'confirm', () => {
                     // 확인 클릭 시 배달비 항목 추가 후 진행
                     const firstItem = allItems[0];
