@@ -3593,14 +3593,17 @@
             // 2. [추가] 오늘 픽업 예정 상품 합산 (배달 주문 시 선택한 경우)
             if (shippingMethod === '배달주문' && extraItems && extraItems.length > 0) {
                 extraItems.forEach(it => {
-                    // 중복 추가 방지 (혹시 장바구니에도 담겨있을 경우를 대비 - 실제로는 픽업 상품은 장바구니에 없을 가능성이 큼)
+                    const mKey = it.matchKey || it.pickupDate || "";
+                    // 날짜 형식이 아니면(상시판매 등) 카테고리성 상품으로 취급
+                    const isCategorized = !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(mKey);
+
                     allItems.push({
                         name: it.item + " (픽업합산)",
                         qty: it.qty,
                         price: parseInt(it.price || 0),
                         subtotal: parseInt(it.total || 0),
-                        date: it.matchKey || it.pickupDate,
-                        isCategorized: false,
+                        date: mKey,
+                        isCategorized: isCategorized,
                         isExtra: true
                     });
                 });
@@ -3622,6 +3625,7 @@
                 
                 const hasNonToday = allItems.some(it => {
                     if (it.isCategorized) return false; 
+                    if (String(it.date || "").includes("상시판매")) return false; // 상시판매 상품은 날짜 체크 제외
                     
                     // 날짜 정규화 (24.02.10 -> 2024-02-10)
                     let dStr = String(it.date || "").replace(/\./g, '-').trim();
