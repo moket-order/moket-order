@@ -2558,7 +2558,7 @@
             // [그룹화] 동일한 주문 시간(timestamp)을 가진 항목들을 하나의 예약 번호처럼 그룹화
             const groupedTransactions = [];
             filtered.forEach(item => {
-                const key = item.timestamp || item.rawTimestamp || 'unknown';
+                const key = (item.timestamp || item.rawTimestamp || 'unknown') + "_" + (item.pickupDate || '');
                 let group = groupedTransactions.find(g => g.key === key);
                 if (!group) {
                     group = {
@@ -2622,7 +2622,7 @@
                 const pickupDateStyle = currentSortBy === 'pickupDate' ? 'color:var(--nego-orange); font-weight:700;' : 'color:#455464;';
 
                 // 그룹 시작 HTML (카드 형태 - 접고 펴기 기능 추가)
-                const groupId = `history-group-${fSafeKey(orderTimeFull)}`;
+                const groupId = `history-group-${fSafeKey(group.key)}`;
                 const displaySummary = group.items.length > 1 ? `${group.items[0].item} 외 ${group.items.length - 1}건` : group.items[0].item;
 
                 htmlBuffer += `
