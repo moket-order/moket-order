@@ -3158,17 +3158,12 @@
             }
         }
 
-        // 날짜 필터 생성 및 초기 리스트 렌더링을 담당하는 공통 함수
         function processAndRender(data) {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            // 1. 데이터 정리 (날짜 필터링 일시 해제하여 모든 상품 노출 보장)
-            const futureData = data.filter(p => {
-                const cleanKey = String(p.matchKey || "").trim();
-                return !!cleanKey; // 키값이 있는 모든 데이터 포함
-            });
-
+            // 1. 데이터 정리
+            const futureData = data.filter(p => !!p.matchKey);
             productsData = futureData;
 
             // 2. 필터 추출 및 분류 (날짜 vs 상시판매)
@@ -3191,7 +3186,17 @@
             row1.innerHTML = '';
             row2.innerHTML = '';
 
-            // 이전 활성 필터 보존 시도
+            // [헬퍼] 날짜/카테고리 표시명 변환
+            const getDisplayName = (key) => {
+                if (!key.includes('-')) return key;
+                try {
+                    const d = new Date(key);
+                    if (isNaN(d.getTime())) return key;
+                    const days = ['일','월','화','수','목','금','토'];
+                    return (d.getMonth()+1) + '.' + d.getDate() + '(' + days[d.getDay()] + ')';
+                } catch(e) { return key; }
+            };
+
             const prevActive = document.querySelector('.date-btn.active');
             let targetFilter = prevActive ? prevActive.dataset.date : (row1Keys.length > 0 ? row1Keys[0] : (row2Keys.length > 0 ? row2Keys[0] : null));
 
@@ -3200,8 +3205,7 @@
                 const isActive = (date === targetFilter);
                 btn.className = `date-btn ${isActive ? 'active' : ''}`;
                 btn.dataset.date = date;
-                // [수정] displayDate 속성 대신 formatDateWithDay 헬퍼 사용
-                btn.innerText = formatDateWithDay(date);
+                btn.innerText = getDisplayName(date);
                 btn.onclick = () => {
                     document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
@@ -3213,7 +3217,7 @@
                 if (isActive) {
                     setTimeout(() => {
                         btn.scrollIntoView({ inline: 'center', block: 'nearest' });
-                    }, 100);
+                    }, 200);
                 }
             };
             
