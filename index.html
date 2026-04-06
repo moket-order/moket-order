@@ -727,36 +727,19 @@
         .date-filter-container {
             padding: 4px 10px 8px 10px;
             display: flex;
-        .date-filter-container {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            padding: 10px 10px 5px;
-            background: #fff;
-            border-bottom: 1px solid #eee;
-        }
-
-        #date-filters {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .filter-line {
-            display: flex;
             gap: 6px;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
-            width: 100%;
         }
 
-        .filter-line::-webkit-scrollbar {
+        .date-filter-container::-webkit-scrollbar {
             display: none;
         }
 
         .date-btn {
             flex-shrink: 0;
             padding: 0 10px;
+            /* 기존 16px에서 10px로 축소 */
             height: 34px;
             border-radius: var(--btn-radius);
             background: #fafafa;
@@ -765,7 +748,6 @@
             font-weight: 800;
             border: 1.5px solid #eee;
             cursor: pointer;
-            white-space: nowrap;
         }
 
         .date-btn.active {
@@ -3214,44 +3196,20 @@
             const activeFilter = activeBtn ? activeBtn.dataset.date : (uniqueFilters.length > 0 ? uniqueFilters[0] : null);
 
             filterArea.innerHTML = '';
-            
-            const line1 = document.createElement('div');
-            line1.className = 'filter-line';
-            line1.style.marginBottom = '6px';
-            
-            const line2 = document.createElement('div');
-            line2.className = 'filter-line';
-
             uniqueFilters.forEach((date, idx) => {
                 const btn = document.createElement('button');
-                const isRegular = date.includes("상시판매");
-                
                 btn.className = `date-btn ${((!activeFilter && idx === 0) || date === activeFilter) ? 'active' : ''}`;
                 btn.dataset.date = date;
-                
-                const filterData = futureData.find(p => p.matchKey === date);
-                btn.innerText = filterData ? filterData.displayDate : date;
-
-                // [유청 요청] 상시판매 박스 위아래 여백을 날짜 박스보다 15% 줄임 (높이 34px -> 약 29px)
-                if (isRegular) {
-                    btn.style.height = '29px';
-                    btn.style.fontSize = '14px';
-                    btn.style.padding = '0 8px';
-                }
-
+                btn.innerText = futureData.find(p => p.matchKey === date).displayDate;
                 btn.onclick = () => {
                     document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                     renderList(date);
+                    // [추가] 클릭한 버튼이 화면 밖으로 나갔다면 중앙으로 슬라이드 (사용자 요청)
                     btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                 };
-
-                if (isRegular) line2.appendChild(btn);
-                else line1.appendChild(btn);
+                filterArea.appendChild(btn);
             });
-
-            if (line1.children.length > 0) filterArea.appendChild(line1);
-            if (line2.children.length > 0) filterArea.appendChild(line2);
 
             if (activeFilter && uniqueFilters.includes(activeFilter)) {
                 renderList(activeFilter);
