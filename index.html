@@ -3207,7 +3207,8 @@
 
             const createBtn = (date, container) => {
                 const btn = document.createElement('button');
-                btn.className = `date-btn ${date === targetFilter ? 'active' : ''}`;
+                const isActive = (date === targetFilter);
+                btn.className = `date-btn ${isActive ? 'active' : ''}`;
                 btn.dataset.date = date;
                 btn.innerText = futureData.find(p => p.matchKey === date).displayDate;
                 btn.onclick = () => {
@@ -3217,8 +3218,15 @@
                     btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                 };
                 container.appendChild(btn);
+                
+                // 초기 로드 시 활성 버튼이 화면 밖이라면 중앙으로 스크롤
+                if (isActive) {
+                    setTimeout(() => {
+                        btn.scrollIntoView({ inline: 'center', block: 'nearest' });
+                    }, 100);
+                }
             };
-
+            
             // 렌더링
             row1Keys.forEach(k => createBtn(k, row1));
             row2Keys.forEach(k => createBtn(k, row2));
