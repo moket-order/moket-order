@@ -3592,19 +3592,36 @@
 
             // 2. [추가] 오늘 픽업 예정 상품 합산 (배달 주문 시 선택한 경우)
             if (shippingMethod === '배달주문' && extraItems && extraItems.length > 0) {
+                const usedNames = {};
                 extraItems.forEach(it => {
                     const mKey = it.matchKey || it.pickupDate || "";
-                    // 날짜 형식이 아니면(상시판매 등) 카테고리성 상품으로 취급
                     const isCategorized = !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(mKey);
+                    
+                    // 동일 이름 중복 시 뒤에 숫자를 붙여 Firebase 키 충돌 방지
+                    let baseName = it.item + " (배달합산)";
+                    let displayName = baseName;
+                    if (usedNames[baseName]) {
+                        usedNames[baseName]++;
+                        displayName = `${it.item} (배달합산-${usedNames[baseName]})`;
+                    } else {
+                        usedNames[baseName] = 1;
+                    }
 
                     allItems.push({
-                        name: it.item + " (픽업합산)",
+                        name: displayName,
                         qty: it.qty,
                         price: parseInt(it.price || 0),
                         subtotal: parseInt(it.total || 0),
                         date: mKey,
                         isCategorized: isCategorized,
-                        isExtra: true
+                        isExtra: true,
+                        // 원본 행 업데이트를 위한 메타 데이터
+                        originalData: {
+                            timestamp: it.timestamp,
+                            name: it.name,
+                            item: it.item,
+                            phone: it.phone || phone
+                        }
                     });
                 });
             }
@@ -3876,7 +3893,21 @@
                     redirect: 'follow',
                     body: JSON.stringify(payload)
                 }).then(res => res.json())
-                    .then(res => console.log("GAS 동기화 결과:", res))
+                    .then(res => {
+                        console.log("GAS 동기화 결과:", res);
+                        // [추가] 픽업 합산된 항목들의 원본 행 상태 변경 (배달합산 처리)
+                        allItems.forEach(it => {
+                            if (it.isExtra && it.originalData) {
+                                fetch(API_URL, {
+                                    method: 'POST',
+                                    body: JSON.stringify({
+                                        header: 'combine',
+                                        ...it.originalData
+                                    })
+                                }).then(r => r.json()).then(r => console.log("픽업 원본 행 합산 처리 완료:", r));
+                            }
+                        });
+                    })
                     .catch(err => console.error("GAS 동기화 실패:", err));
 
                 isHistoryProcessing = false;
