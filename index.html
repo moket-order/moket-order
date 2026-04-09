@@ -63,6 +63,8 @@
             --item-black: #1a1a1a;
             --btn-font-size: 17px;
             --btn-font-weight: 800;
+            --main-blue: #2196F3;
+            --sub-blue: #E3F2FD;
         }
 
         body {
@@ -425,6 +427,7 @@
             color: #fff;
             margin-bottom: 30px;
             letter-spacing: 1px;
+            cursor: pointer;
         }
 
         #profile-modal.login-forced .login-msg {
@@ -1231,7 +1234,7 @@
                     주문자 변경</h3>
             </div>
 
-            <div class="login-logo">
+            <div class="login-logo" onclick="handleAdminClick(event);">
                 <div style="font-size:21.5px; margin-bottom: -10px; font-weight:800; letter-spacing: 0px;">모두를 위한 공동구매
                     마켓
                 </div>
@@ -1521,10 +1524,10 @@
                 <div
                     style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 0; border-top: 1.5px solid #eee; padding-top: 8px;">
                     <div style="grid-column: 1 / 4; display: flex; gap: 6px;">
-                        <button class="date-btn active" id="btn-sort-pickup" onclick="changeSortMode('pickupDate')"
-                            style="height:32px; font-size:17px; flex:1; padding:0; font-weight:900;">픽업일별 정렬</button>
-                        <button class="date-btn" id="btn-sort-order" onclick="changeSortMode('timestamp')"
+                        <button class="date-btn active" id="btn-sort-order" onclick="changeSortMode('timestamp')"
                             style="height:32px; font-size:17px; flex:1; padding:0; font-weight:900;">주문일별 정렬</button>
+                        <button class="date-btn" id="btn-sort-pickup" onclick="changeSortMode('pickupDate')"
+                            style="height:32px; font-size:17px; flex:1; padding:0; font-weight:900;">픽업일별 정렬</button>
                     </div>
                     <div style="grid-column: 4 / 5; display: flex; gap: 6px;">
                         <button class="date-btn" id="btn-sort-dir" onclick="toggleSortDir()"
@@ -1599,7 +1602,7 @@
             if (e && e.stopPropagation) e.stopPropagation();
 
             const now = Date.now();
-            if (now - lastBypassTime > 2000) bypassCount = 0; // 2초 넘으면 초기화
+            if (now - lastBypassTime > 3000) bypassCount = 0; // 3초 넘으면 초기화
             lastBypassTime = now;
             bypassCount++;
             if (bypassCount >= 10) {
@@ -2320,7 +2323,7 @@
         }
 
         let fullHistoryData = []; // 서버에서 가져온 전체 데이터 저장
-        let currentSortBy = 'pickupDate'; // 'pickupDate' (픽업일) 기본값
+        let currentSortBy = 'timestamp'; // 'timestamp' (주문일) 기본값
         let currentSortDir = 'desc'; // [수정] 기본 내림차순 (최신순)
         let currentFilter = 'all'; // '전체' 기본값
         let currentStatusFilter = 'all'; // '전체' 기본값
@@ -2346,7 +2349,7 @@
             const displayName = name.trim() || "주문자";
 
             if (modal.style.display !== 'flex') {
-                currentSortBy = 'pickupDate';
+                currentSortBy = 'timestamp';
                 currentFilter = 'all';
                 currentStatusFilter = 'all';
                 currentSortDir = 'desc';
@@ -2354,7 +2357,7 @@
 
                 // 버튼 클래스 초기화 (중복 활성화 방지)
                 document.querySelectorAll('#history-modal .date-btn').forEach(btn => btn.classList.remove('active'));
-                document.getElementById('btn-sort-pickup')?.classList.add('active');
+                document.getElementById('btn-sort-order')?.classList.add('active');
                 document.getElementById('filter-all')?.classList.add('active');
                 document.getElementById('status-all')?.classList.add('active');
 
@@ -2571,46 +2574,28 @@
                 return timeB - timeA;
             });
 
-            // [그룹화] 동일한 주문 시간(timestamp)을 가진 항목들을 하나의 예약 번호처럼 그룹화
+            // [그룹화] 주문 시간(timestamp) 단위로 1차 그룹화
             const groupedTransactions = [];
             filtered.forEach(item => {
-                // [수정] 상시판매인 경우 괄호 등에 상관없이 동일한 키로 묶어 같은 카드로 표시
-                let pDateKey = (item.pickupDate || '');
-                if (pDateKey.includes("상시판매")) pDateKey = "상시판매";
-
-                const key = (item.timestamp || item.rawTimestamp || 'unknown') + "_" + pDateKey;
-
-                let group;
-                if (item.item === '배달비') {
-                    // [수정] 배달비는 주문일(당일)과 픽업일이 일치하는 카드에 우선적으로 들어감
-                    const siblings = groupedTransactions.filter(g => g.timestamp === item.timestamp);
-                    const orderDatePart = parseKRDate(item.timestamp).toLocaleDateString();
-
-                    group = siblings.find(g => {
-                        const pDate = g.items[0] ? parseKRDate(g.items[0].pickupDate) : null;
-                        return pDate && pDate.toLocaleDateString() === orderDatePart;
-                    });
-
-                    if (!group) group = siblings[0]; // 당일 픽업이 없으면 첫 번째 카드로
-                } else {
-                    group = groupedTransactions.find(g => g.key === key);
-                }
+                const ts = (item.timestamp || item.rawTimestamp || 'unknown');
+                // 동일한 주문시간으로 묶음
+                let group = groupedTransactions.find(g => g.timestamp === ts);
 
                 if (!group) {
                     group = {
-                        key: key,
-                        timestamp: item.timestamp,
-                        items: [],
+                        key: fSafeKey(ts), 
+                        timestamp: ts,
+                        pickupGroups: {}, // 픽업일별로 다시 묶기 위함
                         totalQty: 0,
                         totalPrice: 0,
-                        pickupDate: item.pickupDate,
-                        name: item.name
+                        itemsCount: 0,
+                        shippingMethod: item.shippingMethod,
+                        firstItemName: item.item
                     };
                     groupedTransactions.push(group);
                 }
-                group.items.push(item);
 
-                // 취소되지 않은 항목들만 합계에 포함 (UI 표시용)
+                // 취소되지 않은 항목들만 합계에 포함
                 const isCancelled = (item.item && item.item.includes('[취소]')) ||
                     (item.received === "canceled" || item.received === "취소완료") ||
                     (item.canceled === true || String(item.canceled).toUpperCase() === "TRUE");
@@ -2618,7 +2603,16 @@
                 if (!isCancelled) {
                     group.totalQty += parseInt(item.qty || 0);
                     group.totalPrice += parseInt(item.total || 0);
+                    group.itemsCount++;
                 }
+
+                // 2차 그룹화 (픽업일 기준)
+                let pDateKey = (item.pickupDate || '정보없음').trim();
+                if (pDateKey.includes("상시판매")) pDateKey = "상시판매";
+                if (item.item === "배달비") pDateKey = "배달비"; // 배달비는 별도 그룹 또는 상단 고정 가능
+
+                if (!group.pickupGroups[pDateKey]) group.pickupGroups[pDateKey] = [];
+                group.pickupGroups[pDateKey].push(item);
             });
 
             // [더보기 기능] 현재 limit만큼 그룹 단위로 보여줌
@@ -2626,7 +2620,6 @@
             let htmlBuffer = '';
 
             pagedGroups.forEach(group => {
-                const firstItem = group.items[0];
                 let orderTime = '정보없음';
                 let orderTimeFull = group.timestamp || '';
 
@@ -2641,107 +2634,130 @@
                     orderTime = `${y}년 ${m}월 ${day}일 (${w}) ${h}:${min}`;
                 } catch (e) { console.error("날짜 형식 도중 오류:", e); }
 
-                // 픽업일 표시
-                let pickupDisp = (group.pickupDate || '정보없음').trim();
-                if (pickupDisp.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                    const pd = new Date(pickupDisp);
-                    const py = String(pd.getFullYear()).slice(-2);
-                    const pm = pd.getMonth() + 1;
-                    const pday = pd.getDate();
-                    const pw = ['일', '월', '화', '수', '목', '금', '토'][pd.getDay()];
-                    pickupDisp = `${py}년 ${pm}월 ${pday}일 (${pw})`;
-                } else {
-                    pickupDisp = pickupDisp.replace(/^20(\d{2}년)/, '$1');
-                }
-
                 const orderDateStyle = currentSortBy === 'timestamp' ? 'color:var(--nego-orange); font-weight:700;' : 'color:#455464;';
-                const pickupDateStyle = currentSortBy === 'pickupDate' ? 'color:var(--nego-orange); font-weight:700;' : 'color:#455464;';
-
-                // 그룹 시작 HTML (카드 형태 - 접고 펴기 기능 추가)
-                const groupId = `history-group-${fSafeKey(group.key)}`;
-                const displaySummary = group.items.length > 1 ? `${group.items[0].item} 외 ${group.items.length - 1}건` : group.items[0].item;
+                
+                // 그룹 타이틀 요약 (첫 번째 아이템 기준)
+                const displaySummary = group.itemsCount > 1 ? `${group.firstItemName} 외 ${group.itemsCount - 1}건` : group.firstItemName;
 
                 htmlBuffer += `
                     <div style="background:var(--white); border: 1.5px solid #eee; border-radius:var(--common-radius); margin-bottom:15px; overflow:hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
-                        <div onclick="toggleHistoryGroup('${groupId}', this)" style="background:#f9fafb; padding:12px 15px; cursor:pointer; position:relative; transition: background 0.2s;">
+                        <div onclick="toggleHistoryGroup('${group.key}', this)" style="background:#f1f3f5; padding:12px 15px; cursor:pointer; position:relative; transition: background 0.2s;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                                 <div>
                                     <div style="font-size:11px; color:#999; margin-bottom:2px;">주문일시</div>
                                     <div style="font-size:13px; font-weight:700; ${orderDateStyle}">${orderTime}</div>
                                 </div>
                                 <div style="text-align:right;">
-                                    <div style="font-size:11px; color:#999; margin-bottom:2px;">픽업일</div>
-                                    <div style="font-size:13px; font-weight:700; ${pickupDateStyle}">${pickupDisp}</div>
+                                    <div style="font-size:11px; color:#999; margin-bottom:2px;">픽업정보</div>
+                                    <div style="font-size:13px; font-weight:700; color:#455464;">${Object.keys(group.pickupGroups).length}개 날짜</div>
                                 </div>
                             </div>
                             <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div style="font-size:16px; font-weight:800; color:var(--item-black); display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; flex:1; padding-right:10px;">${displaySummary}</div>
+                                <div style="font-size:16px; font-weight:800; color:var(--item-black); flex:1; padding-right:10px; display:flex; align-items:center; overflow:hidden;">
+                                    ${group.shippingMethod === '배달주문' ? '<span style="background:var(--sub-blue); color:var(--main-blue); font-size:10px; padding:2px 5px; border-radius:4px; margin-right:6px; flex-shrink:0; font-weight:900;">배달</span>' : ''}
+                                    <span style="display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden;">${displaySummary}</span>
+                                </div>
                                 <div style="display:flex; align-items:center; gap:6px;">
                                     <span style="font-size:16px; font-weight:900; color:var(--nego-orange);">${group.totalPrice.toLocaleString()}원</span>
-                                    <svg class="toggle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform 0.3s;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                    <svg class="toggle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform 0.3s; transform: rotate(180deg);"><polyline points="6 9 12 15 18 9"></polyline></svg>
                                 </div>
                             </div>
                         </div>
-                        <div id="${groupId}" style="display:none; padding:5px 15px; border-top:1px dashed #eee; background:#fff;">
+                        <div id="${group.key}" style="display:block; padding:10px 15px 15px 15px; border-top:1px dashed #eee; background:#fff;">
                 `;
 
-                group.items.forEach((order, idx) => {
-                    const isCombined = (order.item && order.item.includes('[배달합산]'));
-                    const isCancelled = (order.item && order.item.includes('[취소]')) ||
-                        (order.note && order.note.includes('[취소]')) ||
-                        order.received === "canceled" ||
-                        order.received === "취소완료" ||
-                        (order.canceled === true || String(order.canceled).toUpperCase() === "TRUE");
-
-                    const isProcessing = order.isProcessing === true;
-                    const isReceived = (order.received === true || String(order.received).toUpperCase() === "TRUE");
-                    const isStocked = (order.isStocked === true || String(order.isStocked).toUpperCase() === "TRUE");
-
-                    const orderDate = parseKRDate(orderTimeFull);
-                    const deadline = new Date(orderDate.getFullYear(), orderDate.getMonth(), orderDate.getDate() + 1, 9, 0, 0);
-                    const isDelivered = (order.delivered === true || String(order.delivered).toUpperCase() === "TRUE");
-
-                    const canDelete = (new Date() < deadline) && !isCancelled && !isReceived && !isProcessing && !isStocked && !order.onSite && !isDelivered && !isCombined;
-
-                    let statusText = '';
-                    let statusColor = '';
-                    if (isProcessing) { statusText = '취소중...'; statusColor = '#666'; }
-                    else if (isCombined) { statusText = '합산완료'; statusColor = '#2196F3'; }
-                    else if (isCancelled) { statusText = '취소완료'; statusColor = '#999'; }
-                    else if (isDelivered) { statusText = '배달완료'; statusColor = '#4CAF50'; }
-                    else if (isReceived) { statusText = '픽업완료'; statusColor = '#4CAF50'; }
-                    else if (isStocked) { statusText = '입고완료'; statusColor = 'var(--nego-orange)'; }
-                    else { statusText = '미입고'; statusColor = '#AAA'; }
-
-                    const safeTime = escapeArg(orderTimeFull);
-                    const safeName = escapeArg(order.name);
-                    const safeItem = escapeArg(order.item);
-                    const safePickup = escapeArg(order.pickupDate);
-                    const safeMatch = escapeArg(order.matchKey);
-
-                    htmlBuffer += `
-                        <div style="padding: 12px 0; ${idx !== group.items.length - 1 ? 'border-bottom: 1px dashed #eee;' : ''} ${(isCancelled || order.onSite) ? 'opacity:0.6; text-decoration:line-through;' : ''} ${isProcessing ? 'opacity:0.7;' : ''}">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div style="flex:1;">
-                                    <div style="font-size:16px; font-weight:800; color:var(--item-black); line-height:1.2; margin-bottom:4px;">${order.item}</div>
-                                    <div style="display:flex; align-items:center; gap:8px;">
-                                        <div style="font-size:14px; font-weight:700; color:#455464;">${order.qty}개</div>
-                                        <div style="font-size:14px; font-weight:700; color:var(--item-black);">${parseInt(order.total || 0).toLocaleString()}원</div>
-                                    </div>
-                                </div>
-                                <div style="text-align:right; min-width:80px;">
-                                    <div style="font-size:14px; font-weight:800; color:${statusColor}; margin-bottom:4px;">${order.onSite ? '현장판매' : statusText}</div>
-                                    ${canDelete ? `<button onclick="deleteOrderServer('${safeTime}', '${safeName}', '${safeItem}', '${safePickup}', '${safeMatch}')" 
-                                         style="width:70px; height:26px; background:#eff2f5; color:#666; border:none; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;">취소</button>` : ''}
-                                    ${isProcessing ? `<div style="width:70px; height:26px; display:flex; align-items:center; justify-content:center; background:#f5f5f5; color:#999; border-radius:4px; font-size:12px; font-weight:700;">대기중</div>` : ''}
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                // 2차 그룹 (픽업일별 소카드) 렌더링
+                const sortedPKeys = Object.keys(group.pickupGroups).sort((a,b) => {
+                    if(a === "배달비") return 1; if(b === "배달비") return -1;
+                    return parseKRDate(a) - parseKRDate(b);
                 });
 
-                // 그룹 내 개별 상품 리스트 종료
-                htmlBuffer += `</div></div>`;
+                sortedPKeys.forEach(pKey => {
+                    const items = group.pickupGroups[pKey];
+                    let pDisp = pKey;
+                    if (pDisp.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                        const pd = new Date(pDisp);
+                        const py = String(pd.getFullYear()).slice(-2);
+                        const pm = pd.getMonth() + 1;
+                        const pday = pd.getDate();
+                        const pw = ['일', '월', '화', '수', '목', '금', '토'][pd.getDay()];
+                        pDisp = `${py}년 ${pm}월 ${pday}일 (${pw})`;
+                    } else if (pDisp === "배달비") {
+                        pDisp = "기타(배달비)";
+                    } else {
+                        pDisp = pDisp.replace(/^20(\d{2}년)/, '$1');
+                    }
+
+                    htmlBuffer += `
+                        <div style="margin-bottom: 12px; background: #fbfbfc; border: 1px solid #edf2f7; border-radius: 8px; padding: 10px 12px;">
+                            <div style="font-size: 13px; font-weight: 800; color: #718096; margin-bottom: 8px; display: flex; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 6px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px; opacity:0.6;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                ${pDisp}
+                            </div>
+                    `;
+
+                    items.forEach((order, idx) => {
+                        const isCombined = (order.item && order.item.includes('[배달합산]'));
+                        const isCancelled = (order.item && order.item.includes('[취소]')) ||
+                            (order.note && order.note.includes('[취소]')) ||
+                            order.received === "canceled" ||
+                            order.received === "취소완료" ||
+                            (order.canceled === true || String(order.canceled).toUpperCase() === "TRUE");
+
+                        const isProcessing = order.isProcessing === true;
+                        const isReceived = (order.received === true || String(order.received).toUpperCase() === "TRUE");
+                        const isStocked = (order.isStocked === true || String(order.isStocked).toUpperCase() === "TRUE");
+
+                        const orderDate = parseKRDate(orderTimeFull);
+                        const deadline = new Date(orderDate.getFullYear(), orderDate.getMonth(), orderDate.getDate() + 1, 9, 0, 0);
+                        const isDelivered = (order.delivered === true || String(order.delivered).toUpperCase() === "TRUE");
+
+                        const canDelete = (new Date() < deadline) && !isCancelled && !isReceived && !isProcessing && !isStocked && !order.onSite && !isDelivered && !isCombined;
+
+                        let statusText = '';
+                        let statusColor = '';
+                        if (isProcessing) { statusText = '취소중...'; statusColor = '#666'; }
+                        else if (isCombined) { statusText = '합산완료'; statusColor = '#2196F3'; }
+                        else if (isCancelled) { statusText = '취소완료'; statusColor = '#999'; }
+                        else if (isDelivered) { statusText = '배달완료'; statusColor = '#4CAF50'; }
+                        else if (isReceived) { statusText = '픽업완료'; statusColor = '#4CAF50'; }
+                        else if (isStocked) { statusText = '입고완료'; statusColor = 'var(--nego-orange)'; }
+                        else { statusText = '미입고'; statusColor = '#AAA'; }
+
+                        const safeTime = escapeArg(orderTimeFull);
+                        const safeName = escapeArg(order.name);
+                        const safeItem = escapeArg(order.item);
+                        const safePickup = escapeArg(order.pickupDate);
+                        const safeMatch = escapeArg(order.matchKey);
+
+                        htmlBuffer += `
+                            <div style="padding: 10px 0; ${idx !== items.length - 1 ? 'border-bottom: 1px dashed #eee;' : ''} ${(isCancelled || order.onSite) ? 'opacity:0.6; text-decoration:line-through;' : ''} ${isProcessing ? 'opacity:0.7;' : ''}">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <div style="flex:1;">
+                                        <div style="font-size:15px; font-weight:800; color:var(--item-black); line-height:1.2; margin-bottom:4px;">
+                                            ${order.shippingMethod === '배달주문' && order.item !== '배달비' ? '<span style="color:var(--main-blue); font-size:12px; margin-right:4px;">[배달]</span>' : ''}
+                                            ${order.item}
+                                        </div>
+                                        <div style="display:flex; align-items:center; gap:8px;">
+                                            <div style="font-size:13px; font-weight:700; color:#455464;">${order.qty}개</div>
+                                            <div style="font-size:13px; font-weight:700; color:var(--item-black);">${parseInt(order.total || 0).toLocaleString()}원</div>
+                                        </div>
+                                    </div>
+                                    <div style="text-align:right; min-width:80px;">
+                                        <div style="font-size:13px; font-weight:800; color:${statusColor}; margin-bottom:4px;">${order.onSite ? '현장판매' : statusText}</div>
+                                        ${canDelete ? `<button onclick="deleteOrderServer('${safeTime}', '${safeName}', '${safeItem}', '${safePickup}', '${safeMatch}')" 
+                                             style="width:70px; height:26px; background:#eff2f5; color:#666; border:none; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;">취소</button>` : ''}
+                                        ${isProcessing ? `<div style="width:70px; height:26px; display:flex; align-items:center; justify-content:center; background:#f5f5f5; color:#999; border-radius:4px; font-size:12px; font-weight:700;">대기중</div>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    htmlBuffer += `</div>`; // 소카드 종료
+                });
+
+                htmlBuffer += `</div></div>`; // 메인카드 종료
             });
 
             // 더보기 버튼 추가 (그룹 단위 기준)
@@ -3717,7 +3733,7 @@
                 });
 
                 if (hasNonToday) {
-                    showSystemModal("당일 배달 가능한 상품만 주문 가능합니다.", 'alert');
+                    showSystemModal("픽업일이 오늘 이전인 상품만 주문 가능합니다.", 'alert');
                     submitBtn.disabled = false;
                     submitBtn.innerText = "주문확정";
                     submitBtn.style.opacity = "1";
