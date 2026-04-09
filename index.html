@@ -756,11 +756,14 @@
             border: 1.5px solid #eee;
             cursor: pointer;
         }
+
         /* 상시판매 카테고리 줄만 여백을 더 줄이는 경우 */
-#date-filters-categories .date-btn {
-    padding: 0 8px; /* 버튼 내부 좌우 여백을 6px로 축소 */
-    font-size: 17px; /* 글씨가 길면 약간 줄이는 것도 방법입니다 */
-}
+        #date-filters-categories .date-btn {
+            padding: 0 8px;
+            /* 버튼 내부 좌우 여백을 6px로 축소 */
+            font-size: 17px;
+            /* 글씨가 길면 약간 줄이는 것도 방법입니다 */
+        }
 
         .date-btn.active {
             background: var(--moket-green);
@@ -1296,6 +1299,13 @@
                 style="display:none; margin-top:8px; background:white; border:1.5px solid #ff4d4d; color:#ff4d4d; font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">🚫
                 배달 버튼 끄기 (비활성화)</button>
 
+            <button id="ADMIN_LOGIN_ON" onclick="adminToggleLoginEntry(true)"
+                style="display:none; margin-top:15px; background:white; border:1.5px solid var(--moket-green); color:var(--moket-green); font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">🔒
+                전체 로그인 화면 강제하기</button>
+            <button id="ADMIN_LOGIN_OFF" onclick="adminToggleLoginEntry(false)"
+                style="display:none; margin-top:8px; background:white; border:1.5px solid #ff4d4d; color:#ff4d4d; font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">🔓
+                로그인 화면 끄기 (수동입력 모드)</button>
+
 
             <button id="btn-unlink-kakao" onclick="unlinkKakao()"
                 style="display:none; margin-top:10px; background:none; border:1px solid #ddd; color:#999; font-size:12px; padding:8px; border-radius:var(--btn-radius); width:100%; cursor:pointer;">카카오
@@ -1365,7 +1375,8 @@
     <div class="sticky-header-group">
         <div class="date-section-title">픽업일별 상품목록</div>
         <div class="date-filter-container" id="date-filters"></div>
-        <div class="date-filter-container" id="date-filters-categories" style="display:none; border-top: 1px solid #f9f9f9;"></div>
+        <div class="date-filter-container" id="date-filters-categories"
+            style="display:none; border-top: 1px solid #f9f9f9;"></div>
     </div>
     <div class="container" id="product-list"></div>
     <div id="detail-overlay" class="modal-overlay" onclick="if(event.target === this) closeModal('detail-overlay')">
@@ -1505,7 +1516,7 @@
                     <button class="date-btn active" id="status-all" onclick="filterStatus('all')"
                         style="height:32px; font-size:17px; padding:0; font-weight:900;">전체</button>
                     <button class="date-btn" id="status-stocked" onclick="filterStatus('stocked')"
-                        style="height:32px; font-size:17px; padding:0; font-weight:900;">입고</button>
+                        style="height:32px; font-size:17px; padding:0; font-weight:900;">입고 / 배달</button>
                     <button class="date-btn" id="status-pickup" onclick="filterStatus('pickup')"
                         style="height:32px; font-size:17px; padding:0; font-weight:900;">픽업</button>
                     <button class="date-btn" id="status-cancel" onclick="filterStatus('cancel')"
@@ -1518,21 +1529,10 @@
                         style="height:32px; font-size:17px; padding:0; font-weight:800;">1주일</button>
                     <button class="date-btn" id="filter-2weeks" onclick="filterHistory('2weeks')"
                         style="height:32px; font-size:17px; padding:0; font-weight:800;">2주일</button>
-                    <button class="date-btn" id="filter-month" onclick="filterHistory('month')"
-                        style="height:32px; font-size:17px; padding:0; font-weight:800;">1개월</button>
-                </div>
-                <div
-                    style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 0; border-top: 1.5px solid #eee; padding-top: 8px;">
-                    <div style="grid-column: 1 / 4; display: flex; gap: 6px;">
-                        <button class="date-btn active" id="btn-sort-order" onclick="changeSortMode('timestamp')"
-                            style="height:32px; font-size:17px; flex:1; padding:0; font-weight:900;">주문일별 정렬</button>
-                        <button class="date-btn" id="btn-sort-pickup" onclick="changeSortMode('pickupDate')"
-                            style="height:32px; font-size:17px; flex:1; padding:0; font-weight:900;">픽업일별 정렬</button>
-                    </div>
-                    <div style="grid-column: 4 / 5; display: flex; gap: 6px;">
+                    <div style="display:flex; gap:4px;">
                         <button class="date-btn" id="btn-sort-dir" onclick="toggleSortDir()"
                             style="height: 32px; flex:1; padding: 0; background: #fafafa; border: 1.5px solid #eee; border-radius: var(--btn-radius); color: #455464; display: flex; align-items: center; justify-content: center; cursor: pointer; outline: none;">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="4" y1="6" x2="13" y2="6"></line>
                                 <line x1="4" y1="10" x2="11" y2="10"></line>
@@ -1544,13 +1544,22 @@
                         </button>
                         <button class="date-btn" id="btn-refresh-history" onclick="openHistoryModal(true)"
                             style="height: 32px; flex:1; padding: 0; background: #fafafa; border: 1.5px solid #eee; border-radius: var(--btn-radius); color: #455464; display: flex; align-items: center; justify-content: center; cursor: pointer; outline: none;">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="23 4 23 10 17 10"></polyline>
                                 <polyline points="1 20 1 14 7 14"></polyline>
                                 <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                             </svg>
                         </button>
+                    </div>
+                </div>
+                <div id="sort-controls-row"
+                    style="display: none; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 0; border-top: 1.5px solid #eee; padding-top: 8px;">
+                    <div style="grid-column: 1 / 4; display: flex; gap: 6px;">
+                        <button class="date-btn active" id="btn-sort-order" onclick="changeSortMode('timestamp')"
+                            style="height:32px; font-size:17px; flex:1; padding:0; font-weight:900;">주문일별 정렬</button>
+                        <button class="date-btn" id="btn-sort-pickup" onclick="changeSortMode('pickupDate')"
+                            style="height:32px; font-size:17px; flex:1; padding:0; font-weight:900;">픽업일별 정렬</button>
                     </div>
                 </div>
             </div>
@@ -1621,10 +1630,14 @@
                 // [신규] 관리자 메뉴 모든 버튼 노출
                 const delOn = document.getElementById('ADMIN_DELIVERY_ON');
                 const delOff = document.getElementById('ADMIN_DELIVERY_OFF');
+                const logOn = document.getElementById('ADMIN_LOGIN_ON');
+                const logOff = document.getElementById('ADMIN_LOGIN_OFF');
                 const unlinkBtn = document.getElementById('btn-unlink-kakao');
 
                 if (delOn) delOn.style.setProperty('display', 'block', 'important');
                 if (delOff) delOff.style.setProperty('display', 'block', 'important');
+                if (logOn) logOn.style.setProperty('display', 'block', 'important');
+                if (logOff) logOff.style.setProperty('display', 'block', 'important');
                 if (unlinkBtn) unlinkBtn.style.setProperty('display', 'block', 'important');
 
                 bypassCount = 0;
@@ -1641,6 +1654,44 @@
                 isDeliveryEnabled = (status === true);
                 updateDeliveryUI();
             } catch (e) { console.error("상태 로드 실패:", e); }
+        }
+
+        let isLoginEntryEnabled = true; // 기본값은 로그인 강제
+        async function fetchLoginEntryStatus() {
+            try {
+                const res = await fetch(FIREBASE_DB_URL + "login_entry_enabled.json");
+                const status = await res.json();
+                // null이면 데이터가 없는 것이므로 기본값 true 유지
+                if (status !== null) isLoginEntryEnabled = (status === true);
+
+                // 로그인 화면 강제 여부에 따라 초기 모달 제어
+                const kakaoInfo = localStorage.getItem('kakao_original_name');
+                if (!kakaoInfo && isLoginEntryEnabled) {
+                    const modal = document.getElementById('profile-modal');
+                    if (modal) {
+                        modal.classList.add('login-forced');
+                        modal.style.display = 'flex';
+                        checkScrollLock();
+                    }
+                }
+            } catch (e) { console.error("로그인 설정 로드 실패:", e); }
+        }
+
+        async function adminToggleLoginEntry(status) {
+            try {
+                showSystemModal("로그인 설정을 변경 중입니다...", 'loading');
+                const res = await fetch(FIREBASE_DB_URL + "login_entry_enabled.json", {
+                    method: 'PUT',
+                    body: JSON.stringify(status)
+                });
+                if (res.ok) {
+                    isLoginEntryEnabled = status;
+                    showSystemModal(status ? "로그인 화면이 강제되었습니다." : "로그인 화면이 해제되었습니다.\n(익명 주문 모드)", 'alert');
+                    setTimeout(() => location.reload(), 1500);
+                }
+            } catch (e) {
+                showSystemModal("변경 실패: " + e.message, 'alert');
+            }
         }
 
         function updateDeliveryUI() {
@@ -1733,7 +1784,10 @@
         }
 
         // 페이지 로드 시 상태 확인
-        window.addEventListener('load', fetchDeliveryStatus);
+        window.addEventListener('load', () => {
+            fetchDeliveryStatus();
+            fetchLoginEntryStatus();
+        });
 
         // [추가] Firebase 키에 사용할 수 없는 문자 세척 함수 (. # $ [ ] / 등 제거)
         function fSafeKey(s) {
@@ -2583,7 +2637,7 @@
 
                 if (!group) {
                     group = {
-                        key: fSafeKey(ts), 
+                        key: fSafeKey(ts),
                         timestamp: ts,
                         pickupGroups: {}, // 픽업일별로 다시 묶기 위함
                         totalQty: 0,
@@ -2635,7 +2689,7 @@
                 } catch (e) { console.error("날짜 형식 도중 오류:", e); }
 
                 const orderDateStyle = currentSortBy === 'timestamp' ? 'color:var(--nego-orange); font-weight:700;' : 'color:#455464;';
-                
+
                 // 그룹 타이틀 요약 (첫 번째 아이템 기준)
                 const displaySummary = group.itemsCount > 1 ? `${group.firstItemName} 외 ${group.itemsCount - 1}건` : group.firstItemName;
 
@@ -2667,8 +2721,8 @@
                 `;
 
                 // 2차 그룹 (픽업일별 소카드) 렌더링
-                const sortedPKeys = Object.keys(group.pickupGroups).sort((a,b) => {
-                    if(a === "배달비") return 1; if(b === "배달비") return -1;
+                const sortedPKeys = Object.keys(group.pickupGroups).sort((a, b) => {
+                    if (a === "배달비") return 1; if (b === "배달비") return -1;
                     return parseKRDate(a) - parseKRDate(b);
                 });
 
@@ -3230,7 +3284,7 @@
                 // 상시판매 카테고리 여부 체크 (날짜 형식이 아니면 카테고리)
                 const isCat = !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(date).trim());
                 const targetArea = isCat ? filterAreaCategories : filterAreaDates;
-                
+
                 if (isCat) filterAreaCategories.style.display = 'flex';
 
                 const btn = document.createElement('button');
@@ -4044,7 +4098,8 @@
 
 
 
-            // [수정] 카카오 정보(kakao_original_name)가 있으면 메인, 없으면 카카오 로그인 유도
+            // [수정] 카톡 정보 여부와 별개로 서버 설정(isLoginEntryEnabled)을 기다려서 띄움 (fetchLoginEntryStatus에서 처리)
+            /*
             const kakaoInfo = localStorage.getItem('kakao_original_name');
             if (!kakaoInfo) {
                 setTimeout(() => {
@@ -4056,6 +4111,10 @@
                     checkScrollLock();
                 }, 400);
             } else {
+                setTimeout(() => checkUnpickedOrders(), 1000);
+            }
+            */
+            if (localStorage.getItem('kakao_original_name')) {
                 setTimeout(() => checkUnpickedOrders(), 1000);
             }
 
