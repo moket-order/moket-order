@@ -2379,7 +2379,7 @@
         let fullHistoryData = []; // 서버에서 가져온 전체 데이터 저장
         let currentSortBy = 'timestamp'; // 'timestamp' (주문일) 기본값
         let currentSortDir = 'desc'; // [수정] 기본 내림차순 (최신순)
-        let currentFilter = 'all'; // '전체' 기본값
+        let currentFilter = 'week'; // '1주일' 기본값
         let currentStatusFilter = 'all'; // '전체' 기본값
 
         function toggleSortDir() {
@@ -2404,7 +2404,7 @@
 
             if (modal.style.display !== 'flex') {
                 currentSortBy = 'timestamp';
-                currentFilter = 'all';
+                currentFilter = 'week';
                 currentStatusFilter = 'all';
                 currentSortDir = 'desc';
                 currentHistoryLimit = 10;
@@ -2412,7 +2412,7 @@
                 // 버튼 클래스 초기화 (중복 활성화 방지)
                 document.querySelectorAll('#history-modal .date-btn').forEach(btn => btn.classList.remove('active'));
                 document.getElementById('btn-sort-order')?.classList.add('active');
-                document.getElementById('filter-all')?.classList.add('active');
+                document.getElementById('filter-week')?.classList.add('active');
                 document.getElementById('status-all')?.classList.add('active');
 
                 title.innerHTML = `<span class="name-badge" style="margin-right:0;">${displayName}</span><span>님의 주문내역</span>`;
@@ -3613,25 +3613,58 @@
             let totalSum = 0;
             let totalQty = 0;
 
-            // 장바구니(cart) 상태를 기준으로 확인 창 표시
+            // 장바구니(cart) 상태를 날짜별로 그룹화하여 표시
+            const grouped = {};
             for (const itemName in cart) {
                 const q = cart[itemName];
                 const product = productsData.find(p => p.name === itemName);
                 if (product && q > 0) {
-                    const sub = q * parseInt(product.price || 0);
-                    totalSum += sub;
+                    const date = product.displayDate;
+                    if (!grouped[date]) grouped[date] = [];
+                    grouped[date].push({ ...product, qty: q });
+                    totalSum += q * parseInt(product.price || 0);
                     totalQty += q;
-                    list.innerHTML += `
-                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:15px; margin-bottom:8px; border-bottom: 1px dashed #eee; padding-bottom:5px;">
-                            <span style="color:var(--item-black); font-weight:800; flex:1; padding-right:6px; word-break:keep-all; line-height:1.2; white-space: pre-wrap;">${itemName}</span>
+                }
+            }
+
+            // 날짜순으로 정렬하여 렌더링
+            const sortedDates = Object.keys(grouped).sort((a, b) => {
+                const ka = grouped[a][0].matchKey;
+                const kb = grouped[b][0].matchKey;
+                // 날짜 형식이면 날짜순, 아니면 텍스트순
+                const da = new Date(ka.replace(/\./g, '-')).getTime();
+                const db = new Date(kb.replace(/\./g, '-')).getTime();
+                if (!isNaN(da) && !isNaN(db)) return da - db;
+                return ka.localeCompare(kb);
+            });
+
+            sortedDates.forEach(date => {
+                // 날짜 그룹 박스 시작
+                let groupHtml = `
+                    <div style="background: #fbfbfc; border: 1px solid #edf2f7; border-radius: 10px; margin-bottom: 15px; overflow: hidden;">
+                        <div style="font-size:12px; font-weight:900; color:#5a67d8; background:#ebf4ff; padding:8px 12px; border-bottom:1px solid #edf2f7; display:flex; align-items:center;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px; opacity:0.7;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            ${date}
+                        </div>
+                        <div style="padding: 10px 12px 10px 12px;">
+                `;
+                
+                grouped[date].forEach((p, idx) => {
+                    const sub = p.qty * parseInt(p.price || 0);
+                    groupHtml += `
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:15px; padding: 8px 0; ${idx !== grouped[date].length - 1 ? 'border-bottom: 1px dashed #eee;' : ''}">
+                            <span style="color:var(--item-black); font-weight:800; flex:1; padding-right:10px; word-break:keep-all; line-height:1.2; white-space: pre-wrap;">${p.name}</span>
                             <div style="display:flex; align-items:center; min-width:90px; justify-content:flex-end; flex-shrink:0;">
-                                <span style="color:#455464; font-size:15px; font-weight:700; text-align:right;">${q}개</span>
+                                <span style="color:#455464; font-size:15px; font-weight:700; text-align:right;">${p.qty}개</span>
                                 <span style="color:#ccc; font-size:0.75rem; margin:0 4px;">/</span>
                                 <span style="color:var(--item-black); font-weight:800; text-align:right;">${sub.toLocaleString()}원</span>
                             </div>
                         </div>`;
-                }
-            }
+                });
+
+                groupHtml += `</div></div>`; // 그룹 박스 종료
+                list.innerHTML += groupHtml;
+            });
 
             // 하단 합계 영역
             const summary = document.getElementById('confirm-summary-area');
@@ -3786,8 +3819,10 @@
                     return dStr !== todayStr;
                 });
 
+                const days = ['일', '월', '화', '수', '목', '금', '토'];
+                const dateLabel = `${now.getMonth() + 1}월 ${now.getDate()}일 (${days[now.getDay()]})`;
                 if (hasNonToday) {
-                    showSystemModal("픽업일이 오늘 이전인 상품만 주문 가능합니다.", 'alert');
+                    showSystemModal(`픽업일이 ${dateLabel} 이전인 상품만 배달주문 가능합니다.\n주문 내용을 확인 해 주세요.`, 'alert');
                     submitBtn.disabled = false;
                     submitBtn.innerText = "주문확정";
                     submitBtn.style.opacity = "1";
