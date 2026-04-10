@@ -1494,9 +1494,9 @@
         </div>
     </div>
     <div id="system-modal" class="modal-overlay" style="z-index: 9999;">
-        <div class="modal-content" style="text-align: center; width: 85%; max-width: 350px; padding: 25px 20px;">
+        <div class="modal-content" style="text-align: center; width: 85%; max-width: 350px;">
             <div id="sys-modal-msg"
-                style="margin: 10px 0 25px; font-weight: 700; font-size: 18px; line-height: 1.5; color: var(--item-black); white-space: pre-wrap;">
+                style="font-weight: 700; color: var(--item-black);">
             </div>
             <div id="sys-modal-btns" style="display: flex; gap: 10px; justify-content: center;"></div>
         </div>
@@ -1715,7 +1715,9 @@
             }
             const addr = document.getElementById('input-address').value;
             if (!addr || addr.trim() === "") {
-                showSystemModal("배달 받으실 주소를 먼저 입력해 주세요.\n(메뉴 ➔ 주문자 변경)", "alert");
+                showSystemModal("배달 받으실 주소를 먼저 입력해 주세요.", "alert", () => {
+                    openSideModal('profile-modal');
+                });
                 return;
             }
 
@@ -1832,6 +1834,40 @@
             }
         }
 
+        // [신규] 현금영수증 라벨 변경 및 입력 포맷팅 전역 함수
+        window.updateReceiptLabel = function(text, placeholder, defaultPhone) {
+            const label = document.getElementById('receipt-input-label');
+            const input = document.getElementById('receipt-phone-input');
+            if (!label || !input) return;
+            label.innerText = text;
+            input.placeholder = placeholder;
+            if (text === '사업자번호') {
+                input.value = '';
+                input.oninput = (e) => window.formatBusinessNumber(e.target);
+            } else {
+                input.value = defaultPhone;
+                input.oninput = (e) => window.formatPhoneNumber(e.target);
+            }
+        };
+
+        window.formatBusinessNumber = function(input) {
+            let val = input.value.replace(/\D/g, "").substring(0, 10);
+            let res = "";
+            if (val.length <= 3) res = val;
+            else if (val.length <= 5) res = val.substring(0, 3) + "-" + val.substring(3);
+            else res = val.substring(0, 3) + "-" + val.substring(3, 5) + "-" + val.substring(5);
+            input.value = res;
+        };
+
+        window.formatPhoneNumber = function(input) {
+            let val = input.value.replace(/\D/g, "").substring(0, 11);
+            let res = "";
+            if (val.length <= 3) res = val;
+            else if (val.length <= 7) res = val.substring(0, 3) + "-" + val.substring(3);
+            else res = val.substring(0, 3) + "-" + val.substring(3, 7) + "-" + val.substring(7);
+            input.value = res;
+        };
+
         // [스크롤 방지]
         function checkScrollLock() {
             const modals = document.querySelectorAll('.modal-overlay');
@@ -1850,21 +1886,37 @@
         }
 
         // [시스템 모달]
-        function showSystemModal(msg, type, yesCallback, noCallback) {
+        function showSystemModal(msg, type, yesCallback, noCallback, isTight = false) {
             const modal = document.getElementById('system-modal');
             const msgDiv = document.getElementById('sys-modal-msg');
             const btnDiv = document.getElementById('sys-modal-btns');
+            const modalContent = modal.querySelector('.modal-content');
+
+            if (isTight) {
+                modalContent.style.padding = "8px 15px";
+                msgDiv.style.margin = "0 0 10px";
+                msgDiv.style.fontSize = "16px";
+                msgDiv.style.lineHeight = "1.3";
+            } else {
+                modalContent.style.padding = "25px 20px";
+                msgDiv.style.margin = "10px 0 25px";
+                msgDiv.style.fontSize = "18px";
+                msgDiv.style.lineHeight = "1.5";
+            }
 
             msgDiv.innerHTML = msg; // innerText 대신 innerHTML 사용하여 스타일 적용 허용
             msgDiv.style.textAlign = 'center'; // 전체 문구 중앙 정렬 적용
-            msgDiv.style.whiteSpace = 'pre-wrap'; // \n 줄바꿈 지원
+            msgDiv.style.whiteSpace = isTight ? 'normal' : 'pre-wrap'; // tight 모드일 땐 줄바꿈 무시 (HTML 구조 사용)
             btnDiv.innerHTML = '';
+
+            const btnHeight = isTight ? '40px' : '48px';
+            const btnFont = isTight ? '0.9rem' : '1rem';
 
             if (type === 'confirm') {
                 const btnNo = document.createElement('button');
                 btnNo.className = 'btn-common btn-close';
-                btnNo.style.height = '48px';
-                btnNo.style.fontSize = '1rem';
+                btnNo.style.height = btnHeight;
+                btnNo.style.fontSize = btnFont;
                 btnNo.innerText = '취소';
 
                 btnNo.onclick = () => {
@@ -1875,8 +1927,8 @@
 
                 const btnYes = document.createElement('button');
                 btnYes.className = 'btn-common btn-primary';
-                btnYes.style.height = '48px';
-                btnYes.style.fontSize = '1rem';
+                btnYes.style.height = btnHeight;
+                btnYes.style.fontSize = btnFont;
                 btnYes.innerText = '확인';
 
                 btnYes.onclick = async () => {
@@ -1893,8 +1945,8 @@
             } else if (type === 'alert') {
                 const btnOk = document.createElement('button');
                 btnOk.className = 'btn-common btn-primary';
-                btnOk.style.height = '48px';
-                btnOk.style.fontSize = '1rem';
+                btnOk.style.height = btnHeight;
+                btnOk.style.fontSize = btnFont;
                 btnOk.innerText = '확인';
 
                 btnOk.onclick = () => {
@@ -1904,11 +1956,10 @@
                 };
                 btnDiv.appendChild(btnOk);
             } else if (type === 'loading') {
-                // [수정] 주문 확인 중 모달에도 확인 버튼 추가
                 const btnOk = document.createElement('button');
                 btnOk.className = 'btn-common btn-primary';
-                btnOk.style.height = '48px';
-                btnOk.style.fontSize = '1rem';
+                btnOk.style.height = btnHeight;
+                btnOk.style.fontSize = btnFont;
                 btnOk.innerText = '확인';
 
                 btnOk.onclick = () => {
@@ -1918,9 +1969,7 @@
                 btnDiv.appendChild(btnOk);
             }
 
-            // 버튼 영역 항상 노출
             btnDiv.style.display = 'flex';
-
             modal.style.display = 'flex';
             checkScrollLock();
         }
@@ -3857,41 +3906,127 @@
                 }
             }
 
-            // [추가] 배달 주문 시 최소 금액(3만원) 체크 및 배달비 안내
-            const totalSum = allItems.reduce((acc, it) => acc + it.subtotal, 0);
-            if (shippingMethod === '배달주문' && totalSum < 30000) {
-                const msg = `당일 배송 주문 금액이 30,000원 미만일 경우 3,000원의 배달비가 발생합니다.\n(현재 주문금액: ${totalSum.toLocaleString()}원)\n\n배달비를 추가하여 주문 하시겠습니까?`;
-                showSystemModal(msg, 'confirm', () => {
-                    // 확인 클릭 시 배달비 항목 추가 후 진행
-                    const firstItem = allItems[0];
-                    allItems.push({
-                        name: "배달비",
-                        qty: 1,
-                        price: 3000,
-                        subtotal: 3000,
-                        date: firstItem ? firstItem.date : "",
-                        isCategorized: firstItem ? firstItem.isCategorized : false
+            // [수정] 배달 주문 시 프로세스: 배달비 체크 -> 입금 안내 및 현금영수증 선택 -> 실행
+            if (shippingMethod === '배달주문') {
+                const currentTotal = allItems.reduce((acc, it) => acc + it.subtotal, 0);
+                if (currentTotal < 30000) {
+                    const msg = `배달주문 금액이 30,000원 미만일 경우 3,000원의 배달비가 발생합니다.\n(현재 주문금액: ${currentTotal.toLocaleString()}원)\n\n배달비를 추가하여 주문 하시겠습니까?`;
+                    showSystemModal(msg, 'confirm', () => {
+                        const firstItem = allItems[0];
+                        allItems.push({
+                            name: "배달비",
+                            qty: 1,
+                            price: 3000,
+                            subtotal: 3000,
+                            date: firstItem ? firstItem.date : "",
+                            isCategorized: firstItem ? firstItem.isCategorized : false
+                        });
+                        showPaymentGuide(allItems, name, phone, shippingMethod);
+                        return true;
+                    }, () => {
+                        isHistoryProcessing = false;
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerText = "주문확정";
+                            submitBtn.style.opacity = "1";
+                        }
                     });
-                    executeOrder(allItems, name, phone, shippingMethod);
-                    return true; // loading 모달로 전환되므로 닫지 않음
-                }, () => {
-                    // 취소 클릭 시 상태 초기화
-                    isHistoryProcessing = false;
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.innerText = "주문확정";
-                        submitBtn.style.opacity = "1";
-                    }
-                });
+                } else {
+                    showPaymentGuide(allItems, name, phone, shippingMethod);
+                }
                 return;
             }
 
-            // 3만원 이상이거나 매장픽업인 경우 바로 진행
             executeOrder(allItems, name, phone, shippingMethod);
         }
 
+        // [신규] 배달 주문 전용 입금 안내 및 현금영수증 모달
+        function showPaymentGuide(allItems, name, phone, shippingMethod) {
+            const total = allItems.reduce((acc, it) => acc + it.subtotal, 0);
+            const msg = `
+                <style>
+                    .receipt-radio {
+                        appearance: none; -webkit-appearance: none;
+                        width: 20px; height: 20px;
+                        border: 2px solid #ccc; border-radius: 4px;
+                        background: #fff; display: flex; align-items: center; justify-content: center;
+                        cursor: pointer; margin: 0; position: relative; transition: all 0.2s;
+                    }
+                    .receipt-radio:checked {
+                        background: #007bff; border-color: #007bff;
+                    }
+                    .receipt-radio:checked::after {
+                        content: '✔'; color: #fff; font-size: 13px; font-weight: bold;
+                    }
+                </style>
+                <div style="text-align:center; display:flex; flex-direction:column; gap:20px; padding-top:10px;">
+                    <div style="background:#fff9f2; padding:12px 6px; border-radius:10px; border:1px solid #ffe8cc; display:flex; flex-direction:column; gap:8px;">
+                        <div style="font-size:18px; font-weight:800; line-height:1.2;">
+                            <span style="color:var(--item-black);">토스뱅크</span><br>
+                            <span style="color:var(--nego-orange); font-size:20px;">1002-4634-4656</span>
+                        </div>
+                        <div style="font-size:16px; color:#999; font-weight:700;">예금주 : 강*민(모켓(MOKET))</div>
+                        <div style="font-size:30px; color:var(--item-black); font-weight:900; line-height:1; margin:12px 0 6px 0;">${total.toLocaleString()}원</div>
+                        <div style="font-size:15px; color:var(--nego-orange); font-weight:800;">오후 12시 전까지 입금해 주세요.</div>
+                        <div style="font-size:11px; font-weight:700; color:#455464; letter-spacing:-0.04em; white-space:nowrap;">
+                            (<span style="color:var(--nego-orange);">오후 12시</span>까지 입금된 건에 한하여 <span style="color:var(--nego-orange);">주문 확정 및 배달</span>이 가능합니다.)
+                        </div>
+                    </div>
+                    <div style="background:#fdfdfd; border:1.5px solid #eee; border-radius:12px; padding:15px 12px; display:flex; flex-direction:column; gap:16px; text-align:center;">
+                        <div>
+                            <div style="font-weight:900; font-size:17px; margin-bottom:10px; color:var(--item-black); line-height:1.2;">현금영수증 발행 여부</div>
+                            <div style="display:flex; gap:12px; margin-top:0;">
+                                <label style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px; background:#f8f9fa; padding:10px 0; border-radius:8px; cursor:pointer; border:1.5px solid #eee;">
+                                    <input type="radio" class="receipt-radio" name="receipt-opt" value="발행" onchange="document.getElementById('receipt-phone-area').style.display = 'flex'"> 
+                                    <span style="font-weight:800; color:#555; font-size:15px;">발행</span>
+                                </label>
+                                <label style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px; background:#f8f9fa; padding:10px 0; border-radius:8px; cursor:pointer; border:1.5px solid #eee;">
+                                    <input type="radio" class="receipt-radio" name="receipt-opt" value="미발행" checked onchange="document.getElementById('receipt-phone-area').style.display = 'none'"> 
+                                    <span style="font-weight:800; color:#555; font-size:15px;">미발행</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="receipt-phone-area" style="display:none; flex-direction:column; gap:12px; border-top:1px dashed #eee; padding-top:15px;">
+                            <div style="display:flex; gap:8px;">
+                                <label style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; background:#fff; padding:8px 0; border-radius:6px; cursor:pointer; border:1px solid #eee;">
+                                    <input type="radio" class="receipt-radio" name="receipt-type" value="개인" checked onchange="window.updateReceiptLabel('휴대폰번호', '010-0000-0000', '${phone}')">
+                                    <span style="font-size:13px; font-weight:800; color:#555;">개인(소득)</span>
+                                </label>
+                                <label style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; background:#fff; padding:8px 0; border-radius:6px; cursor:pointer; border:1px solid #eee;">
+                                    <input type="radio" class="receipt-radio" name="receipt-type" value="사업자" onchange="window.updateReceiptLabel('사업자번호', '000-00-00000', '${phone}')">
+                                    <span style="font-size:13px; font-weight:800; color:#555;">사업자(지출)</span>
+                                </label>
+                            </div>
+                            <div style="text-align:left;">
+                                <div id="receipt-input-label" style="font-size:13px; color:#455464; font-weight:800; margin-bottom:4px; padding-left:4px;">휴대폰번호</div>
+                                <input type="tel" id="receipt-phone-input" value="${phone}" class="modal-input" oninput="window.formatPhoneNumber(this)" placeholder="010-0000-0000" style="width:100%; box-sizing:border-box; margin:0; height:42px; font-size:16px; font-weight:700; text-align:center; border: 1.5px solid #eee; border-radius:8px;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            showSystemModal(msg, 'confirm', async () => {
+                const receiptOpt = document.querySelector('input[name="receipt-opt"]:checked')?.value || "미발행";
+                const receiptType = document.querySelector('input[name="receipt-type"]:checked')?.value || "개인";
+                const receiptPhone = document.getElementById('receipt-phone-input')?.value || "";
+                await executeOrder(allItems, name, phone, shippingMethod, receiptOpt, receiptPhone, receiptType);
+                return true;
+            }, () => {
+                isHistoryProcessing = false;
+                const submitBtn = document.getElementById('btn-submit-order');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = "주문확정";
+                    submitBtn.style.opacity = "1";
+                }
+            }, true);
+        }
+        
+
         // 실질적인 주문 전송 로직 분리 (배달비 확인 후 실행을 위함)
-        async function executeOrder(allItems, name, phone, shippingMethod) {
+        async function executeOrder(allItems, name, phone, shippingMethod, cashReceipt = "미발행", receiptPhone = "", cashReceiptType = "개인") {
             const submitBtn = document.getElementById('btn-submit-order');
 
             if (!name || !phone) {
@@ -3965,6 +4100,7 @@
                     pickupDate: it.name === "배달비" ? "" : jsFormatPickup(it.date),
                     received: false,
                     delivered: false,
+                    cashReceipt: cashReceipt,
                     shippingMethod: shippingMethod,
                     name: name,
                     rawTimestamp: tempTimestamp,
@@ -3983,7 +4119,8 @@
                 }
 
                 // [Optimistic UI] 로딩 메시지 대신 '접수 완료'를 먼저 띄움
-                showSystemModal("주문이 완료되었습니다!\n(데이터 동기화 중입니다...)", 'loading');
+                // [수정] 주문 성공 메시지
+                showSystemModal("주문이 완료되었습니다!", 'alert');
 
                 const kakaoName = localStorage.getItem('kakao_original_name') || "";
                 const kakaoPhone = localStorage.getItem('kakao_original_phone') || "";
@@ -4003,6 +4140,9 @@
                     addressDetail: userAddressDetail,
                     entrance: userEntrance,
                     shippingMethod: shippingMethod,
+                    cashReceipt: cashReceipt,
+                    cashReceiptType: (cashReceipt === '발행') ? cashReceiptType : "",
+                    cashReceiptPhone: (cashReceipt === '발행') ? receiptPhone : "",
                     kakaoName: kakaoName,
                     kakaoRealName: kakaoRealName,
                     kakaoPhone: kakaoPhone,
@@ -4026,7 +4166,10 @@
                         qty: it.qty,
                         price: it.price,
                         total: it.price * it.qty,
-                        pickupDate: it.name === "배달비" ? "" : jsFormatPickup(it.date)
+                        pickupDate: it.name === "배달비" ? "" : jsFormatPickup(it.date),
+                        cashReceipt: cashReceipt,
+                        cashReceiptType: (cashReceipt === '발행') ? cashReceiptType : "",
+                        cashReceiptPhone: (cashReceipt === '발행') ? receiptPhone : ""
                     };
                     delete itemPayload.items;
 
