@@ -745,29 +745,33 @@
 
         .date-btn {
             flex-shrink: 0;
-            padding: 0 6px;
-            /* 컴팩트 사이즈에 맞춰 축소 */
+            padding: 0 10px;
+            /* 원복: 기존 10px */
             height: 34px;
             border-radius: var(--btn-radius);
             background: #fafafa;
             color: #455464;
             font-size: 16px;
-            /* 17px에서 16px로 통일 */
+            /* 원복: 기존 17px */
             font-weight: 800;
             border: 1.5px solid #eee;
             cursor: pointer;
         }
 
-        /* 현장판매 카테고리 줄만 여백을 더 줄이는 경우 */
-        #date-filters-categories .date-btn {
-            padding: 0 4px;
-            /* 버튼 내부 좌우 여백을 4px로 축소 */
+        /* 현장판매 카테고리: 3개 이하일 때 (균등 배분) */
+        #date-filters-categories.compact-view .date-btn {
+            padding: 0 6px;
             font-size: 16px;
-            /* 글씨 크기 미세 축소 */
             flex: 1;
-            /* 균등 배분 시도 */
             min-width: 0;
             white-space: nowrap;
+        }
+
+        /* 현장판매 카테고리: 4개 이상일 때 (원래대로, 가로 스크롤) */
+        #date-filters-categories:not(.compact-view) .date-btn {
+            padding: 0 10px;
+            font-size: 16px;
+            flex-shrink: 0;
         }
 
         .date-btn.active {
@@ -3335,6 +3339,16 @@
             filterAreaCategories.style.display = 'none';
             const catTitle = document.getElementById('category-section-title');
             if (catTitle) catTitle.style.display = 'none';
+
+            // [추가] 현장판매 카테고리 개수 파악
+            const categories = uniqueFilters.filter(date => {
+                return !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(date).trim()) || String(date).includes("상시판매") || String(date).includes("현장판매");
+            });
+            if (categories.length > 0 && categories.length <= 3) {
+                filterAreaCategories.classList.add('compact-view');
+            } else {
+                filterAreaCategories.classList.remove('compact-view');
+            }
 
             uniqueFilters.forEach((date, idx) => {
                 // 현장판매 카테고리 여부 체크 (날짜 형식이 아니면 카테고리)
