@@ -728,9 +728,9 @@
         }
 
         .date-filter-container {
-            padding: 4px 10px 4px 10px;
+            padding: 4px 6px 4px 6px;
             display: flex;
-            gap: 6px;
+            gap: 4px;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
         }
@@ -745,24 +745,29 @@
 
         .date-btn {
             flex-shrink: 0;
-            padding: 0 10px;
-            /* 기존 16px에서 10px로 축소 */
+            padding: 0 6px;
+            /* 컴팩트 사이즈에 맞춰 축소 */
             height: 34px;
             border-radius: var(--btn-radius);
             background: #fafafa;
             color: #455464;
-            font-size: 17px;
+            font-size: 16px;
+            /* 17px에서 16px로 통일 */
             font-weight: 800;
             border: 1.5px solid #eee;
             cursor: pointer;
         }
 
-        /* 상시판매 카테고리 줄만 여백을 더 줄이는 경우 */
+        /* 현장판매 카테고리 줄만 여백을 더 줄이는 경우 */
         #date-filters-categories .date-btn {
-            padding: 0 8px;
-            /* 버튼 내부 좌우 여백을 6px로 축소 */
-            font-size: 17px;
-            /* 글씨가 길면 약간 줄이는 것도 방법입니다 */
+            padding: 0 4px;
+            /* 버튼 내부 좌우 여백을 4px로 축소 */
+            font-size: 16px;
+            /* 글씨 크기 미세 축소 */
+            flex: 1;
+            /* 균등 배분 시도 */
+            min-width: 0;
+            white-space: nowrap;
         }
 
         .date-btn.active {
@@ -1375,8 +1380,8 @@
     <div class="sticky-header-group">
         <div class="date-section-title">픽업일별 상품목록</div>
         <div class="date-filter-container" id="date-filters"></div>
-        <div class="date-filter-container" id="date-filters-categories"
-            style="display:none; border-top: 1px solid #f9f9f9;"></div>
+        <div class="date-section-title" id="category-section-title" style="display:none; margin-top:4px;">현장판매 상품목록</div>
+        <div class="date-filter-container" id="date-filters-categories" style="display:none;"></div>
     </div>
     <div class="container" id="product-list"></div>
     <div id="detail-overlay" class="modal-overlay" onclick="if(event.target === this) closeModal('detail-overlay')">
@@ -1757,7 +1762,7 @@
                 const orderDateFull = item.timestamp || "";
                 const isTodayOrder = orderDateFull.includes(todayStr) || orderDateFull.includes(todayStr.replace(/-/g, '.'));
 
-                const isRegularSale = String(item.pickupDate).includes("상시판매");
+                const isRegularSale = String(item.pickupDate).includes("상시판매") || String(item.pickupDate).includes("현장판매");
 
                 const isCancelled = (item.item && (item.item.includes('[취소]') || item.item.includes('[배달합산]'))) ||
                     (item.received === "canceled" || item.received === "취소완료") ||
@@ -1767,7 +1772,7 @@
                 const isDelivered = (item.delivered === true || String(item.delivered).toUpperCase() === "TRUE");
                 const isOnSite = (item.onSite === true || String(item.onSite).toUpperCase() === "TRUE");
 
-                // 오늘 픽업 예정이거나, 오늘 주문한 배달비이거나, 상시판매 상품이면서 제외 조건에 해당하지 않는 경우
+                // 오늘 픽업 예정이거나, 오늘 주문한 배달비이거나, 현장판매 상품이면서 제외 조건에 해당하지 않는 경우
                 return ((itemDate === todayStr || isRegularSale) || (isDeliveryFee && isTodayOrder)) &&
                     !isCancelled && !isReceived && !isDelivered && !isOnSite;
             });
@@ -2711,7 +2716,7 @@
 
                 // 2차 그룹화 (픽업일 기준)
                 let pDateKey = (item.pickupDate || '정보없음').trim();
-                if (pDateKey.includes("상시판매")) pDateKey = "상시판매";
+                if (pDateKey.includes("상시판매") || pDateKey.includes("현장판매")) pDateKey = (item.pickupDate || "").trim();
                 if (item.item === "배달비") pDateKey = "배달비"; // 배달비는 별도 그룹 또는 상단 고정 가능
 
                 if (!group.pickupGroups[pDateKey]) group.pickupGroups[pDateKey] = [];
@@ -3301,7 +3306,7 @@
                         return pDate >= today;
                     }
                 }
-                // 날짜가 아닌 일반 텍스트 필터(예: 상시판매)는 무조건 포함
+                // 날짜가 아닌 일반 텍스트 필터(예: 현장판매)는 무조건 포함
                 return true;
             });
 
@@ -3328,13 +3333,18 @@
             filterAreaDates.innerHTML = '';
             filterAreaCategories.innerHTML = '';
             filterAreaCategories.style.display = 'none';
+            const catTitle = document.getElementById('category-section-title');
+            if (catTitle) catTitle.style.display = 'none';
 
             uniqueFilters.forEach((date, idx) => {
-                // 상시판매 카테고리 여부 체크 (날짜 형식이 아니면 카테고리)
-                const isCat = !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(date).trim());
+                // 현장판매 카테고리 여부 체크 (날짜 형식이 아니면 카테고리)
+                const isCat = !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(date).trim()) || String(date).includes("상시판매") || String(date).includes("현장판매");
                 const targetArea = isCat ? filterAreaCategories : filterAreaDates;
 
-                if (isCat) filterAreaCategories.style.display = 'flex';
+                if (isCat) {
+                    filterAreaCategories.style.display = 'flex';
+                    if (catTitle) catTitle.style.display = 'block';
+                }
 
                 const btn = document.createElement('button');
                 btn.className = `date-btn ${((!activeFilter && idx === 0) || date === activeFilter) ? 'active' : ''}`;
@@ -3853,7 +3863,7 @@
 
                 const hasNonToday = allItems.some(it => {
                     if (it.isCategorized) return false;
-                    if (String(it.date || "").includes("상시판매")) return false; // 상시판매 상품은 날짜 체크 제외
+                    if (String(it.date || "").includes("상시판매") || String(it.date || "").includes("현장판매")) return false; // 상시판매/현장판매 상품은 날짜 체크 제외
 
                     // 날짜 정규화 (24.02.10 -> 2024-02-10)
                     let dStr = String(it.date || "").replace(/\./g, '-').trim();
