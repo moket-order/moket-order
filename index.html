@@ -938,12 +938,13 @@
             font-size: 19px;
             margin-top: 5px;
             color: var(--item-black);
-            line-height: 1.2;
-            white-space: nowrap;
-            /* 한 줄 유지 */
+            line-height: 1.25; /* 줄 간격 살짝 조정 */
+            white-space: normal; /* 한 줄 유지 -> 자동 줄바꿈으로 변경 */
+            word-break: keep-all; /* 단어 단위 줄바꿈 (한국어 권장) */
             overflow: hidden;
-            /* 넘치는 부분 숨김 */
             width: 100%;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
         }
 
         .item-price-val {
@@ -3575,15 +3576,27 @@
                     `</div></div></div>`;
                 container.appendChild(card);
 
-                // [추가] 상품명 폰트 사이즈 자동 조절 (한 줄 유지)
+                // [추가] 상품명 폰트 사이즈 자동 조절 (3줄까지 허용 후 축소)
                 const nameEl = card.querySelector('.item-name');
                 if (nameEl) {
                     let fontSize = 19;
                     nameEl.style.fontSize = fontSize + 'px';
-                    // 요소가 화면에 그려진 후 scrollWidth를 체크하기 위해 잠시 대기하거나 즉시 실행
-                    while (nameEl.scrollWidth > nameEl.offsetWidth && fontSize > 11) {
+                    
+                    // 3줄 높이 계산 (line-height 1.25 기준)
+                    // 폰트사이즈 * 줄간격 * 최대줄수
+                    const checkHeight = () => {
+                        const style = window.getComputedStyle(nameEl);
+                        const lh = parseFloat(style.lineHeight);
+                        return lh * 3;
+                    };
+
+                    let maxHeight = checkHeight();
+                    
+                    // scrollHeight가 3줄 높이보다 크면 폰트 축소
+                    while (nameEl.scrollHeight > maxHeight + 2 && fontSize > 11) {
                         fontSize -= 0.5;
                         nameEl.style.fontSize = fontSize + 'px';
+                        maxHeight = checkHeight(); // 폰트가 작아지면 기준 높이도 다시 계산
                     }
                 }
             });
