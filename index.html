@@ -1608,6 +1608,7 @@
         }
 
         let productsData = [];
+        let cachedProducts = []; // [추가] 원본 데이터 보관용 (공개/비공개 전환용)
         let cart = {}; // { 상품명: 수량 } 저장용 장바구니 상태
         let isHistoryProcessing = false; // 주문내역 처리 중 플래그 추가
 
@@ -1749,10 +1750,10 @@
         }
 
         async function adminToggleProductList(enabled) {
-            const secret = await getFirebaseSecret();
-            const url = FIREBASE_DB_URL + "product_list_enabled.json" + (secret ? "?auth=" + secret : "");
+            const url = FIREBASE_DB_URL + "product_list_enabled.json";
 
             try {
+                showSystemModal("구성을 변경 중입니다...", 'loading');
                 const res = await fetch(url, {
                     method: 'PUT',
                     body: JSON.stringify(enabled)
@@ -1760,7 +1761,8 @@
                 if (res.ok) {
                     showSystemModal(`상품목록이 즉시 ${enabled ? '공개' : '비공개'} 처리되었습니다.`, 'alert');
                     isProductListEnabled = enabled;
-                    processAndRender(cachedProducts);
+                    // 즉시 화면 반영
+                    processAndRender(cachedProducts || productsData);
                 }
             } catch (e) {
                 showSystemModal("상태 변경 실패: " + e.toString(), 'alert');
@@ -3360,6 +3362,9 @@
 
         // 날짜 필터 생성 및 초기 리스트 렌더링을 담당하는 공통 함수
         function processAndRender(data) {
+            if (!data || data.length === 0) return;
+            cachedProducts = data; // [추가] 원본 데이터 백업
+
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
