@@ -748,7 +748,7 @@
             padding: 0 12px;
             /* 여백 살짝 상향 */
             min-width: 78px;
-            /* 버튼 크기 일정하게 유지 */
+            /* 상단 필터 버튼 크기 일정하게 유지 */
             height: 34px;
             border-radius: var(--btn-radius);
             background: #fafafa;
@@ -761,6 +761,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+
+        /* [추가] 주문내역 모달 내의 버튼은 좁은 공간에 맞춰 최소 너비 해제 */
+        #history-modal .date-btn {
+            min-width: 0 !important;
         }
 
         /* 현장판매 카테고리: 3개 이하일 때 (균등 배분) */
