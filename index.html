@@ -3416,7 +3416,14 @@
 
             // [수정] 두 영역 모두에서 현재 활성화된 필터 기억
             const activeBtn = document.querySelector('.date-btn.active');
-            const activeFilter = activeBtn ? activeBtn.dataset.date : (uniqueFilters.length > 0 ? uniqueFilters[0] : null);
+            let activeFilter = activeBtn ? activeBtn.dataset.date : (uniqueFilters.length > 0 ? (uniqueFilters.some(f => !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(f).trim())) ? uniqueFilters[0] : '전체상품') : null);
+
+            // [추가] 픽업일 필터가 있을 경우 맨 앞에 '전체상품' 추가
+            const hasDates = uniqueFilters.some(date => /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(date).trim()) && !String(date).includes("상시판매") && !String(date).includes("현장판매"));
+            if (hasDates && !uniqueFilters.includes('전체상품')) {
+                uniqueFilters.unshift('전체상품');
+                if (!activeFilter) activeFilter = '전체상품';
+            }
 
             filterAreaDates.innerHTML = '';
             filterAreaCategories.innerHTML = '';
@@ -3447,7 +3454,12 @@
                 const btn = document.createElement('button');
                 btn.className = `date-btn ${((!activeFilter && idx === 0) || date === activeFilter) ? 'active' : ''}`;
                 btn.dataset.date = date;
-                btn.innerText = futureData.find(p => p.matchKey === date).displayDate;
+                
+                if (date === '전체상품') {
+                    btn.innerText = '전체상품';
+                } else {
+                    btn.innerText = futureData.find(p => p.matchKey === date).displayDate;
+                }
                 btn.onclick = () => {
                     document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
@@ -3492,7 +3504,11 @@
                 return;
             }
 
-            productsData.filter(p => p.matchKey === targetKey).forEach(p => {
+            const filteredData = targetKey === '전체상품' 
+                ? productsData.filter(p => /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(p.matchKey).trim()) && !String(p.matchKey).includes("상시판매") && !String(p.matchKey).includes("현장판매"))
+                : productsData.filter(p => p.matchKey === targetKey);
+
+            filteredData.forEach(p => {
                 const imgId = p.images[0];
                 const thumbUrl = imgId ? getImgUrl(imgId, 300) : '';
 
