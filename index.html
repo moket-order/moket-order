@@ -3468,7 +3468,7 @@
             }
             else if (uniqueFilters.length > 0) renderList(uniqueFilters[0]);
             else {
-                document.getElementById('product-list').innerHTML = '<div style="text-align:center; padding:80px 20px; color:#999; font-weight:700;">현재 주문 가능한 상품이 없습니다.</div>';
+                document.getElementById('product-list').innerHTML = '<div style="text-align:center; padding:80px 20px; color:#999; font-weight:700;">현재는 주문이 불가능 합니다.</div>';
             }
         }
 
@@ -3486,7 +3486,7 @@
 
             // [추가] 비공개 상태에서 일반 사용자가 들어온 경우
             if (!isAdminMode && !isProductListEnabled) {
-                container.innerHTML = '<div style="text-align:center; padding:80px 20px; color:#999; font-weight:700;">현재 주문 가능한 상품이 없습니다.</div>';
+                container.innerHTML = '<div style="text-align:center; padding:80px 20px; color:#999; font-weight:700;">현재는 주문이 불가능 합니다.</div>';
                 return;
             }
 
