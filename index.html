@@ -3419,6 +3419,9 @@
             if (dateFilters.length > 0) dateFilters.unshift('전체상품_예약');
             if (categoryFilters.length > 0) categoryFilters.unshift('전체상품_현장');
 
+            const filterAreaDates = document.getElementById('date-filters');
+            const filterAreaCategories = document.getElementById('date-filters-categories');
+
             // [수정] 두 영역 모두에서 현재 활성화된 필터 기억
             const activeBtn = document.querySelector('.date-btn.active');
             let activeFilter = activeBtn ? activeBtn.dataset.date : (dateFilters.length > 0 ? '전체상품_예약' : (categoryFilters.length > 0 ? '전체상품_현장' : null));
@@ -3474,15 +3477,16 @@
                 filterAreaCategories.appendChild(btn);
             });
 
-            if (activeFilter && uniqueFilters.includes(activeFilter)) {
+            const allShownFilters = [...dateFilters, ...categoryFilters];
+            if (activeFilter && allShownFilters.includes(activeFilter)) {
                 renderList(activeFilter);
                 // [추가] 초기 로딩 시에도 활성 버튼이 보이도록 위치 조정
                 setTimeout(() => {
-                    const target = filterArea.querySelector(`[data-date="${activeFilter}"]`);
-                    if (target) target.scrollIntoView({ inline: 'center', block: 'nearest' });
+                    const target = document.querySelector(`[data-date="${activeFilter}"]`);
+                    if (target) target.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                 }, 100);
             }
-            else if (uniqueFilters.length > 0) renderList(uniqueFilters[0]);
+            else if (allShownFilters.length > 0) renderList(allShownFilters[0]);
             else {
                 document.getElementById('product-list').innerHTML = `<div style="text-align:center; padding:80px 20px; color:#999; font-weight:700;">현재는 주문이 불가능 합니다.<br>
                             (주문 가능 시간 - 오전 10시 ~ 다음날 오전 6시)</div>`;
