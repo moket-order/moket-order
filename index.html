@@ -3411,19 +3411,17 @@
                 return a.localeCompare(b);
             });
 
-            const filterAreaDates = document.getElementById('date-filters');
-            const filterAreaCategories = document.getElementById('date-filters-categories');
+            // 픽업일 필터(날짜)와 카테고리 필터(현장판매 등) 분리
+            const dateFilters = uniqueFilters.filter(f => /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(f).trim()) && !String(f).includes("상시판매") && !String(f).includes("현장판매"));
+            const categoryFilters = uniqueFilters.filter(f => !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(f).trim()) || String(f).includes("상시판매") || String(f).includes("현장판매"));
+
+            // 각 섹션 맨 앞에 '전체상품' 추가 (식별을 위해 다른 키 사용)
+            if (dateFilters.length > 0) dateFilters.unshift('전체상품_예약');
+            if (categoryFilters.length > 0) categoryFilters.unshift('전체상품_현장');
 
             // [수정] 두 영역 모두에서 현재 활성화된 필터 기억
             const activeBtn = document.querySelector('.date-btn.active');
-            let activeFilter = activeBtn ? activeBtn.dataset.date : (uniqueFilters.length > 0 ? (uniqueFilters.some(f => !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(f).trim())) ? uniqueFilters[0] : '전체상품') : null);
-
-            // [추가] 픽업일 필터가 있을 경우 맨 앞에 '전체상품' 추가
-            const hasDates = uniqueFilters.some(date => /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(date).trim()) && !String(date).includes("상시판매") && !String(date).includes("현장판매"));
-            if (hasDates && !uniqueFilters.includes('전체상품')) {
-                uniqueFilters.unshift('전체상품');
-                if (!activeFilter) activeFilter = '전체상품';
-            }
+            let activeFilter = activeBtn ? activeBtn.dataset.date : (dateFilters.length > 0 ? '전체상품_예약' : (categoryFilters.length > 0 ? '전체상품_현장' : null));
 
             filterAreaDates.innerHTML = '';
             filterAreaCategories.innerHTML = '';
@@ -3431,43 +3429,49 @@
             const catTitle = document.getElementById('category-section-title');
             if (catTitle) catTitle.style.display = 'none';
 
-            // [추가] 현장판매 카테고리 개수 파악
-            const categories = uniqueFilters.filter(date => {
-                return !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(date).trim()) || String(date).includes("상시판매") || String(date).includes("현장판매");
-            });
-            if (categories.length > 0 && categories.length <= 3) {
+            // 카테고리 개수에 따른 뷰 모드 설정
+            if (categoryFilters.length > 0 && categoryFilters.length <= 4) { // 전체상품 포함 4개 이하
                 filterAreaCategories.classList.add('compact-view');
             } else {
                 filterAreaCategories.classList.remove('compact-view');
             }
 
-            uniqueFilters.forEach((date, idx) => {
-                // 현장판매 카테고리 여부 체크 (날짜 형식이 아니면 카테고리)
-                const isCat = !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(date).trim()) || String(date).includes("상시판매") || String(date).includes("현장판매");
-                const targetArea = isCat ? filterAreaCategories : filterAreaDates;
-
-                if (isCat) {
-                    filterAreaCategories.style.display = 'flex';
-                    if (catTitle) catTitle.style.display = 'block';
-                }
-
+            // 날짜 필터 생성
+            dateFilters.forEach((date, idx) => {
                 const btn = document.createElement('button');
-                btn.className = `date-btn ${((!activeFilter && idx === 0) || date === activeFilter) ? 'active' : ''}`;
+                btn.className = `date-btn ${date === activeFilter ? 'active' : ''}`;
                 btn.dataset.date = date;
-                
-                if (date === '전체상품') {
-                    btn.innerText = '전체상품';
-                } else {
-                    btn.innerText = futureData.find(p => p.matchKey === date).displayDate;
-                }
+                btn.innerText = (date === '전체상품_예약') ? '전체상품' : futureData.find(p => p.matchKey === date).displayDate;
                 btn.onclick = () => {
                     document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                     renderList(date);
-                    // [추가] 클릭한 버튼이 화면 밖으로 나갔다면 중앙으로 슬라이드 (사용자 요청)
                     btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                 };
-                targetArea.appendChild(btn);
+                filterAreaDates.appendChild(btn);
+            });
+
+            // 현장판매 필터 생성
+            categoryFilters.forEach((cat, idx) => {
+                filterAreaCategories.style.display = 'flex';
+                if (catTitle) catTitle.style.display = 'block';
+
+                const btn = document.createElement('button');
+                btn.className = `date-btn ${cat === activeFilter ? 'active' : ''}`;
+                btn.dataset.date = cat;
+                if (cat === '전체상품_현장') {
+                    btn.innerText = '전체상품';
+                } else {
+                    const found = futureData.find(p => p.matchKey === cat);
+                    btn.innerText = found ? found.displayDate : cat;
+                }
+                btn.onclick = () => {
+                    document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    renderList(cat);
+                    btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                };
+                filterAreaCategories.appendChild(btn);
             });
 
             if (activeFilter && uniqueFilters.includes(activeFilter)) {
@@ -3504,8 +3508,10 @@
                 return;
             }
 
-            const filteredData = targetKey === '전체상품' 
+            const filteredData = targetKey === '전체상품_예약' 
                 ? productsData.filter(p => /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(p.matchKey).trim()) && !String(p.matchKey).includes("상시판매") && !String(p.matchKey).includes("현장판매"))
+                : targetKey === '전체상품_현장'
+                ? productsData.filter(p => !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(p.matchKey).trim()) || String(p.matchKey).includes("상시판매") || String(p.matchKey).includes("현장판매"))
                 : productsData.filter(p => p.matchKey === targetKey);
 
             filteredData.forEach(p => {
