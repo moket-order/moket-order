@@ -3521,7 +3521,19 @@
                 const currentQty = cart[p.name] || 0;
                 const stock = p.stock !== undefined && p.stock !== "" ? parseInt(p.stock) : Infinity;
                 const isSoldOut = stock <= 0;
-                const stockText = isFinite(stock) ? (isSoldOut ? "품절" : (stock < 10 ? `주문가능수량 <span style="color:var(--nego-orange);">${stock}</span>개` : "")) : "";
+                const isLowStock = !isSoldOut && stock < 10;
+                
+                let stockText = "";
+                let stockColor = "#455464";
+                if (isFinite(stock)) {
+                    if (isSoldOut) {
+                        stockText = "품절";
+                        stockColor = "#ff0000";
+                    } else if (isLowStock) {
+                        stockText = "품절임박";
+                        stockColor = "#ff0000";
+                    }
+                }
 
                 const card = document.createElement('div');
                 card.className = `product-card ${stockText ? 'has-stock' : ''}`;
@@ -3535,7 +3547,7 @@
                     `<div class="item-controls-bottom-v">` +
                     `<button class="btn-detail" onclick="openDetail('${escapeArg(p.name)}')">상세보기</button>` +
                     `<div class="qty-group">` +
-                    `<div class="stock-status" style="color:${isSoldOut ? '#ff0000' : '#455464'};">${stockText}</div>` +
+                    `<div class="stock-status" style="color:${stockColor}; font-weight:800;">${stockText}</div>` +
                     `<div class="qty-controls ${currentQty > 0 ? 'selected' : ''}" style="${isSoldOut ? 'opacity:0.5; pointer-events:none;' : ''}">` +
                     `<button class="qty-btn" onclick="qty(this, -1)">-</button>` +
                     `<input class="qty-num" value="${currentQty}" readonly data-name="${p.name}" data-price="${p.price}" data-stock="${stock}">` +
