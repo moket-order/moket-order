@@ -2762,7 +2762,7 @@
                 if (a.item !== '배달비' && b.item === '배달비') return -1;
 
                 // 2. 주문시간(timestamp) 내림차순(최신순)으로 정렬
-                const timeA = parseKRDate(a.timestamp);
+                        const timeA = parseKRDate(a.timestamp);
                 const timeB = parseKRDate(b.timestamp);
                 return timeB - timeA;
             });
@@ -2901,11 +2901,12 @@
                         const isReceived = (order.received === true || String(order.received).toUpperCase() === "TRUE");
                         const isStocked = (order.isStocked === true || String(order.isStocked).toUpperCase() === "TRUE");
 
-                        const orderDate = parseKRDate(orderTimeFull);
-                        const deadline = new Date(orderDate.getFullYear(), orderDate.getMonth(), orderDate.getDate() + 1, 9, 0, 0);
                         const isDelivered = (order.delivered === true || String(order.delivered).toUpperCase() === "TRUE");
+                        
+                        // [수정] 시간 기반 자동 마감 대신, 사장님이 상품 목록에서 지웠는지만 체크 (수동 마감 지원)
+                        const isProductStillInList = productsData.some(p => p.name === String(order.item).trim());
 
-                        const canDelete = (new Date() < deadline) && !isCancelled && !isReceived && !isProcessing && !isStocked && !order.onSite && !isDelivered && !isCombined;
+                        const canDelete = isProductStillInList && !isCancelled && !isReceived && !isProcessing && !isStocked && !order.onSite && !isDelivered && !isCombined;
 
                         let statusText = '';
                         let statusColor = '';
