@@ -3442,7 +3442,9 @@
             // 날짜 필터 생성
             dateFilters.forEach((date, idx) => {
                 const btn = document.createElement('button');
-                btn.className = `date-btn ${date === activeFilter ? 'active' : ''}`;
+                // [수정] 정확한 문자열 비교로 active 클래스 적용 보장
+                const isActive = activeFilter ? (String(date) === String(activeFilter)) : (idx === 0);
+                btn.className = `date-btn ${isActive ? 'active' : ''}`;
                 btn.dataset.date = date;
                 btn.innerText = (date === '전체상품_예약') ? '전체상품' : futureData.find(p => p.matchKey === date).displayDate;
                 btn.onclick = () => {
@@ -3460,7 +3462,8 @@
                 if (catTitle) catTitle.style.display = 'block';
 
                 const btn = document.createElement('button');
-                btn.className = `date-btn ${cat === activeFilter ? 'active' : ''}`;
+                const isActive = activeFilter ? (String(cat) === String(activeFilter)) : (dateFilters.length === 0 && idx === 0);
+                btn.className = `date-btn ${isActive ? 'active' : ''}`;
                 btn.dataset.date = cat;
                 if (cat === '전체상품_현장') {
                     btn.innerText = '전체상품';
@@ -3512,8 +3515,21 @@
                 return;
             }
 
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // [수정] 전체상품 필터 시에도 '오늘 이후' 상품만 나오도록 필터링 강화
             const filteredData = targetKey === '전체상품_예약' 
-                ? productsData.filter(p => /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(p.matchKey).trim()) && !String(p.matchKey).includes("상시판매") && !String(p.matchKey).includes("현장판매"))
+                ? productsData.filter(p => {
+                    if (!/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(p.matchKey).trim()) || String(p.matchKey).includes("상시판매") || String(p.matchKey).includes("현장판매")) return false;
+                    const cleanDate = String(p.matchKey).replace(/\./g, '-');
+                    const parts = cleanDate.split('-');
+                    if (parts.length === 3) {
+                        const pDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                        if (!isNaN(pDate.getTime())) { pDate.setHours(0, 0, 0, 0); return pDate >= today; }
+                    }
+                    return true;
+                })
                 : targetKey === '전체상품_현장'
                 ? productsData.filter(p => !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(p.matchKey).trim()) || String(p.matchKey).includes("상시판매") || String(p.matchKey).includes("현장판매"))
                 : productsData.filter(p => p.matchKey === targetKey);
