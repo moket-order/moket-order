@@ -3422,9 +3422,9 @@
             const filterAreaDates = document.getElementById('date-filters');
             const filterAreaCategories = document.getElementById('date-filters-categories');
 
-            // [수정] 두 영역 모두에서 현재 활성화된 필터 기억
+            // [수정] 기본 필터를 '전체상품'으로 우선 설정 (이미 선택된 버튼이 없다면)
             const activeBtn = document.querySelector('.date-btn.active');
-            let activeFilter = activeBtn ? activeBtn.dataset.date : (dateFilters.length > 0 ? '전체상품_예약' : (categoryFilters.length > 0 ? '전체상품_현장' : null));
+            let activeFilter = activeBtn ? activeBtn.dataset.date : (dateFilters.includes('전체상품_예약') ? '전체상품_예약' : (categoryFilters.includes('전체상품_현장') ? '전체상품_현장' : (dateFilters[0] || categoryFilters[0] || null)));
 
             filterAreaDates.innerHTML = '';
             filterAreaCategories.innerHTML = '';
