@@ -1319,6 +1319,13 @@
             <button id="btn-unlink-kakao" onclick="unlinkKakao()"
                 style="display:none; margin-top:10px; background:none; border:1px solid #ddd; color:#999; font-size:12px; padding:8px; border-radius:var(--btn-radius); width:100%; cursor:pointer;">카카오
                 탈퇴하기</button>
+            <hr id="ADMIN_HR" style="display:none; margin:20px 0; border:none; border-top:1px dashed #ddd;">
+            <button id="ADMIN_PRODUCT_LIST_ON" onclick="adminToggleProductList(true)"
+                style="display:none; background:white; border:1.5px solid #2196F3; color:#2196F3; font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">📦
+                상품목록 전체 공개 (정상작동)</button>
+            <button id="ADMIN_PRODUCT_LIST_OFF" onclick="adminToggleProductList(false)"
+                style="display:none; margin-top:8px; background:white; border:1.5px solid #607D8B; color:#607D8B; font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">🌑
+                상품목록 전체 비공개 (숨김)</button>
         </div>
     </div>
     <div id="save-confirm-modal" class="modal-overlay">
@@ -1384,7 +1391,8 @@
     <div class="sticky-header-group">
         <div class="date-section-title">픽업일별 예약상품 목록</div>
         <div class="date-filter-container" id="date-filters"></div>
-        <div class="date-section-title" id="category-section-title" style="display:none; margin-top:4px;">현장판매 상품목록</div>
+        <div class="date-section-title" id="category-section-title" style="display:none; margin-top:4px;">현장판매 상품목록
+        </div>
         <div class="date-filter-container" id="date-filters-categories" style="display:none;"></div>
     </div>
     <div class="container" id="product-list"></div>
@@ -1504,8 +1512,7 @@
     </div>
     <div id="system-modal" class="modal-overlay" style="z-index: 9999;">
         <div class="modal-content" style="text-align: center; width: 85%; max-width: 350px;">
-            <div id="sys-modal-msg"
-                style="font-weight: 700; color: var(--item-black);">
+            <div id="sys-modal-msg" style="font-weight: 700; color: var(--item-black);">
             </div>
             <div id="sys-modal-btns" style="display: flex; gap: 10px; justify-content: center;"></div>
         </div>
@@ -1612,46 +1619,63 @@
         let pendingStockUpdates = {};
         const STOCK_LOCK_DURATION = 15000; // 15초 동안 유지
 
-        // [추가] 10번 클릭 시 로그인 무시 바이패스
+        // [추가] 관리자 모드 상태 변수
+        let isAdminMode = sessionStorage.getItem('moket_admin_mode') === 'true';
         let bypassCount = 0;
         let lastBypassTime = 0;
+
         function handleAdminClick(e) {
-            // 이벤트 전파 방지 (로고 클릭 시 메뉴 닫기 등 방지)
             if (e && e.stopPropagation) e.stopPropagation();
 
             const now = Date.now();
-            if (now - lastBypassTime > 3000) bypassCount = 0; // 3초 넘으면 초기화
+            if (now - lastBypassTime > 3000) bypassCount = 0;
             lastBypassTime = now;
             bypassCount++;
+
             if (bypassCount >= 10) {
-                showSystemModal("관리자 모드로 진입합니다 (비인증).", 'alert');
-
-                // [추가] 주문자 정보 초기화 및 모드 전환
-                const modal = document.getElementById('profile-modal');
-                if (modal) modal.classList.remove('login-forced');
-
-                const title = document.getElementById('profile-modal-title');
-                if (title) title.innerText = "주문자 변경";
-
-                const submitBtn = document.getElementById('profile-submit-btn');
-                if (submitBtn) submitBtn.innerText = "변경하기";
-
-                // [신규] 관리자 메뉴 모든 버튼 노출
-                const delOn = document.getElementById('ADMIN_DELIVERY_ON');
-                const delOff = document.getElementById('ADMIN_DELIVERY_OFF');
-                const logOn = document.getElementById('ADMIN_LOGIN_ON');
-                const logOff = document.getElementById('ADMIN_LOGIN_OFF');
-                const unlinkBtn = document.getElementById('btn-unlink-kakao');
-
-                if (delOn) delOn.style.setProperty('display', 'block', 'important');
-                if (delOff) delOff.style.setProperty('display', 'block', 'important');
-                if (logOn) logOn.style.setProperty('display', 'block', 'important');
-                if (logOff) logOff.style.setProperty('display', 'block', 'important');
-                if (unlinkBtn) unlinkBtn.style.setProperty('display', 'block', 'important');
-
+                isAdminMode = !isAdminMode; // 토글 방식으로 변경
+                sessionStorage.setItem('moket_admin_mode', isAdminMode);
+                
+                if (isAdminMode) {
+                    showSystemModal("관리자 기능이 활성화되었습니다.<br>(상품목록이 비공개여도 사장님께는 보입니다)", 'alert');
+                    
+                    // 관리자 설정 버튼들 표시
+                    const adminElements = [
+                        'ADMIN_DELIVERY_ON', 'ADMIN_DELIVERY_OFF', 
+                        'ADMIN_LOGIN_ON', 'ADMIN_LOGIN_OFF', 'btn-unlink-kakao',
+                        'ADMIN_PRODUCT_LIST_ON', 'ADMIN_PRODUCT_LIST_OFF', 'ADMIN_HR'
+                    ];
+                    adminElements.forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.style.setProperty('display', 'block', 'important');
+                    });
+                    
+                    const modal = document.getElementById('profile-modal');
+                    if (modal) modal.classList.remove('login-forced');
+                } else {
+                    showSystemModal("관리자 모드가 해제되었습니다.<br>(일반 사용자 화면으로 전환됩니다)", 'alert');
+                    setTimeout(() => location.reload(), 1000);
+                }
+                
                 bypassCount = 0;
+                renderList(document.querySelector('.date-btn.active')?.dataset.date);
             }
         }
+
+        // 페이지 로드 시 관리자 모드라면 버튼들 미리 노출
+        window.addEventListener('load', () => {
+            if (isAdminMode) {
+                const adminElements = [
+                    'ADMIN_DELIVERY_ON', 'ADMIN_DELIVERY_OFF', 
+                    'ADMIN_LOGIN_ON', 'ADMIN_LOGIN_OFF', 'btn-unlink-kakao',
+                    'ADMIN_PRODUCT_LIST_ON', 'ADMIN_PRODUCT_LIST_OFF', 'ADMIN_HR'
+                ];
+                adminElements.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.setProperty('display', 'block', 'important');
+                });
+            }
+        });
 
         // [신규] 배달 기능 실시간 로드 및 제어 로직
         let isDeliveryEnabled = false;
@@ -1702,6 +1726,49 @@
                 showSystemModal("변경 실패: " + e.message, 'alert');
             }
         }
+
+        // [신규] 상품목록 공개여부 제어 로직
+        let isProductListEnabled = true;
+
+        async function fetchProductListStatus() {
+            try {
+                const url = FIREBASE_DB_URL + "product_list_enabled.json";
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data === null) {
+                    isProductListEnabled = true;
+                } else {
+                    isProductListEnabled = !!data;
+                }
+                
+                // 관리자가 아닐 때 리스트 상태 반영
+                if (!isAdminMode) {
+                    processAndRender(cachedProducts);
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function adminToggleProductList(enabled) {
+            const secret = await getFirebaseSecret();
+            const url = FIREBASE_DB_URL + "product_list_enabled.json" + (secret ? "?auth=" + secret : "");
+
+            try {
+                const res = await fetch(url, {
+                    method: 'PUT',
+                    body: JSON.stringify(enabled)
+                });
+                if (res.ok) {
+                    showSystemModal(`상품목록이 즉시 ${enabled ? '공개' : '비공개'} 처리되었습니다.`, 'alert');
+                    isProductListEnabled = enabled;
+                    processAndRender(cachedProducts);
+                }
+            } catch (e) {
+                showSystemModal("상태 변경 실패: " + e.toString(), 'alert');
+            }
+        }
+
+        setInterval(fetchProductListStatus, 10000); 
+        fetchProductListStatus();
 
         function updateDeliveryUI() {
             const btn = document.getElementById('btn-delivery-order');
@@ -1844,7 +1911,7 @@
         }
 
         // [신규] 현금영수증 라벨 변경 및 입력 포맷팅 전역 함수
-        window.updateReceiptLabel = function(text, placeholder, defaultPhone) {
+        window.updateReceiptLabel = function (text, placeholder, defaultPhone) {
             const label = document.getElementById('receipt-input-label');
             const input = document.getElementById('receipt-phone-input');
             if (!label || !input) return;
@@ -1859,7 +1926,7 @@
             }
         };
 
-        window.formatBusinessNumber = function(input) {
+        window.formatBusinessNumber = function (input) {
             let val = input.value.replace(/\D/g, "").substring(0, 10);
             let res = "";
             if (val.length <= 3) res = val;
@@ -1868,7 +1935,7 @@
             input.value = res;
         };
 
-        window.formatPhoneNumber = function(input) {
+        window.formatPhoneNumber = function (input) {
             let val = input.value.replace(/\D/g, "").substring(0, 11);
             let res = "";
             if (val.length <= 3) res = val;
@@ -3296,6 +3363,15 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
+            // [추가] 사장님 모드가 아니고, 전체 비공개 상태인 경우 빈 배열 처리
+            if (!isAdminMode && !isProductListEnabled) {
+                productsData = [];
+                cachedProducts = data; // 원본 백업
+                renderFilters([]);
+                renderList('');
+                return;
+            }
+
             // 필터 처리: 날짜 형식인 경우 오늘 이후만, 일반 텍스트인 경우 무조건 포함
             const futureData = data.filter(p => {
                 const cleanKey = String(p.matchKey || "").trim();
@@ -3391,6 +3467,20 @@
         function renderList(targetKey) {
             const container = document.getElementById('product-list');
             container.innerHTML = '';
+
+            // [추가] 관리자 모드 안내 표시
+            if (isAdminMode) {
+                const adminMsg = document.createElement('div');
+                adminMsg.style = "background:#e3f2fd; color:#1976d2; padding:12px; margin-bottom:15px; border-radius:var(--common-radius); font-size:13px; font-weight:700; text-align:center; border: 1px solid #bbdefb;";
+                adminMsg.innerHTML = `👨‍💻 관리자 모드 활성 중 (전체공개: ${isProductListEnabled ? '✅ON' : '🌑OFF'})<br><span style='font-size:11px; font-weight: normal; color:#5c6bc0;'>사장님께는 모든 상품이 항상 보입니다.</span>`;
+                container.appendChild(adminMsg);
+            }
+
+            // [추가] 비공개 상태에서 일반 사용자가 들어온 경우
+            if (!isAdminMode && !isProductListEnabled) {
+                container.innerHTML = '<div style="text-align:center; padding:80px 20px; color:#999; font-weight:700;"><div style="font-size:40px; margin-bottom:15px;">🌑</div>현재 주문 가능한 상품이 없습니다.</div>';
+                return;
+            }
 
             productsData.filter(p => p.matchKey === targetKey).forEach(p => {
                 const imgId = p.images[0];
@@ -3721,7 +3811,7 @@
                         </div>
                         <div style="padding: 10px 12px 10px 12px;">
                 `;
-                
+
                 grouped[date].forEach((p, idx) => {
                     const sub = p.qty * parseInt(p.price || 0);
                     groupHtml += `
@@ -4047,7 +4137,7 @@
                 }
             }, true);
         }
-        
+
 
         // 실질적인 주문 전송 로직 분리 (배달비 확인 후 실행을 위함)
         async function executeOrder(allItems, name, phone, shippingMethod, cashReceipt = "미발행", receiptPhone = "", cashReceiptType = "개인") {
