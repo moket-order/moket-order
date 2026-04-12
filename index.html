@@ -3218,7 +3218,7 @@
                 console.log("[Data Sync] 병렬 로드 완료", { rawData, globalAdjustments });
 
                 // 매핑 처리 (가짜 데이터 'no-date' 원천 차단)
-                let freshData = rawData.map(p => {
+                let freshData = rawData.map((p, idx) => {
                     let mKey = (p.matchKey || p.date || "").trim();
                     if (mKey === "no-date") mKey = ""; // 가짜 데이터 제거
 
@@ -3236,7 +3236,8 @@
                         matchKey: mKey,
                         stock: currentStock,
                         displayDate: p.date ? formatDateWithDay(p.date) : "",
-                        images: Array.isArray(p.images) ? p.images : []
+                        images: Array.isArray(p.images) ? p.images : [],
+                        originalIndex: idx
                     };
                 });
 
@@ -3565,8 +3566,14 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            // [수정] 전체상품 필터 시에도 '오늘 이후' 상품만 나오도록 필터링 강화
-            const filteredData = targetKey === '전체상품_예약' 
+            const getPriority = (name) => {
+                const n = String(name || "").trim();
+                if (n.startsWith('[')) return 1;
+                if (n.endsWith(']')) return 3;
+                return 2;
+            };
+
+            let filteredData = targetKey === '전체상품_예약' 
                 ? productsData.filter(p => {
                     if (!/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(p.matchKey).trim()) || String(p.matchKey).includes("상시판매") || String(p.matchKey).includes("현장판매")) return false;
                     const cleanDate = String(p.matchKey).replace(/\./g, '-');
@@ -3576,15 +3583,27 @@
                         if (!isNaN(pDate.getTime())) { pDate.setHours(0, 0, 0, 0); return pDate >= today; }
                     }
                     return true;
-                }).sort((a, b) => {
-                    // [추가] 날짜순 정렬
-                    const dateA = new Date(String(a.matchKey).replace(/\./g, '-')).getTime();
-                    const dateB = new Date(String(b.matchKey).replace(/\./g, '-')).getTime();
-                    return dateA - dateB;
                 })
                 : targetKey === '전체상품_현장'
                 ? productsData.filter(p => !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(p.matchKey).trim()) || String(p.matchKey).includes("상시판매") || String(p.matchKey).includes("현장판매"))
                 : productsData.filter(p => p.matchKey === targetKey);
+
+            // [정렬 적용] 머릿말 > 일반 > 맺음말 순
+            filteredData.sort((a, b) => {
+                // 전체상품 예약 보기일 때는 날짜순 정렬 우선
+                if (targetKey === '전체상품_예약') {
+                    const dateA = new Date(String(a.matchKey).replace(/\./g, '-')).getTime() || 0;
+                    const dateB = new Date(String(b.matchKey).replace(/\./g, '-')).getTime() || 0;
+                    if (dateA !== dateB) return dateA - dateB;
+                }
+
+                const pA = getPriority(a.name);
+                const pB = getPriority(b.name);
+                if (pA !== pB) return pA - pB;
+                
+                // [수정] 같은 우선순위라면 가나다 순(숫자 포함 자연스럽게) 정렬
+                return a.name.localeCompare(b.name, 'ko', { numeric: true, sensitivity: 'base' });
+            });
 
             let lastGroupKey = null;
             let currentGroupBox = null;
