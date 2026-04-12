@@ -3287,18 +3287,13 @@
                         }
                     });
 
-                    // 데이터가 바뀌었거나 [추가] 공개상태가 바뀌었을 때만 렌더링 업데이트 (화면 깜빡임 방지)
-                    if (statusChanged || JSON.stringify(freshData) !== JSON.stringify(productsData)) {
-                        productsData = freshData;
-                        localStorage.setItem('moket_products_cache_v2', JSON.stringify(productsData));
-                        console.log("최신 데이터로 화면 업데이트 (상세 이미지 보존됨)");
-                        processAndRender(productsData);
-                        startImageCaching(productsData);
-                        setTimeout(preloadAllProductImages, 2000); // 2초 뒤에 배경 프리로드 시작 (메인 이미지 우선)
-                    } else {
-                        startImageCaching(productsData);
-                        setTimeout(preloadAllProductImages, 1000);
-                    }
+                    // [수정] 데이터 변경 여부와 상관없이 서버에서 응답이 오면 항상 렌더링 업데이트 (로직 수정 반영 보장)
+                    productsData = freshData;
+                    localStorage.setItem('moket_products_cache_v2', JSON.stringify(productsData));
+                    console.log("최신 데이터로 화면 업데이트 완료");
+                    processAndRender(productsData);
+                    startImageCaching(productsData);
+                    setTimeout(preloadAllProductImages, 2000);
                 } else {
                     // [추가] 데이터가 하나도 없는 경우 (필터링 등으로 인해)
                     productsData = [];
@@ -3481,7 +3476,11 @@
             const categoryFilters = uniqueFilters.filter(f => !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(f).trim()) || String(f).includes("상시판매") || String(f).includes("현장판매"));
 
             // 각 섹션 맨 앞에 '전체상품' 추가 (식별을 위해 다른 키 사용)
-            if (dateFilters.length > 0) dateFilters.unshift('전체상품_예약');
+            if (dateFilters.length > 0) {
+                dateFilters.unshift('전체상품_예약');
+                // [신규] '야채' 가상 카테고리 추가 (전체상품 다음)
+                dateFilters.splice(1, 0, '야채_예약');
+            }
             if (categoryFilters.length > 0) categoryFilters.unshift('전체상품_현장');
 
             const filterAreaDates = document.getElementById('date-filters');
@@ -3511,7 +3510,14 @@
                 const isActive = activeFilter ? (String(date) === String(activeFilter)) : (idx === 0);
                 btn.className = `date-btn ${isActive ? 'active' : ''}`;
                 btn.dataset.date = date;
-                btn.innerText = (date === '전체상품_예약') ? '전체상품' : futureData.find(p => p.matchKey === date).displayDate;
+                if (date === '전체상품_예약') {
+                    btn.innerText = '전체상품';
+                } else if (date === '야채_예약') {
+                    btn.innerText = '야채';
+                } else {
+                    const found = futureData.find(p => p.matchKey === date);
+                    btn.innerText = found ? found.displayDate : date;
+                }
                 btn.onclick = () => {
                     document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
@@ -3585,10 +3591,10 @@
 
             const getPriority = (name) => {
                 const n = String(name || "").trim();
-                // [(【[ 등의 문자로 시작하면 1순위 (머릿말)
-                if (/^[\(\[\{\【\［\（]/.test(n)) return 1;
+                // [(【[ , ★☆♥♡◆◇📢✨ 등의 문자로 시작하면 1순위 (머릿말)
+                if (/^[\(\[\{\【\［\（\★\☆\♥\♡\◆\◇\📢\✨]/.test(n)) return 1;
                 // )]}】］） 등의 문자로 끝나면 3순위 (맺음말/품절안내 등)
-                if (/[\)\]\}\】\］\）]$/.test(n)) return 3;
+                if (/[\)\]\}\\】\］\）]$/.test(n)) return 3;
                 return 2;
             };
 
@@ -3603,25 +3609,39 @@
                     }
                     return true;
                 })
+                : targetKey === '야채_예약'
+                ? productsData.filter(p => {
+                    // 1. 예약 상품(날짜 형식)이어야 함
+                    if (!/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(p.matchKey).trim())) return false;
+                    // 2. 오늘 이후 상품이어야 함
+                    const cleanDate = String(p.matchKey).replace(/\./g, '-');
+                    const parts = cleanDate.split('-');
+                    if (parts.length === 3) {
+                        const pDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                        if (!isNaN(pDate.getTime())) { pDate.setHours(0, 0, 0, 0); if (pDate < today) return false; }
+                    }
+                    // 3. 상품명에 [야채]가 포함되어야 함
+                    return p.name.includes('[야채]');
+                })
                 : targetKey === '전체상품_현장'
                 ? productsData.filter(p => !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(p.matchKey).trim()) || String(p.matchKey).includes("상시판매") || String(p.matchKey).includes("현장판매"))
                 : productsData.filter(p => p.matchKey === targetKey);
 
             // [정렬 적용] 머릿말 > 일반 > 맺음말 순
             filteredData.sort((a, b) => {
-                // 1. 전체상품 예약 보기일 때는 날짜순 정렬 우선 (날짜 그룹 내에서 머릿말 정렬)
+                // 1. 머릿말 우선순위 (getPriority) - 날짜보다도 우선하여 최상단 고정
+                const pA = getPriority(a.name);
+                const pB = getPriority(b.name);
+                if (pA !== pB) return pA - pB;
+
+                // 2. 전체상품 예약 보기일 때는 날짜순 정렬 (같은 우선순위 내에서 날짜별 정렬)
                 if (targetKey === '전체상품_예약') {
                     const dateA = new Date(String(a.matchKey).replace(/\./g, '-')).getTime() || 0;
                     const dateB = new Date(String(b.matchKey).replace(/\./g, '-')).getTime() || 0;
                     if (dateA !== dateB) return dateA - dateB;
                 }
-
-                // 2. 머릿말 우선순위 (getPriority)
-                const pA = getPriority(a.name);
-                const pB = getPriority(b.name);
-                if (pA !== pB) return pA - pB;
                 
-                // 3. 같은 우선순위라면 가나다 순(숫자 포함 자연스럽게) 정렬
+                // 3. 같은 우선순위와 날짜라면 가나다 순(숫자 포함 자연스럽게) 정렬
                 return a.name.localeCompare(b.name, 'ko', { numeric: true, sensitivity: 'base' });
             });
 
@@ -3685,7 +3705,7 @@
                     `<div class="thumb-notice">예시이미지입니다.</div>` +
                     `</div>` +
                     `<div class="item-info-top">` +
-                    `<div class="item-name">${p.name.replace(/^([\[\(【\［\（].*?[\]\)】\］\）])/, '<span style="color:var(--nego-orange);">$1</span>')}</div>` +
+                    `<div class="item-name">${p.name.replace(/^([\[\(【\［\（\★\☆\♥\♡\◆\◇\📢\✨].*?([\]\)】\］\）\★\☆\♥\♡\◆\◇\📢\✨]|$))/, '<span style="color:var(--nego-orange);">$1</span>')}</div>` +
                     `<div class="item-price-val">${parseInt(p.price || 0).toLocaleString()}원</div>` +
                     `</div></div>` +
                     `<div class="item-controls-bottom-v">` +
