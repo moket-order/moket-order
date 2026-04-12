@@ -1456,8 +1456,7 @@
         <div class="main-tabs">
             <button class="main-tab-btn active" data-tab="reserve" onclick="switchMainTab('reserve')">공동구매</button>
             <button class="main-tab-btn" data-tab="on-site" onclick="switchMainTab('on-site')">현장판매</button>
-            <button class="main-tab-btn" data-tab="fruit" onclick="switchMainTab('fruit')">과일</button>
-            <button class="main-tab-btn" data-tab="vegetable" onclick="switchMainTab('vegetable')">야채</button>
+            <button class="main-tab-btn" data-tab="fruit-veg" onclick="switchMainTab('fruit-veg')">과채 당일예약</button>
         </div>
         <!-- [수정] 제목 영역 (ID 변경 및 동적 텍스트 적용 가능하게 함) -->
         <div class="date-section-title" id="main-section-title">공동구매 예약상품 목록</div>
@@ -1699,8 +1698,7 @@
             if (title) {
                 if (type === 'reserve') title.innerText = '공동구매 예약상품 목록';
                 else if (type === 'on-site') title.innerText = '현장판매상품 목록';
-                else if (type === 'fruit') title.innerText = '과일 상품 목록';
-                else if (type === 'vegetable') title.innerText = '야채 상품 목록';
+                else if (type === 'fruit-veg') title.innerText = '당일예약 과일/야채 상품 목록';
             }
 
             // 3. UI 및 목록 다시 그리기 (이미 로드된 데이터 활용 - 사용자 클릭이므로 true 전달)
@@ -3576,10 +3574,29 @@
                     filterAreaCategories.appendChild(btn);
                 });
                 activeFilter = '전체상품_현장';
-            } else if (currentMainTab === 'fruit') {
+            } else if (currentMainTab === 'fruit-veg') {
+                filterAreaCategories.style.display = 'flex';
+                filterAreaCategories.classList.add('compact-view');
+                
+                const fvCats = [
+                    { key: '과일_예약', label: '과일' },
+                    { key: '야채_예약', label: '야채' }
+                ];
+                
+                fvCats.forEach((cat, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'date-btn' + (idx === 0 ? ' active' : '');
+                    btn.dataset.date = cat.key;
+                    btn.innerText = cat.label;
+                    btn.onclick = () => {
+                        document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        renderList(cat.key);
+                        if (isUserAction) btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                    };
+                    filterAreaCategories.appendChild(btn);
+                });
                 activeFilter = '과일_예약';
-            } else if (currentMainTab === 'vegetable') {
-                activeFilter = '야채_예약';
             }
 
             // 4. 리스트 렌더링 호출
