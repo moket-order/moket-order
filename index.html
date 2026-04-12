@@ -849,6 +849,23 @@
             color: #ccc;
             font-size: 0.9rem;
             font-weight: 700;
+            position: relative; /* [추가] 안내문구 배치를 위해 상대 좌표 설정 */
+        }
+
+        .thumb-notice {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.4); /* [추가] 반투명 배경 */
+            color: #fff;
+            font-size: 10px;
+            padding: 3px 0;
+            text-align: center;
+            letter-spacing: -0.5px;
+            pointer-events: none; /* 클릭 방해 금지 */
+            font-weight: 500;
+            backdrop-filter: blur(1px);
         }
 
         .thumb img {
@@ -3660,7 +3677,10 @@
                 card.className = `product-card ${stockText ? 'has-stock' : ''}`;
 
                 card.innerHTML = `<div class="card-top">` +
-                    `<div class="thumb">${imgId ? `<img src="${getImgUrl(imgId, 300)}" loading="lazy" referrerpolicy="no-referrer" style="width:100%; height:100%; object-fit:contain;" onerror="this.onerror=null; this.src=getImgUrl('${imgId}', 300, true);">` : 'No Image'}</div>` +
+                    `<div class="thumb">` +
+                    (imgId ? `<img src="${getImgUrl(imgId, 300)}" loading="lazy" referrerpolicy="no-referrer" style="width:100%; height:100%; object-fit:contain;" onerror="this.onerror=null; this.src=getImgUrl('${imgId}', 300, true);">` : 'No Image') +
+                    `<div class="thumb-notice">예시이미지입니다.</div>` +
+                    `</div>` +
                     `<div class="item-info-top">` +
                     `<div class="item-name">${p.name.replace(/^(\[.*?\])/, '<span style="color:var(--nego-orange);">$1</span>')}</div>` +
                     `<div class="item-price-val">${parseInt(p.price || 0).toLocaleString()}원</div>` +
