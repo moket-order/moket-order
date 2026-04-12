@@ -3585,8 +3585,10 @@
 
             const getPriority = (name) => {
                 const n = String(name || "").trim();
-                if (n.startsWith('[')) return 1;
-                if (n.endsWith(']')) return 3;
+                // [(【[ 등의 문자로 시작하면 1순위 (머릿말)
+                if (/^[\(\[\{\【\［\（]/.test(n)) return 1;
+                // )]}】］） 등의 문자로 끝나면 3순위 (맺음말/품절안내 등)
+                if (/[\)\]\}\】\］\）]$/.test(n)) return 3;
                 return 2;
             };
 
@@ -3607,18 +3609,19 @@
 
             // [정렬 적용] 머릿말 > 일반 > 맺음말 순
             filteredData.sort((a, b) => {
-                // 전체상품 예약 보기일 때는 날짜순 정렬 우선
+                // 1. 전체상품 예약 보기일 때는 날짜순 정렬 우선 (날짜 그룹 내에서 머릿말 정렬)
                 if (targetKey === '전체상품_예약') {
                     const dateA = new Date(String(a.matchKey).replace(/\./g, '-')).getTime() || 0;
                     const dateB = new Date(String(b.matchKey).replace(/\./g, '-')).getTime() || 0;
                     if (dateA !== dateB) return dateA - dateB;
                 }
 
+                // 2. 머릿말 우선순위 (getPriority)
                 const pA = getPriority(a.name);
                 const pB = getPriority(b.name);
                 if (pA !== pB) return pA - pB;
                 
-                // [수정] 같은 우선순위라면 가나다 순(숫자 포함 자연스럽게) 정렬
+                // 3. 같은 우선순위라면 가나다 순(숫자 포함 자연스럽게) 정렬
                 return a.name.localeCompare(b.name, 'ko', { numeric: true, sensitivity: 'base' });
             });
 
@@ -3682,7 +3685,7 @@
                     `<div class="thumb-notice">예시이미지입니다.</div>` +
                     `</div>` +
                     `<div class="item-info-top">` +
-                    `<div class="item-name">${p.name.replace(/^(\[.*?\])/, '<span style="color:var(--nego-orange);">$1</span>')}</div>` +
+                    `<div class="item-name">${p.name.replace(/^([\[\(【\［\（].*?[\]\)】\］\）])/, '<span style="color:var(--nego-orange);">$1</span>')}</div>` +
                     `<div class="item-price-val">${parseInt(p.price || 0).toLocaleString()}원</div>` +
                     `</div></div>` +
                     `<div class="item-controls-bottom-v">` +
