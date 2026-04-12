@@ -3628,6 +3628,14 @@
             const container = document.getElementById('product-list');
             container.innerHTML = '';
 
+            // [추가] 과채 예약구매 11시~13시 주문 불가 안내
+            const now = new Date();
+            const hours = now.getHours();
+            if (currentMainTab === 'fruit-veg' && hours >= 11 && hours < 13 && !isAdminMode) {
+                container.innerHTML = `<div style="text-align:center; padding:80px 20px; color:#999; font-weight:700; line-height:1.6; word-break:keep-all;">현재 주문 가능한 상품이 없습니다.</div>`;
+                return;
+            }
+
             // [추가] 관리자 모드 안내 표시
             if (isAdminMode) {
                 const adminMsg = document.createElement('div');
