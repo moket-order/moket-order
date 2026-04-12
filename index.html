@@ -1703,11 +1703,11 @@
                 else if (type === 'vegetable') title.innerText = '야채 상품 목록';
             }
 
-            // 3. UI 및 목록 다시 그리기 (이미 로드된 데이터 활용)
-            processAndRender(productsData);
+            // 3. UI 및 목록 다시 그리기 (이미 로드된 데이터 활용 - 사용자 클릭이므로 true 전달)
+            processAndRender(productsData, true);
             
             // 4. 스크롤을 맨 위로 (탭 전환 시 초기화 느낌)
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            window.scrollTo({ top: 0, behavior: 'auto' });
         }
 
         /**
@@ -3232,6 +3232,10 @@
             });
         }
 
+        // [추가] 자동 새로고침 간격 제한 (30초)
+        let lastAutoLoadTime = 0;
+        const AUTO_LOAD_INTERVAL = 30000;
+
         async function loadData(force = false) {
             const productArea = document.getElementById('product-list');
 
@@ -3350,17 +3354,23 @@
                         }
                     });
 
-                    // [수정] 데이터 변경 여부와 상관없이 서버에서 응답이 오면 항상 렌더링 업데이트 (로직 수정 반영 보장)
-                    productsData = freshData;
-                    localStorage.setItem('moket_products_cache_v2', JSON.stringify(productsData));
-                    console.log("최신 데이터로 화면 업데이트 완료");
-                    processAndRender(productsData);
-                    startImageCaching(productsData);
-                    setTimeout(preloadAllProductImages, 2000);
+                    // [수정] 데이터 변경 여부를 확인하여 불필요한 리렌더링 방지 (스크롤 튀는 현상 해결)
+                    const isDataChanged = JSON.stringify(productsData) !== JSON.stringify(freshData);
+                    
+                    if (isDataChanged || force) {
+                        productsData = freshData;
+                        localStorage.setItem('moket_products_cache_v2', JSON.stringify(productsData));
+                        console.log(isDataChanged ? "데이터 변경됨: 화면 업데이트" : "강제 새로고침: 화면 업데이트");
+                        processAndRender(productsData, false);
+                        startImageCaching(productsData);
+                        setTimeout(preloadAllProductImages, 2000);
+                    } else {
+                        console.log("데이터 변경 없음: 리렌더링 스킵");
+                    }
                 } else {
                     // [추가] 데이터가 하나도 없는 경우 (필터링 등으로 인해)
                     productsData = [];
-                    processAndRender([]);
+                    processAndRender([], false);
                     console.log("조회된 상품이 없습니다.");
                 }
             }
@@ -3468,7 +3478,7 @@
         }
 
         // [핵심] 상품 데이터를 가공하여 화면에 렌더링 (대분류 탭 포함)
-        function processAndRender(data) {
+        function processAndRender(data, isUserAction = false) {
             if (!data || data.length === 0) return;
             productsData = data; // 최신 데이터 유지
 
@@ -3537,7 +3547,7 @@
                         document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
                         btn.classList.add('active');
                         renderList(date);
-                        btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                        if (isUserAction) btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                     };
                     filterAreaDates.appendChild(btn);
                 });
@@ -3561,7 +3571,7 @@
                         document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
                         btn.classList.add('active');
                         renderList(cat);
-                        btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                        if (isUserAction) btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                     };
                     filterAreaCategories.appendChild(btn);
                 });
@@ -4706,10 +4716,15 @@
         });
 
         // [속도 개선] 사용자가 앱에 다시 들어오거나 다른 탭에서 돌아오면 자동으로 최신 데이터 갱신
+        // [속도 개선] 사용자가 앱에 다시 들어오거나 다른 탭에서 돌아오면 자동으로 최신 데이터 갱신
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
-                console.log("Tab focused (visibility), refreshing data...");
-                loadData();
+                const now = Date.now();
+                if (now - lastAutoLoadTime > AUTO_LOAD_INTERVAL) {
+                    console.log("Tab focused (visibility), refreshing data...");
+                    lastAutoLoadTime = now;
+                    loadData();
+                }
             }
         });
 
@@ -4724,8 +4739,12 @@
 
         // [추가] 포커스를 얻었을 때도 갱신 (일부 모바일 환경 대응)
         window.addEventListener('focus', () => {
-            console.log("Window focused, checking for updates...");
-            loadData();
+            const now = Date.now();
+            if (now - lastAutoLoadTime > AUTO_LOAD_INTERVAL) {
+                console.log("Window focused, checking for updates...");
+                lastAutoLoadTime = now;
+                loadData();
+            }
         });
 
         // [수동 새로고침] 로고 클릭 또는 새로고침 버튼 클릭 시 실행
