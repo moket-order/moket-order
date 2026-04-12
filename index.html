@@ -1701,7 +1701,7 @@
 
         async function fetchDeliveryStatus() {
             try {
-                const res = await fetch(FIREBASE_DB_URL + "delivery_status.json");
+                const res = await fetch(FIREBASE_DB_URL + "delivery_status.json?t=" + Date.now());
                 const status = await res.json();
                 isDeliveryEnabled = (status === true);
                 updateDeliveryUI();
@@ -1711,7 +1711,7 @@
         let isLoginEntryEnabled = true; // 기본값은 로그인 강제
         async function fetchLoginEntryStatus() {
             try {
-                const res = await fetch(FIREBASE_DB_URL + "login_entry_enabled.json");
+                const res = await fetch(FIREBASE_DB_URL + "login_entry_enabled.json?t=" + Date.now());
                 const status = await res.json();
                 // null이면 데이터가 없는 것이므로 기본값 true 유지
                 if (status !== null) isLoginEntryEnabled = (status === true);
@@ -1751,7 +1751,7 @@
 
         async function fetchProductListStatus() {
             try {
-                const url = FIREBASE_DB_URL + "product_list_enabled.json";
+                const url = FIREBASE_DB_URL + "product_list_enabled.json?t=" + Date.now();
                 const res = await fetch(url);
                 const data = await res.json();
                 if (data === null) {
@@ -3190,15 +3190,17 @@
 
                 const [mainRes, stockRes, statusRes] = await Promise.all([
                     fetch(fetchUrl).catch(e => { console.error("GAS 로드 실패:", e); return { ok: false }; }),
-                    fetch(`${FIREBASE_DB_URL}global_stock.json`).catch(e => { console.error("Firebase 로드 실패:", e); return { ok: false }; }),
-                    fetch(`${FIREBASE_DB_URL}product_list_enabled.json`).catch(e => { console.error("공개상태 로드 실패:", e); return { ok: false }; })
+                    fetch(`${FIREBASE_DB_URL}global_stock.json?t=${Date.now()}`).catch(e => { console.error("Firebase 로드 실패:", e); return { ok: false }; }),
+                    fetch(`${FIREBASE_DB_URL}product_list_enabled.json?t=${Date.now()}`).catch(e => { console.error("공개상태 로드 실패:", e); return { ok: false }; })
                 ]);
 
                 // [추가] 공개 여부 설정을 즉시 확인하여 반영
+                const prevEnabled = isProductListEnabled;
                 if (statusRes && statusRes.ok) {
                     const statusData = await statusRes.json();
                     isProductListEnabled = (statusData === null) ? true : !!statusData;
                 }
+                const statusChanged = (prevEnabled !== isProductListEnabled);
 
                 if (header) header.style.opacity = '1';
 
@@ -3267,8 +3269,8 @@
                         }
                     });
 
-                    // 데이터가 바뀌었을 때만 렌더링 업데이트 (화면 깜빡임 방지)
-                    if (JSON.stringify(freshData) !== JSON.stringify(productsData)) {
+                    // 데이터가 바뀌었거나 [추가] 공개상태가 바뀌었을 때만 렌더링 업데이트 (화면 깜빡임 방지)
+                    if (statusChanged || JSON.stringify(freshData) !== JSON.stringify(productsData)) {
                         productsData = freshData;
                         localStorage.setItem('moket_products_cache_v2', JSON.stringify(productsData));
                         console.log("최신 데이터로 화면 업데이트 (상세 이미지 보존됨)");
@@ -3413,13 +3415,16 @@
                             <div style="font-size:50px; margin-bottom:20px;">🌘</div>
                             <div style="font-size:18px; font-weight:800; color:var(--item-black); margin-bottom:8px;">상품 준비 중입니다</div>
                             <div style="font-size:15px; color:#999; line-height:1.5;">
-                                지금은 주문 가능 시간이 아니거나<br>
+                                지금은 주문 가능 시간이나<br>
                                 상품 목록을 업데이트 중입니다.<br>
                                 잠시 후 다시 접속해 주세요!
                             </div>
                         </div>`;
                 }
                 return;
+            } else if (isAdminMode && !isProductListEnabled) {
+                // 관리자 모드인데 상품목록이 꺼져있을 때 상단에 알림 배너 (선택사항)
+                console.log("관리자 모드: 상품 비공개 상태에서 목록을 유지합니다.");
             }
 
             // 필터 처리: 날짜 형식인 경우 오늘 이후만, 일반 텍스트인 경우 무조건 포함
@@ -4458,7 +4463,7 @@
                     if (it.name === "배달비") return;
                     const adjKey = fSafeKey(it.date) + "_" + fSafeKey(it.name);
                     const diff = -it.qty;
-                    fetch(`${FIREBASE_DB_URL}global_stock/${adjKey}.json`)
+                    fetch(`${FIREBASE_DB_URL}global_stock/${adjKey}.json?t=${Date.now()}`)
                         .then(r => r.json())
                         .then(currentAdj => {
                             const newAdj = (currentAdj || 0) + diff;
