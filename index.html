@@ -1456,10 +1456,10 @@
         <div class="main-tabs">
             <button class="main-tab-btn active" data-tab="reserve" onclick="switchMainTab('reserve')">공동구매</button>
             <button class="main-tab-btn" data-tab="on-site" onclick="switchMainTab('on-site')">현장판매</button>
-            <button class="main-tab-btn" data-tab="fruit-veg" onclick="switchMainTab('fruit-veg')">과채 당일예약</button>
+            <button class="main-tab-btn" data-tab="fruit-veg" onclick="switchMainTab('fruit-veg')">과채 예약구매</button>
         </div>
         <!-- [수정] 제목 영역 (ID 변경 및 동적 텍스트 적용 가능하게 함) -->
-        <div class="date-section-title" id="main-section-title">공동구매 예약상품 목록</div>
+        <div class="date-section-title" id="main-section-title" style="display:none;"></div>
         <!-- [통합] 필터 영역 (하위 카테고리/날짜 표시) -->
         <div class="date-filter-container" id="date-filters"></div>
         <div class="date-filter-container" id="date-filters-categories" style="display:none;"></div>
@@ -1696,9 +1696,15 @@
             // 2. 제목 변경
             const title = document.getElementById('main-section-title');
             if (title) {
-                if (type === 'reserve') title.innerText = '공동구매 예약상품 목록';
-                else if (type === 'on-site') title.innerText = '현장판매상품 목록';
-                else if (type === 'fruit-veg') title.innerText = '당일예약 상품목록(낮 12시 주문마감)';
+                if (type === 'reserve' || type === 'on-site') {
+                    title.style.display = 'none';
+                } else if (type === 'fruit-veg') {
+                    title.style.display = 'block';
+                    title.innerHTML = `
+                        <div style="font-size: 17px; font-weight: 900; color: var(--nego-orange); margin-bottom: 6px;">[과일, 채소한정] 예약구매시 5% 할인!!</div>
+                        <div style="font-size: 14px; font-weight: 600; color: #666; letter-spacing: -0.5px;">(00시~11시 : 오늘상품 예약, 13시~24시 : 다음날상품 예약)</div>
+                    `;
+                }
             }
 
             // 3. UI 및 목록 다시 그리기 (이미 로드된 데이터 활용 - 사용자 클릭이므로 true 전달)
@@ -3230,9 +3236,9 @@
             });
         }
 
-        // [추가] 자동 새로고침 간격 제한 (30초)
+        // [추가] 자동 새로고침 간격 제한 (1분)
         let lastAutoLoadTime = 0;
-        const AUTO_LOAD_INTERVAL = 30000;
+        const AUTO_LOAD_INTERVAL = 60000;
 
         async function loadData(force = false) {
             const productArea = document.getElementById('product-list');
@@ -3266,9 +3272,9 @@
                 // 2. [서버 호출] 배경에서 최신 데이터 가져오기 (Promise.all로 병렬 처리하여 속도 개선)
                 const fetchUrl = API_URL + (API_URL.includes('?') ? '&' : '?') + 't=' + Date.now();
 
-                // 로딩 중 표시 (기능적으로만 작동하도록 투명도 조절)
+                // 로딩 중 표시 (수동 새로고침일 때만 투명도 조절하여 배경 갱신 시 불쾌함 감소)
                 const header = document.querySelector('.header');
-                if (header) header.style.opacity = '0.7';
+                if (force && header) header.style.opacity = '0.7';
 
                 const [mainRes, stockRes, statusRes] = await Promise.all([
                     fetch(fetchUrl).catch(e => { console.error("GAS 로드 실패:", e); return { ok: false }; }),
@@ -3640,14 +3646,15 @@
 
             let filteredData = targetKey === '전체상품_예약' 
                 ? productsData.filter(p => {
-                    if (!/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(p.matchKey).trim()) || String(p.matchKey).includes("상시판매") || String(p.matchKey).includes("현장판매")) return false;
+                    const s = String(p.matchKey).trim();
+                    if (!/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(s) || s.includes("상시판매") || s.includes("현장판매")) return false;
                     
-                    // [추가] 공동구매 전체보기에서는 야채/과일 상품 제외
-                    const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || String(p.matchKey).trim() === "야채구매";
-                    const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || String(p.matchKey).trim() === "과일구매";
+                    // [핵심] 야채/과일 상품 제외 (이름 또는 매치키 기준)
+                    const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
+                    const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
                     if (isVeg || isFruit) return false;
 
-                    const cleanDate = String(p.matchKey).replace(/\./g, '-');
+                    const cleanDate = s.replace(/\./g, '-');
                     const parts = cleanDate.split('-');
                     if (parts.length === 3) {
                         const pDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
@@ -3696,16 +3703,28 @@
                     return p.name.includes('[야채]') || p.name.includes('[야채구매]') || isVegKey;
                 })
                 : targetKey === '전체상품_현장'
-                ? productsData.filter(p => !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(p.matchKey).trim()) || String(p.matchKey).includes("상시판매") || String(p.matchKey).includes("현장판매"))
+                ? productsData.filter(p => {
+                    const s = String(p.matchKey).trim();
+                    const isDate = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(s);
+                    // 날짜가 아니거나 상시/현장판매인 상품만 포함
+                    if (isDate && !s.includes("상시판매") && !s.includes("현장판매")) return false;
+
+                    // [핵심] 야채/과일 상품 제외
+                    const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
+                    const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
+                    if (isVeg || isFruit) return false;
+
+                    return true;
+                })
                 : productsData.filter(p => {
                     // 특정 날짜/카테고리 필터 클릭 시
                     if (p.matchKey !== targetKey) return false;
                     
-                    // [추가] 공동구매 탭의 날짜 필터 클릭 시 야채/과일 상품은 숨김
+                    // [추가] 공동구매/현장판매 탭에서는 야채/과일 상품은 숨김
                     const s = String(p.matchKey).trim();
                     const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
                     const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
-                    if (currentMainTab === 'reserve' && (isVeg || isFruit)) return false;
+                    if ((currentMainTab === 'reserve' || currentMainTab === 'on-site') && (isVeg || isFruit)) return false;
                     
                     return true;
                 });
