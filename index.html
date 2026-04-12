@@ -1760,9 +1760,9 @@
                     isProductListEnabled = !!data;
                 }
 
-                // 관리자가 아닐 때 리스트 상태 반영
+                // [수정] 관리자가 아닐 때 리스트 상태 반영 (cachedProducts가 있으면 그것으로, 없으면 현재 것으로)
                 if (!isAdminMode) {
-                    processAndRender(cachedProducts);
+                    processAndRender(cachedProducts || productsData);
                 }
             } catch (e) { console.error(e); }
         }
@@ -3188,10 +3188,17 @@
                 const header = document.querySelector('.header');
                 if (header) header.style.opacity = '0.7';
 
-                const [mainRes, stockRes] = await Promise.all([
+                const [mainRes, stockRes, statusRes] = await Promise.all([
                     fetch(fetchUrl).catch(e => { console.error("GAS 로드 실패:", e); return { ok: false }; }),
-                    fetch(`${FIREBASE_DB_URL}global_stock.json`).catch(e => { console.error("Firebase 로드 실패:", e); return { ok: false }; })
+                    fetch(`${FIREBASE_DB_URL}global_stock.json`).catch(e => { console.error("Firebase 로드 실패:", e); return { ok: false }; }),
+                    fetch(`${FIREBASE_DB_URL}product_list_enabled.json`).catch(e => { console.error("공개상태 로드 실패:", e); return { ok: false }; })
                 ]);
+
+                // [추가] 공개 여부 설정을 즉시 확인하여 반영
+                if (statusRes && statusRes.ok) {
+                    const statusData = await statusRes.json();
+                    isProductListEnabled = (statusData === null) ? true : !!statusData;
+                }
 
                 if (header) header.style.opacity = '1';
 
@@ -3390,12 +3397,28 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            // [추가] 사장님 모드가 아니고, 전체 비공개 상태인 경우 빈 배열 처리
+            // [추가] 사장님 모드가 아니고, 전체 비공개 상태인 경우 안내 문구 표시
             if (!isAdminMode && !isProductListEnabled) {
-                productsData = [];
                 cachedProducts = data; // 원본 백업
-                renderFilters([]);
-                renderList('');
+                const productArea = document.getElementById('product-list');
+                const filterAreaDates = document.getElementById('date-filters');
+                const filterAreaCategories = document.getElementById('date-filters-categories');
+                
+                if (filterAreaDates) filterAreaDates.innerHTML = '';
+                if (filterAreaCategories) filterAreaCategories.innerHTML = '';
+                
+                if (productArea) {
+                    productArea.innerHTML = `
+                        <div style="text-align:center; padding:100px 20px; color:#666;">
+                            <div style="font-size:50px; margin-bottom:20px;">🌘</div>
+                            <div style="font-size:18px; font-weight:800; color:var(--item-black); margin-bottom:8px;">상품 준비 중입니다</div>
+                            <div style="font-size:15px; color:#999; line-height:1.5;">
+                                지금은 주문 가능 시간이 아니거나<br>
+                                상품 목록을 업데이트 중입니다.<br>
+                                잠시 후 다시 접속해 주세요!
+                            </div>
+                        </div>`;
+                }
                 return;
             }
 
