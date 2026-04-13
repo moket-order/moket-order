@@ -878,7 +878,8 @@
             color: #ccc;
             font-size: 0.9rem;
             font-weight: 700;
-            position: relative; /* [추가] 안내문구 배치를 위해 상대 좌표 설정 */
+            position: relative;
+            /* [추가] 안내문구 배치를 위해 상대 좌표 설정 */
         }
 
         .thumb-notice {
@@ -886,13 +887,15 @@
             bottom: 0;
             left: 0;
             width: 100%;
-            background: rgba(0, 0, 0, 0.4); /* [추가] 반투명 배경 */
+            background: rgba(0, 0, 0, 0.4);
+            /* [추가] 반투명 배경 */
             color: #fff;
             font-size: 10px;
             padding: 3px 0;
             text-align: center;
             letter-spacing: -0.5px;
-            pointer-events: none; /* 클릭 방해 금지 */
+            pointer-events: none;
+            /* 클릭 방해 금지 */
             font-weight: 500;
             backdrop-filter: blur(1px);
         }
@@ -991,12 +994,16 @@
 
         .item-name {
             font-weight: 800;
-            font-size: 17px; /* 19px -> 17px로 축소 */
+            font-size: 17px;
+            /* 19px -> 17px로 축소 */
             margin-top: 5px;
             color: var(--item-black);
-            line-height: 1.25; /* 줄 간격 살짝 조정 */
-            white-space: normal; /* 한 줄 유지 -> 자동 줄바꿈으로 변경 */
-            word-break: keep-all; /* 단어 단위 줄바꿈 (한국어 권장) */
+            line-height: 1.25;
+            /* 줄 간격 살짝 조정 */
+            white-space: normal;
+            /* 한 줄 유지 -> 자동 줄바꿈으로 변경 */
+            word-break: keep-all;
+            /* 단어 단위 줄바꿈 (한국어 권장) */
             overflow: hidden;
             width: 100%;
             display: -webkit-box;
@@ -1421,7 +1428,7 @@
                 <div style="text-align:left; line-height:2.2; font-weight:700; font-size:16px;">
                     • 월요일 - 금요일 : 11:00 - 20:00<br>
                     • 토요일 : 11:00 - 18:00<br>
-                    • 휴무일 : 일요일, 1월1일, 설연휴, 추석연휴
+                    • 휴무일 : 일요일, 1월1일, 설날연휴, 추석연휴
                 </div>
             </div>
             <button class="btn-common btn-close" onclick="closeModal('hours-modal')">닫기</button>
@@ -1445,7 +1452,8 @@
                         style="font-size:22px; color:var(--nego-orange); letter-spacing:0.5px; font-weight:900;">1002-4634-4656</span><br>
                     <span style="font-size:15px; color:#666; letter-spacing:-0.5px;">예금주 : 강*민(모켓(MOKET))</span>
                     <!-- [추가] 사다드림 전용 안내 문구 영역 -->
-                    <div id="bank-modal-notice" style="display:none; margin-top:15px; padding:12px; background:#fff0f0; border-radius:10px; color:#ff4d4d; font-size:14px; line-height:1.5; border:1.5px solid #ffcccc; word-break:keep-all;">
+                    <div id="bank-modal-notice"
+                        style="display:none; margin-top:15px; padding:12px; background:#fff0f0; border-radius:10px; color:#ff4d4d; font-size:14px; line-height:1.5; border:1.5px solid #ffcccc; word-break:keep-all;">
                         📢 <b>사다드림 안내</b> 📢<br>
                         입금 확인까지 되어야 최종 주문 확정이 됩니다.(입금자명은 닉네임으로 부탁드립니다!)<br>(오픈채팅방과 주문서 닉네임을 동일하게 해주세요!)
                     </div>
@@ -1714,7 +1722,7 @@
 
             // 3. UI 및 목록 다시 그리기 (이미 로드된 데이터 활용 - 사용자 클릭이므로 true 전달)
             processAndRender(productsData, true);
-            
+
             // 4. 스크롤을 맨 위로 (탭 전환 시 초기화 느낌)
             window.scrollTo({ top: 0, behavior: 'auto' });
         }
@@ -2188,7 +2196,7 @@
                 el.style.display = 'none';
                 // [추가] 높아졌던 Z-Index 초기화
                 if (id === 'profile-modal') el.style.zIndex = "";
-                
+
                 // [추가] 사다드림 주문 완료 후 계좌창을 닫을 때만 페이지 새로고침
                 if (id === 'bank-modal' && window.isSadaOrderFinished) {
                     window.isSadaOrderFinished = false;
@@ -2863,7 +2871,7 @@
                 if (a.item !== '배달비' && b.item === '배달비') return -1;
 
                 // 2. 주문시간(timestamp) 내림차순(최신순)으로 정렬
-                        const timeA = parseKRDate(a.timestamp);
+                const timeA = parseKRDate(a.timestamp);
                 const timeB = parseKRDate(b.timestamp);
                 return timeB - timeA;
             });
@@ -3003,7 +3011,7 @@
                         const isStocked = (order.isStocked === true || String(order.isStocked).toUpperCase() === "TRUE");
 
                         const isDelivered = (order.delivered === true || String(order.delivered).toUpperCase() === "TRUE");
-                        
+
                         // [수정] 시간 기반 자동 마감 대신, 사장님이 상품 목록에서 지웠는지만 체크 (수동 마감 지원)
                         const isProductStillInList = productsData.some(p => p.name === String(order.item).trim());
 
@@ -3371,7 +3379,7 @@
 
                     // [수정] 데이터 변경 여부를 확인하여 불필요한 리렌더링 방지 (스크롤 튀는 현상 해결)
                     const isDataChanged = JSON.stringify(productsData) !== JSON.stringify(freshData);
-                    
+
                     if (isDataChanged || force) {
                         productsData = freshData;
                         localStorage.setItem('moket_products_cache_v2', JSON.stringify(productsData));
@@ -3532,8 +3540,8 @@
                 const s = String(f).trim();
                 // 날짜가 아니어야 하고, 상시/현장판매는 포함하되 '야채/야채구매', '과일/과일구매'는 제외
                 const isNotDate = !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(s);
-                return (isNotDate || s.includes("상시판매") || s.includes("현장판매")) && 
-                       s !== "야채구매" && s !== "야채" && s !== "과일구매" && s !== "과일" && s !== "기타";
+                return (isNotDate || s.includes("상시판매") || s.includes("현장판매")) &&
+                    s !== "야채구매" && s !== "야채" && s !== "과일구매" && s !== "과일" && s !== "기타";
             });
 
             // 3. UI 영역 설정
@@ -3594,13 +3602,13 @@
             } else if (currentMainTab === 'fruit-veg') {
                 filterAreaCategories.style.display = 'flex';
                 filterAreaCategories.classList.add('compact-view');
-                
+
                 const fvCats = [
                     { key: '과일_예약', label: '과일' },
                     { key: '야채_예약', label: '야채' },
                     { key: '기타_예약', label: '기타' }
                 ];
-                
+
                 fvCats.forEach((cat, idx) => {
                     const btn = document.createElement('button');
                     btn.className = 'date-btn' + (idx === 0 ? ' active' : '');
@@ -3664,11 +3672,11 @@
                 return 2;
             };
 
-            let filteredData = targetKey === '전체상품_예약' 
+            let filteredData = targetKey === '전체상품_예약'
                 ? productsData.filter(p => {
                     const s = String(p.matchKey).trim();
                     if (!/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(s) || s.includes("상시판매") || s.includes("현장판매")) return false;
-                    
+
                     // [핵심] 야채/과일/기타 상품 제외 (이름 또는 매치키 기준)
                     const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
                     const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
@@ -3684,80 +3692,80 @@
                     return true;
                 })
                 : targetKey === '과일_예약'
-                ? productsData.filter(p => {
-                    // 1. 예약 상품(날짜 형식) 이거나 matchKey가 '과일' 또는 '과일구매'여야 함
-                    const isDate = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(p.matchKey).trim());
-                    const s = String(p.matchKey).trim();
-                    const isFruitKey = s === "과일구매" || s === "과일";
-                    if (!isDate && !isFruitKey) return false;
+                    ? productsData.filter(p => {
+                        // 1. 예약 상품(날짜 형식) 이거나 matchKey가 '과일' 또는 '과일구매'여야 함
+                        const isDate = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(p.matchKey).trim());
+                        const s = String(p.matchKey).trim();
+                        const isFruitKey = s === "과일구매" || s === "과일";
+                        if (!isDate && !isFruitKey) return false;
 
-                    if (isDate) {
-                        const cleanDate = String(p.matchKey).replace(/\./g, '-');
-                        const parts = cleanDate.split('-');
-                        if (parts.length === 3) {
-                            const pDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                            if (!isNaN(pDate.getTime())) { pDate.setHours(0, 0, 0, 0); if (pDate < today) return false; }
+                        if (isDate) {
+                            const cleanDate = String(p.matchKey).replace(/\./g, '-');
+                            const parts = cleanDate.split('-');
+                            if (parts.length === 3) {
+                                const pDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                                if (!isNaN(pDate.getTime())) { pDate.setHours(0, 0, 0, 0); if (pDate < today) return false; }
+                            }
                         }
-                    }
-                    if (s === "기타") return false;
-                    return p.name.includes('[과일]') || p.name.includes('[과일구매]') || isFruitKey;
-                })
-                : targetKey === '야채_예약'
-                ? productsData.filter(p => {
-                    // 1. 예약 상품(날짜 형식) 이거나 matchKey가 '야채' 또는 '야채구매'여야 함
-                    const isDate = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(p.matchKey).trim());
-                    const s = String(p.matchKey).trim();
-                    const isVegKey = s === "야채구매" || s === "야채";
-                    
-                    if (!isDate && !isVegKey) return false;
+                        if (s === "기타") return false;
+                        return p.name.includes('[과일]') || p.name.includes('[과일구매]') || isFruitKey;
+                    })
+                    : targetKey === '야채_예약'
+                        ? productsData.filter(p => {
+                            // 1. 예약 상품(날짜 형식) 이거나 matchKey가 '야채' 또는 '야채구매'여야 함
+                            const isDate = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(p.matchKey).trim());
+                            const s = String(p.matchKey).trim();
+                            const isVegKey = s === "야채구매" || s === "야채";
 
-                    // 2. 오늘 이후 상품이어야 함 (날짜 형식인 경우에만 체크)
-                    if (isDate) {
-                        const cleanDate = String(p.matchKey).replace(/\./g, '-');
-                        const parts = cleanDate.split('-');
-                        if (parts.length === 3) {
-                            const pDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                            if (!isNaN(pDate.getTime())) { pDate.setHours(0, 0, 0, 0); if (pDate < today) return false; }
-                        }
-                    }
-                    
-                    if (s === "기타") return false;
-                    // 3. 상품명에 [야채]가 포함되거나 matchKey가 '야채구매'여야 함
-                    return p.name.includes('[야채]') || p.name.includes('[야채구매]') || isVegKey;
-                })
-                : targetKey === '기타_예약'
-                ? productsData.filter(p => {
-                    const s = String(p.matchKey).trim();
-                    return s === "기타";
-                })
-                : targetKey === '전체상품_현장'
-                ? productsData.filter(p => {
-                    const s = String(p.matchKey).trim();
-                    const isDate = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(s);
-                    // 날짜가 아니거나 상시/현장판매인 상품만 포함
-                    if (isDate && !s.includes("상시판매") && !s.includes("현장판매")) return false;
+                            if (!isDate && !isVegKey) return false;
 
-                    // [핵심] 야채/과일/기타 상품 제외
-                    const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
-                    const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
-                    const isEtc = s === "기타";
-                    if (isVeg || isFruit || isEtc) return false;
+                            // 2. 오늘 이후 상품이어야 함 (날짜 형식인 경우에만 체크)
+                            if (isDate) {
+                                const cleanDate = String(p.matchKey).replace(/\./g, '-');
+                                const parts = cleanDate.split('-');
+                                if (parts.length === 3) {
+                                    const pDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                                    if (!isNaN(pDate.getTime())) { pDate.setHours(0, 0, 0, 0); if (pDate < today) return false; }
+                                }
+                            }
 
-                    return true;
-                })
-                : productsData.filter(p => {
-                    // 특정 날짜/카테고리 필터 클릭 시
-                    if (p.matchKey !== targetKey) return false;
-                    
-                    // [추가] 공동구매/현장판매 탭에서는 야채/과일 상품은 숨김
-                    const s = String(p.matchKey).trim();
-                    const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
-                    const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
-                    const isEtc = s === "기타";
-                    if ((currentMainTab === 'reserve' || currentMainTab === 'on-site') && (isVeg || isFruit || isEtc)) return false;
-                    
-                    return true;
-                });
+                            if (s === "기타") return false;
+                            // 3. 상품명에 [야채]가 포함되거나 matchKey가 '야채구매'여야 함
+                            return p.name.includes('[야채]') || p.name.includes('[야채구매]') || isVegKey;
+                        })
+                        : targetKey === '기타_예약'
+                            ? productsData.filter(p => {
+                                const s = String(p.matchKey).trim();
+                                return s === "기타";
+                            })
+                            : targetKey === '전체상품_현장'
+                                ? productsData.filter(p => {
+                                    const s = String(p.matchKey).trim();
+                                    const isDate = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(s);
+                                    // 날짜가 아니거나 상시/현장판매인 상품만 포함
+                                    if (isDate && !s.includes("상시판매") && !s.includes("현장판매")) return false;
+
+                                    // [핵심] 야채/과일/기타 상품 제외
+                                    const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
+                                    const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
+                                    const isEtc = s === "기타";
+                                    if (isVeg || isFruit || isEtc) return false;
+
+                                    return true;
+                                })
+                                : productsData.filter(p => {
+                                    // 특정 날짜/카테고리 필터 클릭 시
+                                    if (p.matchKey !== targetKey) return false;
+
+                                    // [추가] 공동구매/현장판매 탭에서는 야채/과일 상품은 숨김
+                                    const s = String(p.matchKey).trim();
+                                    const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
+                                    const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
+                                    const isEtc = s === "기타";
+                                    if ((currentMainTab === 'reserve' || currentMainTab === 'on-site') && (isVeg || isFruit || isEtc)) return false;
+
+                                    return true;
+                                });
 
             // [정렬 적용] 머릿말 > 일반 > 맺음말 순
             filteredData.sort((a, b) => {
@@ -3772,7 +3780,7 @@
                     const dateB = new Date(String(b.matchKey).replace(/\./g, '-')).getTime() || 0;
                     if (dateA !== dateB) return dateA - dateB;
                 }
-                
+
                 // 3. 같은 우선순위와 날짜라면 가나다 순(숫자 포함 자연스럽게) 정렬
                 return a.name.localeCompare(b.name, 'ko', { numeric: true, sensitivity: 'base' });
             });
@@ -3795,14 +3803,14 @@
                     currentGroupBox = document.createElement('div');
                     currentGroupBox.className = "product-group-box";
                     currentGroupBox.style = "margin-bottom:25px; border:1px solid #f0f0f0; border-radius:15px; background:white; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.03);";
-                    
+
                     const header = document.createElement('div');
                     header.style = "padding:15px 18px; font-size:16px; font-weight:900; color:var(--item-black); border-bottom:1px solid #f0f0f0; background:#fcfdfe; display:flex; align-items:center;";
-                    
-                    const iconSvg = targetKey === '전체상품_예약' 
+
+                    const iconSvg = targetKey === '전체상품_예약'
                         ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px; color:var(--moket-green);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`
                         : ``;
-                    
+
                     header.innerHTML = `${iconSvg}${p.displayDate || p.matchKey}`;
                     currentGroupBox.appendChild(header);
 
@@ -3831,8 +3839,8 @@
                 }
 
                 const isSoldOut = stock <= 0;
-                const isLowStock = !isSoldOut && stock < 10;
-                
+                const isLowStock = !isSoldOut && stock <= 5;
+
                 let stockText = "";
                 let stockColor = "#455464";
                 if (isFinite(stock)) {
@@ -3854,7 +3862,7 @@
                     `<div class="thumb-notice">예시이미지입니다.</div>` +
                     `</div>` +
                     `<div class="item-info-top">` +
-                    `<div class="item-name">${p.name.replace(/^([\[\(【\［\（\★\☆\♥\♡\◆\◇\📢\✨].*?([\]\)】\］\）\★\☆\♥\♡\◆\◇\📢\✨]|$))/, '<span style="color:var(--nego-orange);">$1</span>')}</div>` +
+                    `<div class="item-name">${p.name.replace(/^(\[.*?\](?:\s*\[.*?\])*)/, '<span style="color:var(--nego-orange);">$1</span>')}</div>` +
                     `<div class="item-price-val">${parseInt(p.price || 0).toLocaleString()}원</div>` +
                     `</div></div>` +
                     `<div class="item-controls-bottom-v">` +
@@ -3866,7 +3874,7 @@
                     `<input class="qty-num" value="${currentQty}" readonly data-name="${p.name}" data-price="${p.price}" data-stock="${stock}">` +
                     `<button class="qty-btn" onclick="qty(this, 1)">+</button>` +
                     `</div></div></div>`;
-                
+
                 // [수정] 박스 래퍼가 있으면 그 안에 넣고, 없으면 기본 컨테이너에 넣음
                 if (currentGroupBox) {
                     currentGroupBox.querySelector('.group-item-container').appendChild(card);
@@ -3879,7 +3887,7 @@
                 if (nameEl) {
                     let fontSize = 17; // 시작 폰트 19 -> 17
                     nameEl.style.fontSize = fontSize + 'px';
-                    
+
                     // 3줄 높이 계산 (line-height 1.25 기준)
                     // 폰트사이즈 * 줄간격 * 최대줄수
                     const checkHeight = () => {
@@ -3889,7 +3897,7 @@
                     };
 
                     let maxHeight = checkHeight();
-                    
+
                     // scrollHeight가 3줄 높이보다 크면 폰트 축소
                     while (nameEl.scrollHeight > maxHeight + 2 && fontSize > 11) {
                         fontSize -= 0.5;
@@ -3976,7 +3984,7 @@
             const p = productsData.find(i => i.name === name);
             if (!p) return;
             // [수정] 대괄호 말머리에 모켓 오렌지 색상 적용
-            document.getElementById('detail-title').innerHTML = p.name.replace(/^(\[.*?\])/, '<span style="color:var(--nego-orange);">$1</span>');
+            document.getElementById('detail-title').innerHTML = p.name.replace(/^(\[.*?\](?:\s*\[.*?\])*)/, '<span style="color:var(--nego-orange);">$1</span>');
             document.getElementById('detail-price').innerText = parseInt(p.price || 0).toLocaleString() + '원';
             document.getElementById('detail-desc').style.whiteSpace = 'pre-wrap'; // 줄바꿈 유지
             document.getElementById('detail-desc').innerText = p.desc || "상세 설명이 없습니다.";
@@ -4192,7 +4200,7 @@
                     const sub = p.qty * parseInt(p.price || 0);
                     groupHtml += `
                         <div style="display:flex; justify-content:space-between; align-items:center; font-size:15px; padding: 8px 0; ${idx !== grouped[date].length - 1 ? 'border-bottom: 1px dashed #eee;' : ''}">
-                            <span style="color:var(--item-black); font-weight:800; flex:1; padding-right:10px; word-break:keep-all; line-height:1.2; white-space: pre-wrap;">${p.name}</span>
+                            <span style="color:var(--item-black); font-weight:800; flex:1; padding-right:10px; word-break:keep-all; line-height:1.2; white-space: pre-wrap;">${p.name.replace(/^(\[.*?\](?:\s*\[.*?\])*)/, '<span style="color:var(--nego-orange);">$1</span>')}</span>
                             <div style="display:flex; align-items:center; min-width:90px; justify-content:flex-end; flex-shrink:0;">
                                 <span style="color:#455464; font-size:15px; font-weight:700; text-align:right;">${p.qty}개</span>
                                 <span style="color:#ccc; font-size:0.75rem; margin:0 4px;">/</span>
@@ -4729,17 +4737,17 @@
                 // 최종 완료 처리
                 setTimeout(() => {
                     document.getElementById('system-modal').style.display = 'none';
-                    
+
                     // [핵심] 사다드림 상품 포함 여부 체크
                     const hasSadaDream = allItems.some(it => String(it.name).includes('[사다드림]'));
-                    
+
                     if (hasSadaDream) {
                         // 사다드림 상품이 있는 경우 계좌 모달과 전용 문구 표시
                         showSystemModal("주문이 완료되었습니다!", 'alert', () => {
                             const notice = document.getElementById('bank-modal-notice');
                             if (notice) notice.style.display = 'block';
                             window.isSadaOrderFinished = true; // 닫을 때 새로고침 플래그
-                            
+
                             // [수정] 메뉴바를 열지 않고 모달만 단독으로 표시
                             document.getElementById('bank-modal').style.display = 'flex';
                             checkScrollLock();
@@ -4748,7 +4756,7 @@
                         // 일반 상품일 경우 기존처럼 바로 새로고침
                         showSystemModal("주문이 완료되었습니다!", 'alert', () => { location.reload(); });
                         // 사용자 응답 없을 경우 2초 뒤 자동 새로고침
-                        setTimeout(() => { if(cart && Object.keys(cart).length > 0) location.reload(); }, 2000);
+                        setTimeout(() => { if (cart && Object.keys(cart).length > 0) location.reload(); }, 2000);
                     }
                 }, 1000);
 
