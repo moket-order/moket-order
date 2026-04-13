@@ -3820,7 +3820,16 @@
                 const thumbUrl = imgId ? getImgUrl(imgId, 300) : '';
 
                 const currentQty = cart[p.name] || 0;
-                const stock = p.stock !== undefined && p.stock !== "" ? parseInt(p.stock) : Infinity;
+                let stock = p.stock !== undefined && p.stock !== "" ? parseInt(p.stock) : Infinity;
+
+                // [신규] 과채 예약구매 수량 제한 해제 로직 (매일 13시 ~ 익일 05시)
+                const sKey = String(p.matchKey || "").trim();
+                const nowHour = new Date().getHours();
+                const matchesFV = (sKey === "과일" || sKey === "야채" || sKey === "과일구매" || sKey === "야채구매");
+                if ((nowHour >= 13 || nowHour < 5) && matchesFV) {
+                    stock = Infinity;
+                }
+
                 const isSoldOut = stock <= 0;
                 const isLowStock = !isSoldOut && stock < 10;
                 
