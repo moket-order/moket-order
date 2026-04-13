@@ -1002,8 +1002,8 @@
             /* 줄 간격 살짝 조정 */
             white-space: normal;
             /* 한 줄 유지 -> 자동 줄바꿈으로 변경 */
-            word-break: keep-all;
-            /* 단어 단위 줄바꿈 (한국어 권장) */
+            word-break: break-all;
+            /* 긴 단어도 강제 줄바꿈 허용 */
             overflow: hidden;
             width: 100%;
             display: -webkit-box;
@@ -3862,7 +3862,7 @@
                     `<div class="thumb-notice">예시이미지입니다.</div>` +
                     `</div>` +
                     `<div class="item-info-top">` +
-                    `<div class="item-name">${p.name.replace(/^(\[.*?\](?:\s*\[.*?\])*)/, '<span style="color:var(--nego-orange);">$1</span>')}</div>` +
+                    `<div class="item-name">${p.name.replace(/^(\[.*?\](?:\s*\[.*?\])*)/, '<span style="color:var(--nego-orange); font-size: 0.9em;">$1</span><br>')}</div>` +
                     `<div class="item-price-val">${parseInt(p.price || 0).toLocaleString()}원</div>` +
                     `</div></div>` +
                     `<div class="item-controls-bottom-v">` +
@@ -3983,8 +3983,8 @@
         async function openDetail(name) {
             const p = productsData.find(i => i.name === name);
             if (!p) return;
-            // [수정] 대괄호 말머리에 모켓 오렌지 색상 적용
-            document.getElementById('detail-title').innerHTML = p.name.replace(/^(\[.*?\](?:\s*\[.*?\])*)/, '<span style="color:var(--nego-orange);">$1</span>');
+            // [수정] 대괄호 말머리에 모켓 오렌지 색상 적용 + 줄바꿈
+            document.getElementById('detail-title').innerHTML = p.name.replace(/^(\[.*?\](?:\s*\[.*?\])*)/, '<span style="color:var(--nego-orange); font-size: 0.85em;">$1</span><br>');
             document.getElementById('detail-price').innerText = parseInt(p.price || 0).toLocaleString() + '원';
             document.getElementById('detail-desc').style.whiteSpace = 'pre-wrap'; // 줄바꿈 유지
             document.getElementById('detail-desc').innerText = p.desc || "상세 설명이 없습니다.";
@@ -4200,7 +4200,7 @@
                     const sub = p.qty * parseInt(p.price || 0);
                     groupHtml += `
                         <div style="display:flex; justify-content:space-between; align-items:center; font-size:15px; padding: 8px 0; ${idx !== grouped[date].length - 1 ? 'border-bottom: 1px dashed #eee;' : ''}">
-                            <span style="color:var(--item-black); font-weight:800; flex:1; padding-right:10px; word-break:keep-all; line-height:1.2; white-space: pre-wrap;">${p.name.replace(/^(\[.*?\](?:\s*\[.*?\])*)/, '<span style="color:var(--nego-orange);">$1</span>')}</span>
+                            <span style="color:var(--item-black); font-weight:800; flex:1; padding-right:10px; word-break:keep-all; line-height:1.2; white-space: pre-wrap;">${p.name.replace(/^(\[.*?\](?:\s*\[.*?\])*)/, '<span style="color:var(--nego-orange); font-size: 0.9em;">$1</span><br>')}</span>
                             <div style="display:flex; align-items:center; min-width:90px; justify-content:flex-end; flex-shrink:0;">
                                 <span style="color:#455464; font-size:15px; font-weight:700; text-align:right;">${p.qty}개</span>
                                 <span style="color:#ccc; font-size:0.75rem; margin:0 4px;">/</span>
