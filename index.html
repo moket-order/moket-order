@@ -1447,7 +1447,7 @@
                     <!-- [추가] 사다드림 전용 안내 문구 영역 -->
                     <div id="bank-modal-notice" style="display:none; margin-top:15px; padding:12px; background:#fff0f0; border-radius:10px; color:#ff4d4d; font-size:14px; line-height:1.5; border:1.5px solid #ffcccc; word-break:keep-all;">
                         📢 <b>사다드림 안내</b> 📢<br>
-                        입금확인까지 되어야 최종 주문확정이 됩니다.(입금자명은 닉네임으로 부탁드립니다!)<br>(오픈채팅방과 주문서 닉네임을 동일하게 해주세요!)
+                        입금 확인까지 되어야 최종 주문 확정이 됩니다.(입금자명은 닉네임으로 부탁드립니다!)<br>(오픈채팅방과 주문서 닉네임을 동일하게 해주세요!)
                     </div>
                 </div>
             </div>
@@ -3533,7 +3533,7 @@
                 // 날짜가 아니어야 하고, 상시/현장판매는 포함하되 '야채/야채구매', '과일/과일구매'는 제외
                 const isNotDate = !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(s);
                 return (isNotDate || s.includes("상시판매") || s.includes("현장판매")) && 
-                       s !== "야채구매" && s !== "야채" && s !== "과일구매" && s !== "과일";
+                       s !== "야채구매" && s !== "야채" && s !== "과일구매" && s !== "과일" && s !== "기타";
             });
 
             // 3. UI 영역 설정
@@ -3597,7 +3597,8 @@
                 
                 const fvCats = [
                     { key: '과일_예약', label: '과일' },
-                    { key: '야채_예약', label: '야채' }
+                    { key: '야채_예약', label: '야채' },
+                    { key: '기타_예약', label: '기타' }
                 ];
                 
                 fvCats.forEach((cat, idx) => {
@@ -3668,10 +3669,11 @@
                     const s = String(p.matchKey).trim();
                     if (!/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(s) || s.includes("상시판매") || s.includes("현장판매")) return false;
                     
-                    // [핵심] 야채/과일 상품 제외 (이름 또는 매치키 기준)
+                    // [핵심] 야채/과일/기타 상품 제외 (이름 또는 매치키 기준)
                     const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
                     const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
-                    if (isVeg || isFruit) return false;
+                    const isEtc = s === "기타";
+                    if (isVeg || isFruit || isEtc) return false;
 
                     const cleanDate = s.replace(/\./g, '-');
                     const parts = cleanDate.split('-');
@@ -3697,6 +3699,7 @@
                             if (!isNaN(pDate.getTime())) { pDate.setHours(0, 0, 0, 0); if (pDate < today) return false; }
                         }
                     }
+                    if (s === "기타") return false;
                     return p.name.includes('[과일]') || p.name.includes('[과일구매]') || isFruitKey;
                 })
                 : targetKey === '야채_예약'
@@ -3718,8 +3721,14 @@
                         }
                     }
                     
+                    if (s === "기타") return false;
                     // 3. 상품명에 [야채]가 포함되거나 matchKey가 '야채구매'여야 함
                     return p.name.includes('[야채]') || p.name.includes('[야채구매]') || isVegKey;
+                })
+                : targetKey === '기타_예약'
+                ? productsData.filter(p => {
+                    const s = String(p.matchKey).trim();
+                    return s === "기타";
                 })
                 : targetKey === '전체상품_현장'
                 ? productsData.filter(p => {
@@ -3728,10 +3737,11 @@
                     // 날짜가 아니거나 상시/현장판매인 상품만 포함
                     if (isDate && !s.includes("상시판매") && !s.includes("현장판매")) return false;
 
-                    // [핵심] 야채/과일 상품 제외
+                    // [핵심] 야채/과일/기타 상품 제외
                     const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
                     const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
-                    if (isVeg || isFruit) return false;
+                    const isEtc = s === "기타";
+                    if (isVeg || isFruit || isEtc) return false;
 
                     return true;
                 })
@@ -3743,7 +3753,8 @@
                     const s = String(p.matchKey).trim();
                     const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
                     const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
-                    if ((currentMainTab === 'reserve' || currentMainTab === 'on-site') && (isVeg || isFruit)) return false;
+                    const isEtc = s === "기타";
+                    if ((currentMainTab === 'reserve' || currentMainTab === 'on-site') && (isVeg || isFruit || isEtc)) return false;
                     
                     return true;
                 });
