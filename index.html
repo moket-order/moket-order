@@ -3508,17 +3508,25 @@
                 const status = (p.status || "").trim();
                 if (status === "비공개" && !isAdminMode) return false;
 
-                const cleanKey = String(p.matchKey || "").trim();
-                const cleanDate = cleanKey.replace(/\./g, '-');
-                const parts = cleanDate.split('-');
-                if (parts.length === 3) {
-                    const pDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                const s = String(p.matchKey || "").trim();
+                // [개선] 문자열 어디든 날짜 패턴(M/D 또는 YMD)이 있으면 추출
+                const dm = s.replace(/[\.\/]/g, '-').match(/(\d{2,4})-(\d{1,2})-(\d{1,2})|(\d{1,2})-(\d{1,2})/);
+                if (dm) {
+                    let y, m, d;
+                    if (dm[1]) { // YMD 형식
+                        y = parseInt(dm[1]); if (y < 100) y += 2000;
+                        m = parseInt(dm[2]); d = parseInt(dm[3]);
+                    } else { // MD 형식
+                        y = new Date().getFullYear();
+                        m = parseInt(dm[4]); d = parseInt(dm[5]);
+                    }
+                    const pDate = new Date(y, m - 1, d);
                     if (!isNaN(pDate.getTime())) {
                         pDate.setHours(0, 0, 0, 0);
                         return pDate >= today;
                     }
                 }
-                return true; // 날짜가 아닌 경우 포함
+                return true; 
             });
 
             // 2. 유니크한 matchKey 추출 및 분류
@@ -3533,12 +3541,13 @@
                 return String(a).localeCompare(String(b));
             });
 
-            const dateFilters = uniqueFilters.filter(f => /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(f).trim()) && !String(f).includes("상시판매") && !String(f).includes("현장판매"));
+            // [개선] 훨씬 유연한 날짜 인식 (문자열 중간에 날짜 형태만 있어도 공동구매로 간주)
+            const dateRegex = /(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/;
+            const dateFilters = uniqueFilters.filter(f => dateRegex.test(String(f).trim()) && !String(f).includes("상시판매") && !String(f).includes("현장판매"));
             const categoryFilters = uniqueFilters.filter(f => {
                 const s = String(f).trim();
-                // 날짜가 아니어야 하고, 상시/현장판매는 포함하되 '야채/야채구매', '과일/과일구매'는 제외
-                const isNotDate = !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(s);
-                return (isNotDate || s.includes("상시판매") || s.includes("현장판매")) &&
+                const isDate = dateRegex.test(s);
+                return (!isDate || s.includes("상시판매") || s.includes("현장판매")) &&
                     s !== "야채구매" && s !== "야채" && s !== "과일구매" && s !== "과일" && s !== "기타";
             });
 
@@ -3673,7 +3682,8 @@
             let filteredData = targetKey === '전체상품_예약'
                 ? productsData.filter(p => {
                     const s = String(p.matchKey).trim();
-                    if (!/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(s) || s.includes("상시판매") || s.includes("현장판매")) return false;
+                    const isDate = /(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/.test(s);
+                    if (!isDate || s.includes("상시판매") || s.includes("현장판매")) return false;
 
                     // [핵심] 야채/과일/기타 상품 제외 (이름 또는 매치키 기준)
                     const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
@@ -3710,25 +3720,23 @@
                     })
                     : targetKey === '야채_예약'
                         ? productsData.filter(p => {
-                            // 1. 예약 상품(날짜 형식) 이거나 matchKey가 '야채' 또는 '야채구매'여야 함
-                            const isDate = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(p.matchKey).trim());
                             const s = String(p.matchKey).trim();
+                            const isDate = /(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/.test(s);
                             const isVegKey = s === "야채구매" || s === "야채";
 
                             if (!isDate && !isVegKey) return false;
 
-                            // 2. 오늘 이후 상품이어야 함 (날짜 형식인 경우에만 체크)
                             if (isDate) {
-                                const cleanDate = String(p.matchKey).replace(/\./g, '-');
-                                const parts = cleanDate.split('-');
-                                if (parts.length === 3) {
-                                    const pDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                                const dm = s.replace(/[\.\/]/g, '-').match(/(\d{2,4})-(\d{1,2})-(\d{1,2})|(\d{1,2})-(\d{1,2})/);
+                                if (dm) {
+                                    let y, m, d;
+                                    if (dm[1]) { y = parseInt(dm[1]); if (y < 100) y += 2000; m = parseInt(dm[2]); d = parseInt(dm[3]); }
+                                    else { y = new Date().getFullYear(); m = parseInt(dm[4]); d = parseInt(dm[5]); }
+                                    const pDate = new Date(y, m - 1, d);
                                     if (!isNaN(pDate.getTime())) { pDate.setHours(0, 0, 0, 0); if (pDate < today) return false; }
                                 }
                             }
-
                             if (s === "기타") return false;
-                            // 3. 상품명에 [야채]가 포함되거나 matchKey가 '야채구매'여야 함
                             return p.name.includes('[야채]') || p.name.includes('[야채구매]') || isVegKey;
                         })
                         : targetKey === '기타_예약'
@@ -3739,8 +3747,7 @@
                             : targetKey === '전체상품_현장'
                                 ? productsData.filter(p => {
                                     const s = String(p.matchKey).trim();
-                                    const isDate = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(s);
-                                    // 날짜가 아니거나 상시/현장판매인 상품만 포함
+                                    const isDate = /(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/.test(s);
                                     if (isDate && !s.includes("상시판매") && !s.includes("현장판매")) return false;
 
                                     // [핵심] 야채/과일/기타 상품 제외
