@@ -2934,7 +2934,7 @@
                     orderTime = `${y}년 ${m}월 ${day}일 (${w}) ${h}:${min}`;
                 } catch (e) { console.error("날짜 형식 도중 오류:", e); }
 
-                const orderDateStyle = currentSortBy === 'timestamp' ? 'color:var(--nego-orange); font-weight:700;' : 'color:#455464;';
+                const orderDateStyle = 'color:#455464;';
 
                 // 그룹 타이틀 요약 (첫 번째 아이템 기준)
                 const displaySummary = group.itemsCount > 1 ? `${group.firstItemName} 외 ${group.itemsCount - 1}건` : group.firstItemName;
@@ -2990,7 +2990,7 @@
 
                     htmlBuffer += `
                         <div style="margin-bottom: 12px; background: #fbfbfc; border: 1px solid #edf2f7; border-radius: 8px; padding: 10px 12px;">
-                            <div style="font-size: 13px; font-weight: 800; color: #718096; margin-bottom: 8px; display: flex; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 6px;">
+                            <div style="font-size: 15px; font-weight: 800; color: var(--nego-orange); margin-bottom: 8px; display: flex; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 6px;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px; opacity:0.6;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                                 ${pDisp}
                             </div>
