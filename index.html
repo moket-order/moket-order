@@ -782,8 +782,8 @@
             border-radius: var(--btn-radius);
             background: #fafafa;
             color: #455464;
-            font-size: 15px;
-            /* 16 -> 15 (텍스트 균형) */
+            font-size: 16px;
+            /* 15 -> 16 (전체 균형 통일) */
             font-weight: 800;
             border: 1.5px solid #eee;
             cursor: pointer;
@@ -800,7 +800,6 @@
         /* 현장판매 카테고리: 3개 이하일 때 (균등 배분) */
         #date-filters-categories.compact-view .date-btn {
             padding: 0 6px;
-            font-size: 16px;
             flex: 1;
             min-width: 0;
             white-space: nowrap;
@@ -809,7 +808,6 @@
         /* 현장판매 카테고리: 4개 이상일 때 (원래대로, 가로 스크롤) */
         #date-filters-categories:not(.compact-view) .date-btn {
             padding: 0 10px;
-            font-size: 16px;
             flex-shrink: 0;
         }
 
@@ -1471,11 +1469,11 @@
             <button class="main-tab-btn" data-tab="on-site" onclick="switchMainTab('on-site')">현장판매</button>
             <button class="main-tab-btn" data-tab="fruit-veg" onclick="switchMainTab('fruit-veg')">과채 예약구매</button>
         </div>
-        <!-- [수정] 제목 영역 (ID 변경 및 동적 텍스트 적용 가능하게 함) -->
-        <div class="date-section-title" id="main-section-title" style="display:none;"></div>
         <!-- [통합] 필터 영역 (하위 카테고리/날짜 표시) -->
         <div class="date-filter-container" id="date-filters"></div>
         <div class="date-filter-container" id="date-filters-categories" style="display:none;"></div>
+        <!-- [수정] 제목 영역 (ID 변경 및 동적 텍스트 적용 가능하게 함) -->
+        <div class="date-section-title" id="main-section-title" style="display:none;"></div>
     </div>
     <div class="container" id="product-list"></div>
     <div id="detail-overlay" class="modal-overlay" onclick="if(event.target === this) closeModal('detail-overlay')">
@@ -3862,7 +3860,7 @@
                     `<div class="thumb-notice">예시이미지입니다.</div>` +
                     `</div>` +
                     `<div class="item-info-top">` +
-                    `<div class="item-name">${p.name.replace(/^(\[.*?\](?:\s*\[.*?\])*)/, '<span style="color:var(--nego-orange); font-size: 0.9em;">$1</span><br>')}</div>` +
+                    `<div class="item-name">${p.name.replace(/^((?:\s*\[.*?\]|\s*\(.*?\))+)*/, (match) => match ? match.replace(/\[(.*?)\]/g, '<span style="color:var(--nego-orange); font-size: 0.9em;">[$1]</span>') + '<br>' : '')}</div>` +
                     `<div class="item-price-val">${parseInt(p.price || 0).toLocaleString()}원</div>` +
                     `</div></div>` +
                     `<div class="item-controls-bottom-v">` +
@@ -3984,7 +3982,7 @@
             const p = productsData.find(i => i.name === name);
             if (!p) return;
             // [수정] 대괄호 말머리에 모켓 오렌지 색상 적용 + 줄바꿈
-            document.getElementById('detail-title').innerHTML = p.name.replace(/^(\[.*?\](?:\s*\[.*?\])*)/, '<span style="color:var(--nego-orange); font-size: 0.85em;">$1</span><br>');
+            document.getElementById('detail-title').innerHTML = p.name.replace(/^((?:\s*\[.*?\]|\s*\(.*?\))+)*/, (match) => match ? match.replace(/\[(.*?)\]/g, '<span style="color:var(--nego-orange); font-size: 0.85em;">[$1]</span>') + '<br>' : '');
             document.getElementById('detail-price').innerText = parseInt(p.price || 0).toLocaleString() + '원';
             document.getElementById('detail-desc').style.whiteSpace = 'pre-wrap'; // 줄바꿈 유지
             document.getElementById('detail-desc').innerText = p.desc || "상세 설명이 없습니다.";
