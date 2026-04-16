@@ -1689,6 +1689,7 @@
         }
 
         let productsData = [];
+        let activeProductName = ""; // [추가] 상세 페이지 확대 시 정확한 매칭을 위한 전역 변수
         let cachedProducts = []; // [추가] 원본 데이터 보관용 (공개/비공개 전환용)
         let cart = {}; // { 상품명: 수량 } 저장용 장바구니 상태
         let isHistoryProcessing = false; // 주문내역 처리 중 플래그 추가
@@ -3998,6 +3999,8 @@
         async function openDetail(name) {
             const p = productsData.find(i => i.name === name);
             if (!p) return;
+            activeProductName = p.name; // [추가] 진짜 이름을 변수에 저장
+
             // [수정] 대괄호 말머리에 모켓 오렌지 색상 적용 + 줄바꿈
             document.getElementById('detail-title').innerHTML = p.name.replace(/^((?:\s*\[.*?\]|\s*\(.*?\))+)*/, (match) => match ? match.replace(/\[(.*?)\]/g, '<span style="color:var(--nego-orange); font-size: 0.85em;">[$1]</span>') + '<br>' : '');
             document.getElementById('detail-price').innerText = parseInt(p.price || 0).toLocaleString() + '원';
@@ -4086,10 +4089,9 @@
 
         function openFullscreen() {
             const slider = document.getElementById('slider-area');
-            const index = Math.round(slider.scrollLeft / slider.clientWidth);
+            const index = slider.clientWidth > 0 ? Math.round(slider.scrollLeft / slider.clientWidth) : 0;
 
-            const name = document.getElementById('detail-title').innerText;
-            const p = productsData.find(i => i.name === name);
+            const p = productsData.find(i => i.name === activeProductName);
             if (!p || !p.images || p.images.length === 0) return;
 
             const fsOverlay = document.getElementById('fullscreen-overlay');
