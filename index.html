@@ -3550,6 +3550,18 @@
                 const isDate = dateRegex.test(s);
                 return (!isDate || s.includes("상시판매") || s.includes("현장판매")) &&
                     s !== "야채구매" && s !== "야채" && s !== "과일구매" && s !== "과일" && s !== "기타";
+            }).sort((a, b) => {
+                const getCatPriority = (s) => {
+                    const str = String(s).trim();
+                    if (str.includes("냉동")) return 1;
+                    if (str.includes("냉장")) return 2;
+                    if (str.includes("상온") || str.includes("실온")) return 3;
+                    return 4;
+                };
+                const pa = getCatPriority(a);
+                const pb = getCatPriority(b);
+                if (pa !== pb) return pa - pb;
+                return String(a).localeCompare(String(b));
             });
 
             // 3. UI 영역 설정
@@ -3673,10 +3685,9 @@
 
             const getPriority = (name) => {
                 const n = String(name || "").trim();
-                // [(【[ , ★☆♥♡◆◇📢✨ 등의 문자로 시작하면 1순위 (머릿말)
+                // [머릿말] 이름 앞에 기호/괄호가 있는 경우만 상단(1)으로 보냄
                 if (/^[\(\[\{\【\［\（\★\☆\♥\♡\◆\◇\📢\✨]/.test(n)) return 1;
-                // )]}】］） 등의 문자로 끝나면 3순위 (맺음말/품절안내 등)
-                if (/[\)\]\}\\】\］\）]$/.test(n)) return 3;
+                // 나머지는 모두 동일 순위(2)로 처리하여 가나다/보관방법 순서 적용
                 return 2;
             };
 
@@ -3685,13 +3696,9 @@
                     const s = String(p.matchKey).trim();
                     const isDate = /(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/.test(s);
                     if (!isDate || s.includes("상시판매") || s.includes("현장판매")) return false;
-
-                    // [핵심] 야채/과일/기타 상품 제외 (이름 또는 매치키 기준)
                     const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
                     const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
-                    const isEtc = s === "기타";
-                    if (isVeg || isFruit || isEtc) return false;
-
+                    if (isVeg || isFruit || s === "기타") return false;
                     const cleanDate = s.replace(/\./g, '-');
                     const parts = cleanDate.split('-');
                     if (parts.length === 3) {
@@ -3702,94 +3709,106 @@
                 })
                 : targetKey === '과일_예약'
                     ? productsData.filter(p => {
-                        // 1. 예약 상품(날짜 형식) 이거나 matchKey가 '과일' 또는 '과일구매'여야 함
-                        const isDate = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(p.matchKey).trim());
                         const s = String(p.matchKey).trim();
-                        const isFruitKey = s === "과일구매" || s === "과일";
-                        if (!isDate && !isFruitKey) return false;
-
+                        const isDate = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(s);
+                        if (!isDate && s !== "과일구매" && s !== "과일") return false;
                         if (isDate) {
-                            const cleanDate = String(p.matchKey).replace(/\./g, '-');
+                            const cleanDate = s.replace(/\./g, '-');
                             const parts = cleanDate.split('-');
                             if (parts.length === 3) {
                                 const pDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
                                 if (!isNaN(pDate.getTime())) { pDate.setHours(0, 0, 0, 0); if (pDate < today) return false; }
                             }
                         }
-                        if (s === "기타") return false;
-                        return p.name.includes('[과일]') || p.name.includes('[과일구매]') || isFruitKey;
+                        return p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
                     })
                     : targetKey === '야채_예약'
                         ? productsData.filter(p => {
                             const s = String(p.matchKey).trim();
                             const isDate = /(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/.test(s);
-                            const isVegKey = s === "야채구매" || s === "야채";
-
-                            if (!isDate && !isVegKey) return false;
-
+                            if (!isDate && s !== "야채구매" && s !== "야채") return false;
                             if (isDate) {
-                                const dm = s.replace(/[\.\/]/g, '-').match(/(\d{2,4})-(\d{1,2})-(\d{1,2})|(\d{1,2})-(\d{1,2})/);
-                                if (dm) {
-                                    let y, m, d;
-                                    if (dm[1]) { y = parseInt(dm[1]); if (y < 100) y += 2000; m = parseInt(dm[2]); d = parseInt(dm[3]); }
-                                    else { y = new Date().getFullYear(); m = parseInt(dm[4]); d = parseInt(dm[5]); }
+                                const cleanDate = s.replace(/[\.\/]/g, '-');
+                                const parts = cleanDate.split('-');
+                                if (parts.length >= 2) {
+                                    let y = parts.length === 3 ? parseInt(parts[0]) : new Date().getFullYear();
+                                    let m = parts.length === 3 ? parseInt(parts[1]) : parseInt(parts[0]);
+                                    let d = parts.length === 3 ? parseInt(parts[2]) : parseInt(parts[1]);
                                     const pDate = new Date(y, m - 1, d);
                                     if (!isNaN(pDate.getTime())) { pDate.setHours(0, 0, 0, 0); if (pDate < today) return false; }
                                 }
                             }
-                            if (s === "기타") return false;
-                            return p.name.includes('[야채]') || p.name.includes('[야채구매]') || isVegKey;
+                            return p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
                         })
-                        : targetKey === '기타_예약'
+                        : targetKey === '기타_예약' ? productsData.filter(p => String(p.matchKey).trim() === "기타")
+                        : targetKey === '전체상품_현장'
                             ? productsData.filter(p => {
                                 const s = String(p.matchKey).trim();
-                                return s === "기타";
+                                if (/(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/.test(s) && !s.includes("상시판매") && !s.includes("현장판매")) return false;
+                                const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
+                                const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
+                                return !(isVeg || isFruit || s === "기타");
                             })
-                            : targetKey === '전체상품_현장'
-                                ? productsData.filter(p => {
-                                    const s = String(p.matchKey).trim();
-                                    const isDate = /(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/.test(s);
-                                    if (isDate && !s.includes("상시판매") && !s.includes("현장판매")) return false;
+                            : productsData.filter(p => {
+                                if (p.matchKey !== targetKey) return false;
+                                const s = String(p.matchKey).trim();
+                                const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
+                                const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
+                                return !((currentMainTab === 'reserve' || currentMainTab === 'on-site') && (isVeg || isFruit || s === "기타"));
+                            });
 
-                                    // [핵심] 야채/과일/기타 상품 제외
-                                    const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
-                                    const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
-                                    const isEtc = s === "기타";
-                                    if (isVeg || isFruit || isEtc) return false;
-
-                                    return true;
-                                })
-                                : productsData.filter(p => {
-                                    // 특정 날짜/카테고리 필터 클릭 시
-                                    if (p.matchKey !== targetKey) return false;
-
-                                    // [추가] 공동구매/현장판매 탭에서는 야채/과일 상품은 숨김
-                                    const s = String(p.matchKey).trim();
-                                    const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
-                                    const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
-                                    const isEtc = s === "기타";
-                                    if ((currentMainTab === 'reserve' || currentMainTab === 'on-site') && (isVeg || isFruit || isEtc)) return false;
-
-                                    return true;
-                                });
-
-            // [정렬 적용] 머릿말 > 일반 > 맺음말 순
+            const nowHour = new Date().getHours();
+            
+            // [정렬 적용] 재고 유무(품절 무조건 최하단) > 머릿말 > 일반 > 맺음말 > 날짜 > 이름 순
             filteredData.sort((a, b) => {
-                // 1. 머릿말 우선순위 (getPriority) - 날짜보다도 우선하여 최상단 고정
+                const getStockVal = (p) => {
+                    // 숫자가 아닌 문자열이나 빈 칸 등은 무제한(Infinity)으로 처리
+                    if (p.stock === undefined || p.stock === "" || isNaN(p.stock)) return Infinity;
+                    let s = parseInt(p.stock);
+                    const sKey = String(p.matchKey || "").trim();
+                    // 과채류 특정 시간 무제한 로직 (단, 원래 재고가 0보다 클 때만 적용하거나 전체 적용할지 판단)
+                    // 사장님 요청에 따라 13시~05시 사이 과채류는 품절되지 않게 함
+                    if ((nowHour >= 13 || nowHour < 5) && (sKey === "과일" || sKey === "야채" || sKey === "과일구매" || sKey === "야채구매")) return Infinity;
+                    return s;
+                };
+
+                const stockA = getStockVal(a);
+                const stockB = getStockVal(b);
+                const isSoldOutA = stockA <= 0;
+                const isSoldOutB = stockB <= 0;
+
+                // [강력 조건] 품절된 상품은 머릿말 우선순위와 상관없이 무조건 뒤로 보냄
+                if (isSoldOutA !== isSoldOutB) return isSoldOutA ? 1 : -1;
+
+                // 둘 다 재고가 있거나 둘 다 품절인 경우 (같은 그룹 내)에서만 우선순위 가동
                 const pA = getPriority(a.name);
                 const pB = getPriority(b.name);
                 if (pA !== pB) return pA - pB;
 
-                // 2. 전체상품 예약 보기일 때는 날짜순 정렬 (같은 우선순위 내에서 날짜별 정렬)
+                // 3. '현장판매 전체'일 경우 그룹 제목(matchKey) 기준으로 (냉동>냉장>상온) 정렬
+                if (targetKey === '전체상품_현장') {
+                    const getStoragePriority = (p) => {
+                        const m = String(p.matchKey || "").trim();
+                        const s = String(p.storage || "").trim();
+                        // matchKey나 storage 중 하나라도 해당 단어를 포함하면 우선순위 부여
+                        if (m.includes("냉동") || s.includes("냉동")) return 1;
+                        if (m.includes("냉장") || s.includes("냉장")) return 2;
+                        if (m.includes("상온") || s.includes("실온") || m.includes("상온") || m.includes("실온")) return 3;
+                        return 4;
+                    };
+                    const spA = getStoragePriority(a);
+                    const spB = getStoragePriority(b);
+                    if (spA !== spB) return spA - spB;
+                }
+
                 if (targetKey === '전체상품_예약') {
                     const dateA = new Date(String(a.matchKey).replace(/\./g, '-')).getTime() || 0;
                     const dateB = new Date(String(b.matchKey).replace(/\./g, '-')).getTime() || 0;
                     if (dateA !== dateB) return dateA - dateB;
                 }
-
-                // 3. 같은 우선순위와 날짜라면 가나다 순(숫자 포함 자연스럽게) 정렬
                 return a.name.localeCompare(b.name, 'ko', { numeric: true, sensitivity: 'base' });
             });
+
 
             let lastGroupKey = null;
             let currentGroupBox = null;
