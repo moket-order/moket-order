@@ -4711,36 +4711,29 @@
                 });
                 await Promise.all(stockPromises);
 
-                // 3. GAS 스프레드시트 동기화 (대기 필수!)
-                try {
-                    const gasRes = await fetch(API_URL, {
-                        method: 'POST',
-                        redirect: 'follow',
-                        body: JSON.stringify(payload)
-                    });
-                    const gasResult = await gasRes.json();
-                    console.log("GAS 동기화 결과:", gasResult);
-
+                // 3. GAS 스프레드시트 동기화 (배경에서 실행)
+                const gasPromise = fetch(API_URL, {
+                    method: 'POST',
+                    redirect: 'follow',
+                    body: JSON.stringify(payload)
+                }).then(res => res.json()).then(gasResult => {
+                    console.log("GAS 동기화 완료:", gasResult);
                     if (gasResult.result === "success") {
-                        // [추가] 픽업 합산된 항목들의 원본 행 상태 변경 (순차 처리)
-                        for (const it of allItems) {
+                        // [추가] 픽업 합산된 항목들의 원본 행 상태 변경
+                        allItems.forEach(async it => {
                             if (it.isExtra && it.originalData) {
                                 try {
-                                    await fetch(API_URL, {
+                                    fetch(API_URL, {
                                         method: 'POST',
                                         body: JSON.stringify({ header: 'combine', ...it.originalData })
                                     });
                                 } catch (e) { console.error("합산 실패:", e); }
                             }
-                        }
-                    } else {
-                        console.error("GAS 처리 오류:", gasResult.message);
+                        });
                     }
-                } catch (err) {
-                    console.error("GAS 동기화 네트워크 실패:", err);
-                }
+                }).catch(err => console.error("GAS 동기화 네트워크 실패:", err));
 
-                // 4. 로컬 상태 업데이트 및 최종 완료 안내
+                // 4. 로컬 상태 업데이트 및 완료 안내 (Firebase 기록 완료 시 바로 표시)
                 isHistoryProcessing = false;
                 
                 allItems.forEach(it => {
@@ -4758,7 +4751,7 @@
 
                 if (activeBtn) renderList(activeBtn.dataset.date);
 
-                // 최종 완료 처리
+                // 최종 완료 처리 (GAS 완료를 기다리지 않고 바로 표시)
                 document.getElementById('system-modal').style.display = 'none';
                 const hasSadaDream = allItems.some(it => String(it.name).includes('[사다드림]'));
 
@@ -4772,7 +4765,6 @@
                     });
                 } else {
                     showSystemModal("주문이 완료되었습니다!", 'alert', () => { location.reload(); });
-                    // 사용자 응답 없을 경우를 위한 자동 새로고침 방지는 제거 (완전한 동기화 완료 후이므로 수동 확인 권장)
                 }
 
                 setTimeout(() => loadData(), 2000);
