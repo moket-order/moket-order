@@ -1804,28 +1804,6 @@
             } catch (e) { console.error("상태 로드 실패:", e); }
         }
 
-        function updateDeliveryUI() {
-            const onBtn = document.getElementById('ADMIN_DELIVERY_ON');
-            const offBtn = document.getElementById('ADMIN_DELIVERY_OFF');
-            if (onBtn && offBtn) {
-                if (isDeliveryEnabled) {
-                    onBtn.innerHTML = '🚚 배달 버튼 켜짐 [현재 적용중]';
-                    onBtn.style.background = '#e8f5e9';
-                    offBtn.innerHTML = '🚫 배달 버튼 끄기';
-                    offBtn.style.background = 'white';
-                    offBtn.style.opacity = '0.5';
-                    onBtn.style.opacity = '1';
-                } else {
-                    offBtn.innerHTML = '🚫 배달 버튼 꺼짐 [현재 적용중]';
-                    offBtn.style.background = '#ffebee';
-                    onBtn.innerHTML = '🚚 배달 버튼 켜기';
-                    onBtn.style.background = 'white';
-                    onBtn.style.opacity = '0.5';
-                    offBtn.style.opacity = '1';
-                }
-            }
-        }
-
         let isLoginEntryEnabled = true; // 기본값은 로그인 강제
         async function fetchLoginEntryStatus() {
             try {
@@ -1833,7 +1811,6 @@
                 const status = await res.json();
                 // null이면 데이터가 없는 것이므로 기본값 true 유지
                 if (status !== null) isLoginEntryEnabled = (status === true);
-                updateLoginEntryUI();
 
                 // 로그인 화면 강제 여부에 따라 초기 모달 제어
                 const kakaoInfo = localStorage.getItem('kakao_original_name');
@@ -1846,28 +1823,6 @@
                     }
                 }
             } catch (e) { console.error("로그인 설정 로드 실패:", e); }
-        }
-
-        function updateLoginEntryUI() {
-            const onBtn = document.getElementById('ADMIN_LOGIN_ON');
-            const offBtn = document.getElementById('ADMIN_LOGIN_OFF');
-            if (onBtn && offBtn) {
-                if (isLoginEntryEnabled) {
-                    onBtn.innerHTML = '🔒 전체 로그인 강제 [현재 적용중]';
-                    onBtn.style.background = '#e3f2fd';
-                    offBtn.innerHTML = '🔓 로그인 화면 끄기';
-                    offBtn.style.background = 'white';
-                    offBtn.style.opacity = '0.5';
-                    onBtn.style.opacity = '1';
-                } else {
-                    offBtn.innerHTML = '🔓 수동입력 모드 [현재 적용중]';
-                    offBtn.style.background = '#fff3e0';
-                    onBtn.innerHTML = '🔒 전체 로그인 강제하기';
-                    onBtn.style.background = 'white';
-                    onBtn.style.opacity = '0.5';
-                    offBtn.style.opacity = '1';
-                }
-            }
         }
 
         async function adminToggleLoginEntry(status) {
@@ -1900,35 +1855,12 @@
                 } else {
                     isProductListEnabled = !!data;
                 }
-                updateProductListUI();
 
                 // [수정] 관리자가 아닐 때 리스트 상태 반영 (cachedProducts가 있으면 그것으로, 없으면 현재 것으로)
                 if (!isAdminMode) {
                     processAndRender(cachedProducts || productsData);
                 }
             } catch (e) { console.error(e); }
-        }
-
-        function updateProductListUI() {
-            const onBtn = document.getElementById('ADMIN_PRODUCT_LIST_ON');
-            const offBtn = document.getElementById('ADMIN_PRODUCT_LIST_OFF');
-            if (onBtn && offBtn) {
-                if (isProductListEnabled) {
-                    onBtn.innerHTML = '📦 상품목록 전체 공개 [현재 적용중]';
-                    onBtn.style.background = '#e1f5fe';
-                    offBtn.innerHTML = '🌑 상품목록 전체 비공개';
-                    offBtn.style.background = 'white';
-                    offBtn.style.opacity = '0.5';
-                    onBtn.style.opacity = '1';
-                } else {
-                    offBtn.innerHTML = '🌑 상품목록 비공개 중 [현재 적용중]';
-                    offBtn.style.background = '#eceff1';
-                    onBtn.innerHTML = '📦 상품목록 전체 공개하기';
-                    onBtn.style.background = 'white';
-                    onBtn.style.opacity = '0.5';
-                    offBtn.style.opacity = '1';
-                }
-            }
         }
 
         async function adminToggleProductList(enabled) {
@@ -3575,10 +3507,7 @@
             // 1. 공통 필터링: 공개 상태 확인 및 오늘 이후 상품만 취급
             const futureData = data.filter(p => {
                 const status = (p.status || "").trim();
-                const mKey = (p.matchKey || "").trim();
-                
-                // [수정] 상태 열 또는 픽업일 열에 '비공개'가 포함된 경우 일반 사용자에게는 숨김
-                if ((status === "비공개" || mKey === "비공개") && !isAdminMode) return false;
+                if (status === "비공개" && !isAdminMode) return false;
 
                 const s = String(p.matchKey || "").trim();
                 // [개선] 문자열 어디든 날짜 패턴(M/D 또는 YMD)이 있으면 추출
@@ -4888,11 +4817,6 @@
             // 데이터 로드와 프로필 로드를 병렬로 시작
             loadData();
             loadProfile();
-
-            // 설정 상태 동기화 및 UI 반영
-            fetchDeliveryStatus();
-            fetchLoginEntryStatus();
-            fetchProductListStatus();
 
             // [복구] 사용자 정보 없으면 로그인 유도창(카카오 로그인) 띄움
 
