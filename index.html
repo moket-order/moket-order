@@ -3507,7 +3507,10 @@
             // 1. 공통 필터링: 공개 상태 확인 및 오늘 이후 상품만 취급
             const futureData = data.filter(p => {
                 const status = (p.status || "").trim();
-                if (status === "비공개" && !isAdminMode) return false;
+                const mKey = (p.matchKey || "").trim();
+                
+                // [수정] 상태 열 또는 픽업일 열에 '비공개'가 포함된 경우 일반 사용자에게는 숨김
+                if ((status === "비공개" || mKey === "비공개") && !isAdminMode) return false;
 
                 const s = String(p.matchKey || "").trim();
                 // [개선] 문자열 어디든 날짜 패턴(M/D 또는 YMD)이 있으면 추출
