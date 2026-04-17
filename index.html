@@ -1804,6 +1804,28 @@
             } catch (e) { console.error("상태 로드 실패:", e); }
         }
 
+        function updateDeliveryUI() {
+            const onBtn = document.getElementById('ADMIN_DELIVERY_ON');
+            const offBtn = document.getElementById('ADMIN_DELIVERY_OFF');
+            if (onBtn && offBtn) {
+                if (isDeliveryEnabled) {
+                    onBtn.innerHTML = '🚚 배달 버튼 켜짐 [현재 적용중]';
+                    onBtn.style.background = '#e8f5e9';
+                    offBtn.innerHTML = '🚫 배달 버튼 끄기';
+                    offBtn.style.background = 'white';
+                    offBtn.style.opacity = '0.5';
+                    onBtn.style.opacity = '1';
+                } else {
+                    offBtn.innerHTML = '🚫 배달 버튼 꺼짐 [현재 적용중]';
+                    offBtn.style.background = '#ffebee';
+                    onBtn.innerHTML = '🚚 배달 버튼 켜기';
+                    onBtn.style.background = 'white';
+                    onBtn.style.opacity = '0.5';
+                    offBtn.style.opacity = '1';
+                }
+            }
+        }
+
         let isLoginEntryEnabled = true; // 기본값은 로그인 강제
         async function fetchLoginEntryStatus() {
             try {
@@ -1811,6 +1833,7 @@
                 const status = await res.json();
                 // null이면 데이터가 없는 것이므로 기본값 true 유지
                 if (status !== null) isLoginEntryEnabled = (status === true);
+                updateLoginEntryUI();
 
                 // 로그인 화면 강제 여부에 따라 초기 모달 제어
                 const kakaoInfo = localStorage.getItem('kakao_original_name');
@@ -1823,6 +1846,28 @@
                     }
                 }
             } catch (e) { console.error("로그인 설정 로드 실패:", e); }
+        }
+
+        function updateLoginEntryUI() {
+            const onBtn = document.getElementById('ADMIN_LOGIN_ON');
+            const offBtn = document.getElementById('ADMIN_LOGIN_OFF');
+            if (onBtn && offBtn) {
+                if (isLoginEntryEnabled) {
+                    onBtn.innerHTML = '🔒 전체 로그인 강제 [현재 적용중]';
+                    onBtn.style.background = '#e3f2fd';
+                    offBtn.innerHTML = '🔓 로그인 화면 끄기';
+                    offBtn.style.background = 'white';
+                    offBtn.style.opacity = '0.5';
+                    onBtn.style.opacity = '1';
+                } else {
+                    offBtn.innerHTML = '🔓 수동입력 모드 [현재 적용중]';
+                    offBtn.style.background = '#fff3e0';
+                    onBtn.innerHTML = '🔒 전체 로그인 강제하기';
+                    onBtn.style.background = 'white';
+                    onBtn.style.opacity = '0.5';
+                    offBtn.style.opacity = '1';
+                }
+            }
         }
 
         async function adminToggleLoginEntry(status) {
@@ -1855,12 +1900,35 @@
                 } else {
                     isProductListEnabled = !!data;
                 }
+                updateProductListUI();
 
                 // [수정] 관리자가 아닐 때 리스트 상태 반영 (cachedProducts가 있으면 그것으로, 없으면 현재 것으로)
                 if (!isAdminMode) {
                     processAndRender(cachedProducts || productsData);
                 }
             } catch (e) { console.error(e); }
+        }
+
+        function updateProductListUI() {
+            const onBtn = document.getElementById('ADMIN_PRODUCT_LIST_ON');
+            const offBtn = document.getElementById('ADMIN_PRODUCT_LIST_OFF');
+            if (onBtn && offBtn) {
+                if (isProductListEnabled) {
+                    onBtn.innerHTML = '📦 상품목록 전체 공개 [현재 적용중]';
+                    onBtn.style.background = '#e1f5fe';
+                    offBtn.innerHTML = '🌑 상품목록 전체 비공개';
+                    offBtn.style.background = 'white';
+                    offBtn.style.opacity = '0.5';
+                    onBtn.style.opacity = '1';
+                } else {
+                    offBtn.innerHTML = '🌑 상품목록 비공개 중 [현재 적용중]';
+                    offBtn.style.background = '#eceff1';
+                    onBtn.innerHTML = '📦 상품목록 전체 공개하기';
+                    onBtn.style.background = 'white';
+                    onBtn.style.opacity = '0.5';
+                    offBtn.style.opacity = '1';
+                }
+            }
         }
 
         async function adminToggleProductList(enabled) {
@@ -2532,7 +2600,7 @@
         }
         // [필수] 한국어 날짜 형식을 Date 객체로 변환 (정렬 및 필터용)
         function parseKRDate(s) {
-            if (!s) return new Date();
+            if (!s || s === "unknown") return null; // [수정] 빈 값에 대해 널(null) 반환
             if (s instanceof Date) return s;
             try {
                 let str = String(s).replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
@@ -2548,10 +2616,10 @@
                     }
                     return new Date(year, month, day);
                 }
-                const d = new Date(s);
-                return isNaN(d.getTime()) ? new Date() : d;
+                const d = new Date(str.replace(/-/g, '/')); // [개선] 하이픈을 슬래시로 변환하여 브라우저 호환성 높임
+                return isNaN(d.getTime()) ? null : d; // [수정] 유효하지 않으면 null
             } catch (e) {
-                return new Date();
+                return null;
             }
         }
 
@@ -2860,9 +2928,12 @@
                 const valA = parseKRDate(a[currentSortBy]);
                 const valB = parseKRDate(b[currentSortBy]);
 
-                if (valA.getTime() !== valB.getTime()) {
-                    return currentSortDir === 'desc' ? valB - valA : valA - valB;
-                }
+                if (valA && valB) {
+                    if (valA.getTime() !== valB.getTime()) {
+                        return currentSortDir === 'desc' ? valB - valA : valA - valB;
+                    }
+                } else if (!valA && valB) return 1; // 날짜 없는 것은 뒤로
+                else if (valA && !valB) return -1;
 
                 // [수정] 메인 정렬 기준이 동일할 경우:
                 // 1. 배달비 항목은 항상 다른 상품 뒤에 둠 (그룹화 안정성을 위함)
@@ -2926,19 +2997,25 @@
 
                 try {
                     const d = parseKRDate(orderTimeFull);
-                    const y = String(d.getFullYear()).slice(-2);
-                    const m = d.getMonth() + 1;
-                    const day = d.getDate();
-                    const w = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
-                    const h = String(d.getHours()).padStart(2, '0');
-                    const min = String(d.getMinutes()).padStart(2, '0');
-                    orderTime = `${y}년 ${m}월 ${day}일 (${w}) ${h}:${min}`;
-                } catch (e) { console.error("날짜 형식 도중 오류:", e); }
+                    if (d) {
+                        const y = String(d.getFullYear()).slice(-2);
+                        const m = d.getMonth() + 1;
+                        const day = d.getDate();
+                        const w = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
+                        const h = String(d.getHours()).padStart(2, '0');
+                        const min = String(d.getMinutes()).padStart(2, '0');
+                        orderTime = `${y}년 ${m}월 ${day}일 (${w}) ${h}:${min}`;
+                    } else {
+                        orderTime = "시간 정보 없음";
+                    }
+                } catch (e) {
+                    orderTime = '정보없음';
+                }
 
                 const orderDateStyle = 'color:#455464;';
 
                 // 그룹 타이틀 요약 (첫 번째 아이템 기준)
-                const displaySummary = group.itemsCount > 1 ? `${group.firstItemName} 외 ${group.itemsCount - 1}건` : group.firstItemName;
+                const displaySummary = group.itemsCount > 1 ? `${(group.firstItemName || "상품명 정보 없음")} 외 ${group.itemsCount - 1}건` : (group.firstItemName || "상품명 정보 없음");
 
                 htmlBuffer += `
                     <div style="background:var(--white); border: 1.5px solid #eee; border-radius:var(--common-radius); margin-bottom:15px; overflow:hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
@@ -3323,29 +3400,31 @@
                 // [디버깅] 서버 수신 데이터 확인
                 console.log("[Data Sync] 병렬 로드 완료", { rawData, globalAdjustments });
 
-                // 매핑 처리 (가짜 데이터 'no-date' 원천 차단)
-                let freshData = rawData.map((p, idx) => {
-                    let mKey = (p.matchKey || p.date || "").trim();
-                    if (mKey === "no-date") mKey = ""; // 가짜 데이터 제거
+                // 매핑 처리 (가짜 데이터 'no-date' 원천 차단 및 유효성 검사 강화)
+                let freshData = rawData
+                    .filter(p => p && (p.name || "").trim() !== "") // [핵심] 이름 없는 행은 원천 차단
+                    .map((p, idx) => {
+                        let mKey = (p.matchKey || p.date || "").trim();
+                        if (mKey === "no-date") mKey = ""; 
 
-                    // [추가] Firebase 전역 변동분 합산
-                    const adjKey = fSafeKey(mKey) + "_" + fSafeKey(p.name);
-                    const adj = globalAdjustments[adjKey] || 0;
-                    let currentStock = p.stock;
-                    if (adj !== 0 && p.stock !== "") {
-                        currentStock = Math.max(0, parseInt(p.stock || 0) + adj);
-                    }
+                        const adjKey = fSafeKey(mKey) + "_" + fSafeKey(p.name);
+                        const adj = globalAdjustments[adjKey] || 0;
+                        let currentStock = p.stock;
+                        if (adj !== 0 && p.stock !== "") {
+                            currentStock = Math.max(0, parseInt(p.stock || 0) + adj);
+                        }
 
-                    return {
-                        ...p,
-                        name: (p.name || "").trim(),
-                        matchKey: mKey,
-                        stock: currentStock,
-                        displayDate: p.date ? formatDateWithDay(p.date) : "",
-                        images: Array.isArray(p.images) ? p.images : [],
-                        originalIndex: idx
-                    };
-                });
+                        return {
+                            ...p,
+                            name: (p.name || "").trim(),
+                            price: parseInt(p.price || 0), // [추가] 가격 정보 보장
+                            matchKey: mKey,
+                            stock: currentStock,
+                            displayDate: p.date ? formatDateWithDay(p.date) : "",
+                            images: Array.isArray(p.images) ? p.images : [],
+                            originalIndex: idx
+                        };
+                    });
 
                 console.log("[Data Sync] 최종 유효 데이터:", freshData);
 
@@ -3507,7 +3586,10 @@
             // 1. 공통 필터링: 공개 상태 확인 및 오늘 이후 상품만 취급
             const futureData = data.filter(p => {
                 const status = (p.status || "").trim();
-                if (status === "비공개" && !isAdminMode) return false;
+                const mKey = (p.matchKey || "").trim();
+                
+                // [수정] 상태 열 또는 픽업일 열에 '비공개'가 포함된 경우 일반 사용자에게는 숨김
+                if ((status === "비공개" || mKey === "비공개") && !isAdminMode) return false;
 
                 const s = String(p.matchKey || "").trim();
                 // [개선] 문자열 어디든 날짜 패턴(M/D 또는 YMD)이 있으면 추출
@@ -3946,6 +4028,8 @@
         function qty(btn, change) {
             const input = btn.parentElement.querySelector('input');
             const name = input.dataset.name;
+            if (!name || name === "undefined") return; // [방어] 이름이 없으면 수량 조절 불가
+
             const stock = input.dataset.stock ? parseFloat(input.dataset.stock) : Infinity;
             let val = Math.max(0, (cart[name] || 0) + change);
 
@@ -4318,6 +4402,8 @@
 
             // 1. 장바구니(cart) 상태를 기준으로 주문 데이터 생성
             for (const itemName in cart) {
+                if (!itemName || itemName === "undefined" || itemName === "null") continue; // [방어] 유효하지 않은 이름 패스
+
                 const q = cart[itemName];
                 const pData = productsData.find(p => p.name === itemName);
                 if (q > 0 && pData) {
@@ -4327,8 +4413,8 @@
                     allItems.push({
                         name: itemName,
                         qty: q,
-                        price: parseInt(pData.price),
-                        subtotal: q * parseInt(pData.price),
+                        price: parseInt(pData.price || 0),
+                        subtotal: q * parseInt(pData.price || 0),
                         date: mKey,
                         isCategorized: isCategorized
                     });
@@ -4817,6 +4903,11 @@
             // 데이터 로드와 프로필 로드를 병렬로 시작
             loadData();
             loadProfile();
+
+            // 설정 상태 동기화 및 UI 반영
+            fetchDeliveryStatus();
+            fetchLoginEntryStatus();
+            fetchProductListStatus();
 
             // [복구] 사용자 정보 없으면 로그인 유도창(카카오 로그인) 띄움
 
