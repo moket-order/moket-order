@@ -4420,8 +4420,9 @@
                     const mKey = pData.matchKey || "";
                     let finalDate = mKey;
 
-                    // [추가] 과채 예약 카테고리 특수 로직: 토요일 13시 이후/일요일 주문 건은 월요일로 기록
-                    if (isWeekendAfterCutoff && (mKey === '과일_예약' || mKey === '야채_예약' || mKey === '기타_예약')) {
+                    // [추가] 과채 예약 및 현장판매 카테고리 특수 로직: 토요일 13시 이후/일요일 주문 건은 월요일로 기록
+                    const isDailyCategory = ['과일', '야채', '기타', '냉장', '냉동', '상온', '실온', '현장판매'].includes(mKey);
+                    if (isWeekendAfterCutoff && isDailyCategory) {
                         const nextMonday = new Date(now);
                         const moveDays = (currentDay === 0 ? 1 : 2); // 일요일이면 +1, 토요일이면 +2
                         nextMonday.setDate(now.getDate() + moveDays);
@@ -4430,7 +4431,7 @@
                         const m = String(nextMonday.getMonth() + 1).padStart(2, '0');
                         const d = String(nextMonday.getDate()).padStart(2, '0');
                         finalDate = `${y}-${m}-${d}`;
-                        console.log(`[시차 적용] 과채류 주문일 조정: ${mKey} -> ${finalDate} (월요일 처리)`);
+                        console.log(`[시차 적용] 월요일 처리 예정: ${mKey} -> ${finalDate}`);
                     }
 
                     const isCategorized = !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(finalDate);
