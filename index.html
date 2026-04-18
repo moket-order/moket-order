@@ -4403,6 +4403,11 @@
 
             const name = document.getElementById('input-name').value;
             const phone = document.getElementById('input-phone').value;
+            const now = new Date();
+            const currentDay = now.getDay(); // 0(Sun) ~ 6(Sat)
+            const currentHour = now.getHours();
+            const isWeekendAfterCutoff = (currentDay === 6 && currentHour >= 13) || currentDay === 0;
+
             const allItems = [];
 
             // 1. 장바구니(cart) 상태를 기준으로 주문 데이터 생성
@@ -4413,14 +4418,29 @@
                 const pData = productsData.find(p => p.name === itemName);
                 if (q > 0 && pData) {
                     const mKey = pData.matchKey || "";
-                    const isCategorized = !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(mKey);
+                    let finalDate = mKey;
+
+                    // [추가] 과채 예약 카테고리 특수 로직: 토요일 13시 이후/일요일 주문 건은 월요일로 기록
+                    if (isWeekendAfterCutoff && (mKey === '과일_예약' || mKey === '야채_예약' || mKey === '기타_예약')) {
+                        const nextMonday = new Date(now);
+                        const moveDays = (currentDay === 0 ? 1 : 2); // 일요일이면 +1, 토요일이면 +2
+                        nextMonday.setDate(now.getDate() + moveDays);
+                        
+                        const y = nextMonday.getFullYear();
+                        const m = String(nextMonday.getMonth() + 1).padStart(2, '0');
+                        const d = String(nextMonday.getDate()).padStart(2, '0');
+                        finalDate = `${y}-${m}-${d}`;
+                        console.log(`[시차 적용] 과채류 주문일 조정: ${mKey} -> ${finalDate} (월요일 처리)`);
+                    }
+
+                    const isCategorized = !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(finalDate);
 
                     allItems.push({
                         name: itemName,
                         qty: q,
                         price: parseInt(pData.price || 0),
                         subtotal: q * parseInt(pData.price || 0),
-                        date: mKey,
+                        date: finalDate,
                         isCategorized: isCategorized
                     });
                 }
