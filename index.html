@@ -4291,10 +4291,18 @@
                 const q = cart[itemName];
                 const product = productsData.find(p => p.name === itemName);
                 if (product && q > 0) {
+                    const mKey = product.matchKey || "";
+                    let currentPrice = parseInt(product.price || 0);
+                    
+                    // [추가] 과일, 야채 카테고리 5% 할인 (화면 표시용)
+                    if (mKey === '과일' || mKey === '야채') {
+                        currentPrice = Math.floor(currentPrice * 0.95);
+                    }
+
                     const date = product.displayDate;
                     if (!grouped[date]) grouped[date] = [];
-                    grouped[date].push({ ...product, qty: q });
-                    totalSum += q * parseInt(product.price || 0);
+                    grouped[date].push({ ...product, qty: q, price: currentPrice });
+                    totalSum += q * currentPrice;
                     totalQty += q;
                 }
             }
@@ -4436,11 +4444,17 @@
 
                     const isCategorized = !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(finalDate);
 
+                    // [추가] 과일, 야채 카테고리 5% 할인 (서버 저장용)
+                    let currentPrice = parseInt(pData.price || 0);
+                    if (mKey === '과일' || mKey === '야채') {
+                        currentPrice = Math.floor(currentPrice * 0.95);
+                    }
+
                     allItems.push({
                         name: itemName,
                         qty: q,
-                        price: parseInt(pData.price || 0),
-                        subtotal: q * parseInt(pData.price || 0),
+                        price: currentPrice,
+                        subtotal: q * currentPrice,
                         date: finalDate,
                         isCategorized: isCategorized
                     });
