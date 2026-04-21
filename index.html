@@ -3626,12 +3626,33 @@
 
             // [개선] 훨씬 유연한 날짜 인식 (문자열 중간에 날짜 형태만 있어도 공동구매로 간주)
             const dateRegex = /(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/;
-            const dateFilters = uniqueFilters.filter(f => dateRegex.test(String(f).trim()) && !String(f).includes("상시판매") && !String(f).includes("현장판매"));
+            
+            // 온사이트 및 과채류 키워드 정의
+            const onSiteKeywords = ["냉동", "냉장", "상온", "실온", "현장판매", "상시판매"];
+            const fvKeywords = ["야채", "과일", "기타"];
+
+            const dateFilters = uniqueFilters.filter(f => {
+                const s = String(f).trim();
+                return dateRegex.test(s) && !s.includes("상시판매") && !s.includes("현장판매");
+            });
+
+            // [추가] 날짜가 아니면서 온사이트/과채류도 아닌 "공동구매 특수 카테고리" 추출
+            const reserveCategories = uniqueFilters.filter(f => {
+                const s = String(f).trim();
+                const isDate = dateRegex.test(s) && !s.includes("상시판매") && !s.includes("현장판매");
+                if (isDate) return false;
+                const isOnSite = onSiteKeywords.some(k => s.includes(k));
+                const isFV = fvKeywords.some(k => s.includes(k));
+                return !isOnSite && !isFV && s !== "";
+            });
+
             const categoryFilters = uniqueFilters.filter(f => {
                 const s = String(f).trim();
                 const isDate = dateRegex.test(s);
-                return (!isDate || s.includes("상시판매") || s.includes("현장판매")) &&
-                    s !== "야채구매" && s !== "야채" && s !== "과일구매" && s !== "과일" && s !== "기타";
+                const isOnSite = onSiteKeywords.some(k => s.includes(k));
+                const isFV = fvKeywords.some(k => s.includes(k));
+                // 온사이트이거나 (날짜인데 상시/현장판매인 경우) 현장판매 탭으로 분류
+                return (isOnSite || (isDate && (s.includes("상시판매") || s.includes("현장판매")))) && !isFV;
             }).sort((a, b) => {
                 const getCatPriority = (s) => {
                     const str = String(s).trim();
@@ -3658,7 +3679,8 @@
 
             if (currentMainTab === 'reserve') {
                 filterAreaDates.style.display = 'flex';
-                const finalDates = ['전체상품_예약', ...dateFilters];
+                // [수정] 날짜 리스트 앞에 특수 카테고리들을 배치
+                const finalDates = ['전체상품_예약', ...reserveCategories, ...dateFilters];
                 finalDates.forEach((date, idx) => {
                     const btn = document.createElement('button');
                     btn.className = 'date-btn' + (idx === 0 ? ' active' : '');
@@ -3776,16 +3798,24 @@
             let filteredData = targetKey === '전체상품_예약'
                 ? productsData.filter(p => {
                     const s = String(p.matchKey).trim();
+                    // [수정] 온사이트 및 과채류를 명확히 제외하고 나머지는 모두 공동구매 전체보기에 포함
+                    const onSiteKeywords = ["냉동", "냉장", "상온", "실온", "현장판매", "상시판매"];
+                    const fvKeywords = ["야채", "과일", "기타"];
+                    
+                    const isOnSite = onSiteKeywords.some(k => s.includes(k));
+                    const isFV = fvKeywords.some(k => s.includes(k));
                     const isDate = /(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/.test(s);
-                    if (!isDate || s.includes("상시판매") || s.includes("현장판매")) return false;
-                    const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
-                    const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
-                    if (isVeg || isFruit || s === "기타") return false;
-                    const cleanDate = s.replace(/\./g, '-');
-                    const parts = cleanDate.split('-');
-                    if (parts.length === 3) {
-                        const pDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                        if (!isNaN(pDate.getTime())) { pDate.setHours(0, 0, 0, 0); return pDate >= today; }
+
+                    if (isOnSite || isFV) return false;
+                    
+                    // 날짜인 경우 오늘 이전 날짜는 제외
+                    if (isDate && !s.includes("상시판매") && !s.includes("현장판매")) {
+                        const cleanDate = s.replace(/\./g, '-');
+                        const parts = cleanDate.split('-');
+                        if (parts.length === 3) {
+                            const pDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                            if (!isNaN(pDate.getTime())) { pDate.setHours(0, 0, 0, 0); if (pDate < today) return false; }
+                        }
                     }
                     return true;
                 })
@@ -3883,14 +3913,40 @@
                     if (spA !== spB) return spA - spB;
                 }
 
+                // [수정] 현장판매 또는 특정 카테고리 선택 시 등록 순서 내림차순 (최신 등록 상품부터)
+                const isOnSiteTab = currentMainTab === 'on-site';
+                if (isOnSiteTab || targetKey === '전체상품_현장') {
+                    if (a.originalIndex !== b.originalIndex) return b.originalIndex - a.originalIndex;
+                }
+
                 if (targetKey === '전체상품_예약') {
-                    const dateA = new Date(String(a.matchKey).replace(/\./g, '-')).getTime() || 0;
-                    const dateB = new Date(String(b.matchKey).replace(/\./g, '-')).getTime() || 0;
+                    // [정렬] 사다드림(0) > 특수 카테고리(1) > 날짜별(2)
+                    const getReservePriority = (p) => {
+                        const n = String(p.name || "").trim();
+                        const s = String(p.matchKey || "").trim();
+                        const isDate = /(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/.test(s);
+                        
+                        if (n.includes("[사다드림]")) return 0;
+                        if (!isDate) return 1; // 특수 카테고리 (이벤트 등)
+                        return 2; // 일반 날짜 상품
+                    };
+
+                    const rpA = getReservePriority(a);
+                    const rpB = getReservePriority(b);
+                    if (rpA !== rpB) return rpA - rpB;
+
+                    const dateRegex = /(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/;
+                    const isDateA = dateRegex.test(String(a.matchKey));
+                    const isDateB = dateRegex.test(String(b.matchKey));
+
+                    if (isDateA && isDateB) {
+                        const dateA = new Date(String(a.matchKey).replace(/\./g, '-')).getTime() || 0;
+                        const dateB = new Date(String(b.matchKey).replace(/\./g, '-')).getTime() || 0;
+                        // 날짜 기준 내림차순 (최신 날짜부터)
+                        if (dateA !== dateB) return dateB - dateA;
+                    }
                     
-                    // 1. 날짜 기준 내림차순 (최신 날짜부터)
-                    if (dateA !== dateB) return dateB - dateA;
-                    
-                    // 2. 동일 날짜 내에서는 등록 순서 내림차순 (최근 등록 상품부터)
+                    // 동일 그룹 내에서는 등록 순서 내림차순 (최근 등록 상품부터)
                     if (a.originalIndex !== b.originalIndex) return b.originalIndex - a.originalIndex;
                 }
                 return a.name.localeCompare(b.name, 'ko', { numeric: true, sensitivity: 'base' });
