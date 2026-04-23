@@ -3822,8 +3822,7 @@
                 : targetKey === '과일_예약'
                     ? productsData.filter(p => {
                         const s = String(p.matchKey).trim();
-                        const isDate = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(s);
-                        if (!isDate && s !== "과일구매" && s !== "과일") return false;
+                        if (!isDate && !/과일|과일구매/.test(s)) return false;
                         if (isDate) {
                             const cleanDate = s.replace(/\./g, '-');
                             const parts = cleanDate.split('-');
@@ -3832,13 +3831,13 @@
                                 if (!isNaN(pDate.getTime())) { pDate.setHours(0, 0, 0, 0); if (pDate < today) return false; }
                             }
                         }
-                        return p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
+                        return p.name.includes('[과일]') || p.name.includes('[과일구매]') || /과일|과일구매/.test(s);
                     })
                     : targetKey === '야채_예약'
                         ? productsData.filter(p => {
                             const s = String(p.matchKey).trim();
                             const isDate = /(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/.test(s);
-                            if (!isDate && s !== "야채구매" && s !== "야채") return false;
+                            if (!isDate && !/야채|야채구매|채소|채소구매/.test(s)) return false;
                             if (isDate) {
                                 const cleanDate = s.replace(/[\.\/]/g, '-');
                                 const parts = cleanDate.split('-');
@@ -3850,7 +3849,7 @@
                                     if (!isNaN(pDate.getTime())) { pDate.setHours(0, 0, 0, 0); if (pDate < today) return false; }
                                 }
                             }
-                            return p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
+                            return /\[야채\]|\[야채구매\]|\[채소\]|\[채소구매\]/.test(p.name) || /야채|야채구매|채소|채소구매/.test(s);
                         })
                         : targetKey === '기타_예약' ? productsData.filter(p => String(p.matchKey).trim() === "기타")
                         : targetKey === '전체상품_현장'
@@ -4500,9 +4499,10 @@
 
                     const isCategorized = !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(finalDate);
 
-                    // [추가] 과일, 야채 카테고리 5% 할인 (서버 저장용)
+                    // [추가] 과일, 야채, 채소 카테고리 5% 할인 (서버 저장용)
                     let currentPrice = parseInt(pData.price || 0);
-                    if (mKey === '과일' || mKey === '야채') {
+                    const isFvItem = /과일|야채|채소/.test(mKey) || /\[과일\]|\[야채\]|\[채소\]/.test(itemName);
+                    if (isFvItem) {
                         currentPrice = Math.floor(currentPrice * 0.95);
                     }
 
