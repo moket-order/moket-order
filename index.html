@@ -4465,20 +4465,19 @@
             checkScrollLock();
         }
 
-        async function completeOrder(shippingMethod, extraItems = []) {
+        async function completeOrder(shippingMethod, extraItems = [], cutoffConfirmed = false) {
             const now = new Date();
             const currentHour = now.getHours();
 
             // [신규] 배달주문 11시 이후 안내 및 날짜 보정 로직
-            if (shippingMethod === '배달주문' && currentHour >= 11 && !window.deliveryCutoffConfirmed) {
-                const msg = "오전 11시 이후 주문은 내일 배달됩니다.\n주문하시겠습니까?";
+            if (shippingMethod === '배달주문' && currentHour >= 11 && !cutoffConfirmed) {
+                const msg = "오전 11시 이후 주문건은 내일 배달됩니다.\n\n배달주문 하시겠습니까?";
                 showSystemModal(msg, 'confirm', () => {
-                    window.deliveryCutoffConfirmed = true;
                     // 처리 중 플래그 잠시 해제하여 재진입 허용
                     isHistoryProcessing = false;
                     const sb = document.getElementById('btn-submit-order');
                     if (sb) { sb.disabled = false; sb.innerText = "주문확정"; sb.style.opacity = "1"; }
-                    completeOrder(shippingMethod, extraItems);
+                    completeOrder(shippingMethod, extraItems, true);
                     return true; // 중요: 수동으로 재진입하므로 현재 모달 자동 닫기 방지(또는 재사용)
                 }, () => {
                     isHistoryProcessing = false;
@@ -4646,7 +4645,7 @@
                             : `${new Date(now.getTime() + 86400000).getMonth() + 1}월 ${new Date(now.getTime() + 86400000).getDate()}일 (${days[new Date(now.getTime() + 86400000).getDay()]})`;
 
                         showSystemModal(`배달 가능일(${targetLabel})과 일치하지 않는 예약 상품이 포함되어 있습니다.\n주문 내용을 확인해 주세요.`, 'alert', () => {
-                            window.deliveryCutoffConfirmed = false;
+                            // window.deliveryCutoffConfirmed = false; // 파라미터 방식으로 변경되어 필요없음
                         });
                         throw new Error("INVALID_DATE");
                     }
@@ -4799,7 +4798,7 @@
             const submitBtn = document.getElementById('btn-submit-order');
 
             // 전송 시작 시 배송 마감 플래그 초기화
-            window.deliveryCutoffConfirmed = false;
+            // window.deliveryCutoffConfirmed = false; // 파라미터 방식으로 변경되어 필요없음
 
             if (!name || !phone) {
                 showSystemModal("주문자명과 연락처를 입력해주세요.", 'alert', () => {
