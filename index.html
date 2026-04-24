@@ -1714,7 +1714,7 @@
                     title.style.display = 'block';
                     title.innerHTML = `
                         <div style="font-size: 18px; font-weight: 900; color: var(--nego-orange); margin-bottom: 6px;">[과일, 채소한정] 예약구매시 5% 할인!!</div>
-                        <div style="font-size: 14px; font-weight: 600; color: #666; letter-spacing: -0.5px;">(00시~11시 : 오늘 픽업 예약, 13시~24시 : 내일 픽업 예약)</div>
+                        <div style="font-size: 14px; font-weight: 600; color: #666; letter-spacing: -0.5px;">(00시~11시 : 오늘 픽업 예약, 11시~24시 : 내일 픽업 예약)</div>
                     `;
                 }
             }
@@ -3405,7 +3405,7 @@
                     .filter(p => p && (p.name || "").trim() !== "") // [핵심] 이름 없는 행은 원천 차단
                     .map((p, idx) => {
                         let mKey = (p.matchKey || p.date || "").trim();
-                        if (mKey === "no-date") mKey = ""; 
+                        if (mKey === "no-date") mKey = "";
 
                         const adjKey = fSafeKey(mKey) + "_" + fSafeKey(p.name);
                         const adj = globalAdjustments[adjKey] || 0;
@@ -3587,7 +3587,7 @@
             const futureData = data.filter(p => {
                 const status = (p.status || "").trim();
                 const mKey = (p.matchKey || "").trim();
-                
+
                 // [수정] 상태 열 또는 픽업일 열에 '비공개'가 포함된 경우 일반 사용자에게는 숨김
                 if ((status === "비공개" || mKey === "비공개") && !isAdminMode) return false;
 
@@ -3609,7 +3609,7 @@
                         return pDate >= today;
                     }
                 }
-                return true; 
+                return true;
             });
 
             // 2. 유니크한 matchKey 추출 및 분류
@@ -3626,7 +3626,7 @@
 
             // [개선] 훨씬 유연한 날짜 인식 (문자열 중간에 날짜 형태만 있어도 공동구매로 간주)
             const dateRegex = /(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/;
-            
+
             // 온사이트 및 과채류 키워드 정의
             const onSiteKeywords = ["냉동", "냉장", "상온", "실온", "현장판매", "상시판매"];
             const fvKeywords = ["야채", "과일", "기타"];
@@ -3761,14 +3761,6 @@
             const container = document.getElementById('product-list');
             container.innerHTML = '';
 
-            // [추가] 과채 예약구매 11시~13시 주문 불가 안내
-            const now = new Date();
-            const hours = now.getHours();
-            if (currentMainTab === 'fruit-veg' && hours >= 11 && hours < 13 && !isAdminMode) {
-                container.innerHTML = `<div style="text-align:center; padding:80px 20px; color:#999; font-weight:700; line-height:1.6; word-break:keep-all;">현재 주문 가능한 상품이 없습니다.</div>`;
-                return;
-            }
-
             // [추가] 관리자 모드 안내 표시
             if (isAdminMode) {
                 const adminMsg = document.createElement('div');
@@ -3801,13 +3793,13 @@
                     // [수정] 온사이트 및 과채류를 명확히 제외하고 나머지는 모두 공동구매 전체보기에 포함
                     const onSiteKeywords = ["냉동", "냉장", "상온", "실온", "현장판매", "상시판매"];
                     const fvKeywords = ["야채", "과일", "기타"];
-                    
+
                     const isOnSite = onSiteKeywords.some(k => s.includes(k));
                     const isFV = fvKeywords.some(k => s.includes(k));
                     const isDate = /(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/.test(s);
 
                     if (isOnSite || isFV) return false;
-                    
+
                     // 날짜인 경우 오늘 이전 날짜는 제외
                     if (isDate && !s.includes("상시판매") && !s.includes("현장판매")) {
                         const cleanDate = s.replace(/\./g, '-');
@@ -3822,6 +3814,7 @@
                 : targetKey === '과일_예약'
                     ? productsData.filter(p => {
                         const s = String(p.matchKey).trim();
+                        const isDate = /(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/.test(s);
                         if (!isDate && !/과일|과일구매/.test(s)) return false;
                         if (isDate) {
                             const cleanDate = s.replace(/\./g, '-');
@@ -3852,24 +3845,24 @@
                             return /\[야채\]|\[야채구매\]|\[채소\]|\[채소구매\]/.test(p.name) || /야채|야채구매|채소|채소구매/.test(s);
                         })
                         : targetKey === '기타_예약' ? productsData.filter(p => String(p.matchKey).trim() === "기타")
-                        : targetKey === '전체상품_현장'
-                            ? productsData.filter(p => {
-                                const s = String(p.matchKey).trim();
-                                if (/(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/.test(s) && !s.includes("상시판매") && !s.includes("현장판매")) return false;
-                                const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
-                                const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
-                                return !(isVeg || isFruit || s === "기타");
-                            })
-                            : productsData.filter(p => {
-                                if (p.matchKey !== targetKey) return false;
-                                const s = String(p.matchKey).trim();
-                                const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
-                                const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
-                                return !((currentMainTab === 'reserve' || currentMainTab === 'on-site') && (isVeg || isFruit || s === "기타"));
-                            });
+                            : targetKey === '전체상품_현장'
+                                ? productsData.filter(p => {
+                                    const s = String(p.matchKey).trim();
+                                    if (/(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/.test(s) && !s.includes("상시판매") && !s.includes("현장판매")) return false;
+                                    const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
+                                    const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
+                                    return !(isVeg || isFruit || s === "기타");
+                                })
+                                : productsData.filter(p => {
+                                    if (p.matchKey !== targetKey) return false;
+                                    const s = String(p.matchKey).trim();
+                                    const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
+                                    const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
+                                    return !((currentMainTab === 'reserve' || currentMainTab === 'on-site') && (isVeg || isFruit || s === "기타"));
+                                });
 
             const nowHour = new Date().getHours();
-            
+
             // [정렬 적용] 재고 유무(품절 무조건 최하단) > 머릿말 > 일반 > 맺음말 > 날짜 > 이름 순
             filteredData.sort((a, b) => {
                 const getStockVal = (p) => {
@@ -3878,8 +3871,8 @@
                     let s = parseInt(p.stock);
                     const sKey = String(p.matchKey || "").trim();
                     // 과채류 특정 시간 무제한 로직 (단, 원래 재고가 0보다 클 때만 적용하거나 전체 적용할지 판단)
-                    // 사장님 요청에 따라 13시~05시 사이 과채류는 품절되지 않게 함
-                    if ((nowHour >= 13 || nowHour < 5) && (sKey === "과일" || sKey === "야채" || sKey === "과일구매" || sKey === "야채구매")) return Infinity;
+                    // 사장님 요청에 따라 11시~05시 사이 과채류는 품절되지 않게 함 (공동구매 연동)
+                    if ((nowHour >= 11 || nowHour < 5) && (sKey === "과일" || sKey === "야채" || sKey === "과일구매" || sKey === "야채구매")) return Infinity;
                     return s;
                 };
 
@@ -3924,7 +3917,7 @@
                         const n = String(p.name || "").trim();
                         const s = String(p.matchKey || "").trim();
                         const isDate = /(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/.test(s);
-                        
+
                         if (n.includes("[사다드림]")) return 0;
                         if (!isDate) return 1; // 특수 카테고리 (이벤트 등)
                         return 2; // 일반 날짜 상품
@@ -3944,7 +3937,7 @@
                         // 날짜 기준 내림차순 (최신 날짜부터)
                         if (dateA !== dateB) return dateB - dateA;
                     }
-                    
+
                     // 동일 그룹 내에서는 등록 순서 내림차순 (최근 등록 상품부터)
                     if (a.originalIndex !== b.originalIndex) return b.originalIndex - a.originalIndex;
                 }
@@ -4018,7 +4011,7 @@
                         stockText = "품절임박";
                         stockColor = "#ff0000";
                     }
-                    
+
                     // [추가] 관리자 모드일 때는 남은 수량을 정확하게 표시
                     if (isAdminMode) {
                         stockText = (isSoldOut ? "품절" : "잔여") + `: ${stock}개`;
@@ -4348,7 +4341,7 @@
                 if (product && q > 0) {
                     const mKey = product.matchKey || "";
                     let currentPrice = parseInt(product.price || 0);
-                    
+
                     // [추가] 과일, 야채 카테고리 5% 할인 (화면 표시용)
                     if (mKey === '과일' || mKey === '야채') {
                         currentPrice = Math.floor(currentPrice * 0.95);
@@ -4444,216 +4437,242 @@
         }
 
         async function completeOrder(shippingMethod, extraItems = []) {
+            const now = new Date();
+            const currentHour = now.getHours();
+
+            // [신규] 배달주문 11시 이후 안내 및 날짜 보정 로직
+            if (shippingMethod === '배달주문' && currentHour >= 11 && !window.deliveryCutoffConfirmed) {
+                const msg = "오전 11시 이후 주문건은 다음날 배달됩니다.\n주문하시겠습니까?";
+                showSystemModal(msg, 'confirm', () => {
+                    window.deliveryCutoffConfirmed = true;
+                    // 처리 중 플래그 잠시 해제하여 재진입 허용
+                    isHistoryProcessing = false;
+                    const sb = document.getElementById('btn-submit-order');
+                    if (sb) { sb.disabled = false; sb.innerText = "주문확정"; sb.style.opacity = "1"; }
+                    completeOrder(shippingMethod, extraItems);
+                }, () => {
+                    isHistoryProcessing = false;
+                    const sb = document.getElementById('btn-submit-order');
+                    if (sb) { sb.disabled = false; sb.innerText = "주문확정"; sb.style.opacity = "1"; }
+                });
+                return; // 모달 응답 대기
+            }
+
             // [추가] 수령방법 선택 모달 닫기
             closeModal('shipping-overlay');
 
-            // [추가] 중복 처리 방지 (데이터 꼬임 방지)
+            // [추가] 중복 처리 방지
             if (isHistoryProcessing) {
                 showSystemModal("이전 주문 확인 중입니다.\n잠시만 기다려 주세요.", 'alert');
                 return;
             }
 
-            const submitBtn = document.getElementById('btn-submit-order');
-            if (submitBtn.disabled) return; // 이미 처리 중이면 중단
-
             // 처리 시작 플래그 설정
             isHistoryProcessing = true;
 
             // 버튼 즉시 비활성화 (중복 클릭 방지)
-            submitBtn.disabled = true;
-            submitBtn.innerText = "처리 중...";
-            submitBtn.style.opacity = "0.7";
-
-            const name = document.getElementById('input-name').value;
-            const phone = document.getElementById('input-phone').value;
-            const now = new Date();
-            const currentDay = now.getDay(); // 0(Sun) ~ 6(Sat)
-            const currentHour = now.getHours();
-            const isWeekendAfterCutoff = (currentDay === 6 && currentHour >= 13) || currentDay === 0;
-
-            const allItems = [];
-
-            // 1. 장바구니(cart) 상태를 기준으로 주문 데이터 생성
-            for (const itemName in cart) {
-                if (!itemName || itemName === "undefined" || itemName === "null") continue; // [방어] 유효하지 않은 이름 패스
-
-                const q = cart[itemName];
-                const pData = productsData.find(p => p.name === itemName);
-                if (q > 0 && pData) {
-                    const mKey = pData.matchKey || "";
-                    let finalDate = mKey;
-
-                    // [추가] 과채 예약 및 현장판매 카테고리 특수 로직: 토요일 13시 이후/일요일 주문 건은 월요일로 기록
-                    const isDailyCategory = ['과일', '야채', '기타', '냉장', '냉동', '상온', '실온', '현장판매'].includes(mKey);
-                    if (isWeekendAfterCutoff && isDailyCategory) {
-                        const nextMonday = new Date(now);
-                        const moveDays = (currentDay === 0 ? 1 : 2); // 일요일이면 +1, 토요일이면 +2
-                        nextMonday.setDate(now.getDate() + moveDays);
-                        
-                        const y = nextMonday.getFullYear();
-                        const m = String(nextMonday.getMonth() + 1).padStart(2, '0');
-                        const d = String(nextMonday.getDate()).padStart(2, '0');
-                        finalDate = `${y}-${m}-${d}`;
-                        console.log(`[시차 적용] 월요일 처리 예정: ${mKey} -> ${finalDate}`);
-                    }
-
-                    const isCategorized = !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(finalDate);
-
-                    // [추가] 과일, 야채, 채소 카테고리 5% 할인 (서버 저장용)
-                    let currentPrice = parseInt(pData.price || 0);
-                    const isFvItem = /과일|야채|채소/.test(mKey) || /\[과일\]|\[야채\]|\[채소\]/.test(itemName);
-                    if (isFvItem) {
-                        currentPrice = Math.floor(currentPrice * 0.95);
-                    }
-
-                    allItems.push({
-                        name: itemName,
-                        qty: q,
-                        price: currentPrice,
-                        subtotal: q * currentPrice,
-                        date: finalDate,
-                        isCategorized: isCategorized
-                    });
-                }
+            const submitBtn = document.getElementById('btn-submit-order');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = "처리 중...";
+                submitBtn.style.opacity = "0.7";
             }
 
-            // 2. [추가] 오늘 픽업 예정 상품 합산 (배달 주문 시 선택한 경우)
-            if (shippingMethod === '배달주문' && extraItems && extraItems.length > 0) {
-                const usedNames = {};
-                extraItems.forEach(it => {
-                    const mKey = it.matchKey || it.pickupDate || "";
-                    const isCategorized = !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(mKey);
+            try {
+                const nameNode = document.getElementById('input-name');
+                const phoneNode = document.getElementById('input-phone');
+                if (!nameNode || !phoneNode) throw new Error("입력 요소를 찾을 수 없습니다.");
 
-                    // 동일 이름 중복 시 뒤에 숫자를 붙여 Firebase 키 충돌 방지
-                    let baseName = it.item + " (배달합산)";
-                    let displayName = baseName;
-                    if (usedNames[baseName]) {
-                        usedNames[baseName]++;
-                        displayName = `${it.item} (배달합산-${usedNames[baseName]})`;
-                    } else {
-                        usedNames[baseName] = 1;
-                    }
+                const name = nameNode.value;
+                const phone = phoneNode.value;
+                const currentDay = now.getDay(); // 0(Sun) ~ 6(Sat)
+                const isWeekendAfterCutoff = (currentDay === 6 && currentHour >= 13) || currentDay === 0;
 
-                    allItems.push({
-                        name: displayName,
-                        qty: it.qty,
-                        price: parseInt(it.price || 0),
-                        subtotal: parseInt(it.total || 0),
-                        date: mKey,
-                        isCategorized: isCategorized,
-                        isExtra: true,
-                        // 원본 행 업데이트를 위한 메타 데이터
-                        originalData: {
-                            timestamp: it.timestamp,
-                            name: it.name,
-                            item: it.item,
-                            phone: it.phone || phone
+                const allItems = [];
+
+                // 1. 장바구니(cart) 상태를 기준으로 주문 데이터 생성
+                for (const itemName in cart) {
+                    if (!itemName || itemName === "undefined" || itemName === "null") continue;
+
+                    const q = cart[itemName];
+                    const pData = productsData.find(p => p.name === itemName);
+                    if (q > 0 && pData) {
+                        const mKey = pData.matchKey || "";
+                        let finalDate = mKey;
+
+                        // [신규] 배달주문 11시 이후 내일로 보정
+                        if (shippingMethod === '배달주문' && currentHour >= 11) {
+                            const isDateItem = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(mKey);
+                            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                            
+                            if (!isDateItem || mKey <= todayStr) {
+                                const nextDay = new Date(now);
+                                nextDay.setDate(now.getDate() + 1);
+                                const y = nextDay.getFullYear();
+                                const m = String(nextDay.getMonth() + 1).padStart(2, '0');
+                                const d = String(nextDay.getDate()).padStart(2, '0');
+                                finalDate = `${y}-${m}-${d}`;
+                            }
                         }
-                    });
-                });
-            }
 
-            if (allItems.length === 0) {
-                showSystemModal("주문할 상품이 없습니다.", 'alert');
-                submitBtn.disabled = false;
-                submitBtn.innerText = "주문확정";
-                submitBtn.style.opacity = "1";
-                isHistoryProcessing = false; // 플래그 초기화
-                return;
-            }
+                        // [추가] 과채 예약 및 현장판매 카테고리 특수 로직: 토요일 13시 이후/일요일 주문 건은 월요일로 기록
+                        const isDailyCategory = ['과일', '야채', '기타', '냉장', '냉동', '상온', '실온', '현장판매'].includes(mKey);
+                        if (isWeekendAfterCutoff && isDailyCategory) {
+                            const nextMonday = new Date(now);
+                            const moveDays = (currentDay === 0 ? 1 : 2);
+                            nextMonday.setDate(now.getDate() + moveDays);
 
-            // [신규] 배달 주문 시 당일 날짜 상품 검증 (카테고리 상품은 제외)
-            if (shippingMethod === '배달주문') {
-                const now = new Date();
-                const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                            const y = nextMonday.getFullYear();
+                            const m = String(nextMonday.getMonth() + 1).padStart(2, '0');
+                            const d = String(nextMonday.getDate()).padStart(2, '0');
+                            finalDate = `${y}-${m}-${d}`;
+                        }
 
-                const hasNonToday = allItems.some(it => {
-                    if (it.isCategorized) return false;
-                    if (String(it.date || "").includes("상시판매") || String(it.date || "").includes("현장판매")) return false; // 상시판매/현장판매 상품은 날짜 체크 제외
+                        const isCategorized = !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(finalDate);
 
-                    // 날짜 정규화 (24.02.10 -> 2024-02-10)
-                    let dStr = String(it.date || "").replace(/\./g, '-').trim();
-                    if (dStr.match(/^\d{2}-\d{1,2}-\d{1,2}$/)) dStr = "20" + dStr;
+                        // [추가] 과일, 야채, 채소 카테고리 5% 할인 (서버 저장용)
+                        let currentPrice = parseInt(pData.price || 0);
+                        const isFvItem = /과일|야채|채소/.test(mKey) || /\[과일\]|\[야채\]|\[채소\]/.test(itemName);
+                        if (isFvItem) {
+                            currentPrice = Math.floor(currentPrice * 0.95);
+                        }
 
-                    // 월/일 2자리 패딩 (2024-2-9 -> 2024-02-09)
-                    const parts = dStr.split('-');
-                    if (parts.length === 3) {
-                        dStr = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-                    }
-
-                    return dStr !== todayStr;
-                });
-
-                const days = ['일', '월', '화', '수', '목', '금', '토'];
-                const dateLabel = `${now.getMonth() + 1}월 ${now.getDate()}일 (${days[now.getDay()]})`;
-                if (hasNonToday) {
-                    showSystemModal(`픽업일이 ${dateLabel} 이전인 상품만 배달주문 가능합니다.\n주문 내용을 확인 해 주세요.`, 'alert');
-                    submitBtn.disabled = false;
-                    submitBtn.innerText = "주문확정";
-                    submitBtn.style.opacity = "1";
-                    isHistoryProcessing = false;
-                    return;
-                }
-            }
-
-            // [추가] 배달 주문 시 상세주소 및 공동현관 입력 체크
-            if (shippingMethod === '배달주문') {
-                const userAddress = localStorage.getItem('moket_user_address') || "";
-                const userDetail = localStorage.getItem('moket_user_address_detail') || "";
-                const userEntrance = localStorage.getItem('moket_user_entrance') || "";
-
-                if (!userAddress.trim() || !userDetail.trim() || !userEntrance.trim()) {
-                    showSystemModal("배달을 위해서는 주소, 상세주소, 공동현관 정보를 모두 입력 해 주세요.", 'alert', () => {
-                        // [수정] 주문 확인 창을 닫지 않고 그 위에 주문자 변경 창을 띄움
-                        const profileModal = document.getElementById('profile-modal');
-                        document.getElementById('profile-modal-title').innerText = "주문자 변경";
-                        document.getElementById('profile-submit-btn').innerText = "변경하기";
-
-                        // Z-Index를 높여서 주문 확인 창 위로 올림
-                        profileModal.style.zIndex = "8000";
-                        profileModal.style.display = 'flex';
-                        checkScrollLock();
-                    });
-                    submitBtn.disabled = false;
-                    submitBtn.innerText = "주문확정";
-                    submitBtn.style.opacity = "1";
-                    isHistoryProcessing = false; // 플래그 초기화
-                    return;
-                }
-            }
-
-            // [수정] 배달 주문 시 프로세스: 배달비 체크 -> 입금 안내 및 현금영수증 선택 -> 실행
-            if (shippingMethod === '배달주문') {
-                const currentTotal = allItems.reduce((acc, it) => acc + it.subtotal, 0);
-                if (currentTotal < 30000) {
-                    const msg = `배달주문 금액이 30,000원 미만일 경우 3,000원의 배달비가 발생합니다.\n(현재 주문금액: ${currentTotal.toLocaleString()}원)\n\n배달비를 추가하여 주문 하시겠습니까?`;
-                    showSystemModal(msg, 'confirm', () => {
-                        const firstItem = allItems[0];
                         allItems.push({
-                            name: "배달비",
-                            qty: 1,
-                            price: 3000,
-                            subtotal: 3000,
-                            date: firstItem ? firstItem.date : "",
-                            isCategorized: firstItem ? firstItem.isCategorized : false
+                            name: itemName,
+                            qty: q,
+                            price: currentPrice,
+                            subtotal: q * currentPrice,
+                            date: finalDate,
+                            isCategorized: isCategorized
                         });
-                        showPaymentGuide(allItems, name, phone, shippingMethod);
-                        return true;
-                    }, () => {
-                        isHistoryProcessing = false;
-                        if (submitBtn) {
-                            submitBtn.disabled = false;
-                            submitBtn.innerText = "주문확정";
-                            submitBtn.style.opacity = "1";
-                        }
-                    });
-                } else {
-                    showPaymentGuide(allItems, name, phone, shippingMethod);
+                    }
                 }
-                return;
-            }
 
-            executeOrder(allItems, name, phone, shippingMethod);
+                // 2. 오늘 픽업 예정 상품 합산 (배달 주문 시 선택한 경우)
+                if (shippingMethod === '배달주문' && extraItems && extraItems.length > 0) {
+                    const usedNames = {};
+                    extraItems.forEach(it => {
+                        const mKey = it.matchKey || it.pickupDate || "";
+                        const isCategorized = !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(mKey);
+
+                        let baseName = it.item + " (배달합산)";
+                        let displayName = baseName;
+                        if (usedNames[baseName]) {
+                            usedNames[baseName]++;
+                            displayName = `${it.item} (배달합산-${usedNames[baseName]})`;
+                        } else {
+                            usedNames[baseName] = 1;
+                        }
+
+                        allItems.push({
+                            name: displayName,
+                            qty: it.qty,
+                            price: parseInt(it.price || 0),
+                            subtotal: parseInt(it.total || 0),
+                            date: mKey,
+                            isCategorized: isCategorized,
+                            isExtra: true,
+                            originalData: {
+                                timestamp: it.timestamp,
+                                name: it.name,
+                                item: it.item,
+                                phone: it.phone || phone
+                            }
+                        });
+                    });
+                }
+
+                if (allItems.length === 0) {
+                    showSystemModal("주문할 상품이 없습니다.", 'alert');
+                    throw new Error("EMPTY_CART");
+                }
+
+                // [신규] 배달 주문 시 상품 날짜 검증
+                if (shippingMethod === '배달주문') {
+                    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                    let targetPickupDate = todayStr;
+                    if (currentHour >= 11) {
+                        const tm = new Date(now); tm.setDate(now.getDate() + 1);
+                        targetPickupDate = `${tm.getFullYear()}-${String(tm.getMonth() + 1).padStart(2, '0')}-${String(tm.getDate()).padStart(2, '0')}`;
+                    }
+
+                    const hasInvalidDate = allItems.some(it => {
+                        if (it.isCategorized) return false;
+                        const d = it.date || ""; 
+                        if (d.includes("상시판매") || d.includes("현장판매")) return false;
+
+                        let dStr = String(d).replace(/\./g, '-').trim();
+                        if (dStr.match(/^\d{2}-\d{1,2}-\d{1,2}$/)) dStr = "20" + dStr;
+                        const pt = dStr.split('-');
+                        if (pt.length === 3) dStr = `${pt[0]}-${pt[1].padStart(2, '0')}-${pt[2].padStart(2, '0')}`;
+
+                        return dStr !== targetPickupDate;
+                    });
+
+                    if (hasInvalidDate) {
+                        const days = ['일', '월', '화', '수', '목', '금', '토'];
+                        const targetLabel = currentHour < 11 
+                            ? `${now.getMonth() + 1}월 ${now.getDate()}일 (${days[now.getDay()]})`
+                            : `${new Date(now.getTime() + 86400000).getMonth() + 1}월 ${new Date(now.getTime() + 86400000).getDate()}일 (${days[new Date(now.getTime() + 86400000).getDay()]})`;
+
+                        showSystemModal(`배달 가능일(${targetLabel})과 일치하지 않는 예약 상품이 포함되어 있습니다.\n주문 내용을 확인해 주세요.`, 'alert', () => {
+                            window.deliveryCutoffConfirmed = false;
+                        });
+                        throw new Error("INVALID_DATE");
+                    }
+                }
+
+                // 배달지 정보 체크
+                if (shippingMethod === '배달주문') {
+                    const addr = localStorage.getItem('moket_user_address') || "";
+                    const detail = localStorage.getItem('moket_user_address_detail') || "";
+                    const ent = localStorage.getItem('moket_user_entrance') || "";
+
+                    if (!addr.trim() || !detail.trim() || !ent.trim()) {
+                        showSystemModal("배달 주소 정보를 모두 입력해 주세요.", 'alert', () => {
+                            const pm = document.getElementById('profile-modal');
+                            document.getElementById('profile-modal-title').innerText = "데이터 입력";
+                            pm.style.zIndex = "8000"; pm.style.display = 'flex'; checkScrollLock();
+                        });
+                        throw new Error("MISSING_ADDRESS");
+                    }
+                }
+
+                // 배달 주문 흐름 (배달비 확인 -> 입금 안내 -> 실행)
+                if (shippingMethod === '배달주문') {
+                    const currentTotal = allItems.reduce((acc, it) => acc + it.subtotal, 0);
+                    if (currentTotal < 30000) {
+                        const feeMsg = `배달주문 금액이 30,000원 미만일 경우 3,000원의 배달비가 발생합니다.\n\n배달비를 추가하여 주문 하시겠습니까?`;
+                        showSystemModal(feeMsg, 'confirm', () => {
+                            allItems.push({
+                                name: "배달비", qty: 1, price: 3000, subtotal: 3000, 
+                                date: allItems[0]?.date || "", isCategorized: false
+                            });
+                            showPaymentGuide(allItems, name, phone, shippingMethod);
+                        }, () => {
+                            isHistoryProcessing = false;
+                            if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = "주문확정"; submitBtn.style.opacity = "1"; }
+                        });
+                    } else {
+                        showPaymentGuide(allItems, name, phone, shippingMethod);
+                    }
+                } else {
+                    executeOrder(allItems, name, phone, shippingMethod);
+                }
+
+            } catch (err) {
+                console.error("completeOrder 오류:", err);
+                isHistoryProcessing = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = "주문확정";
+                    submitBtn.style.opacity = "1";
+                }
+                // EMPTY_CART나 INVALID_DATE 등 이미 모달을 띄운 경우는 추가 안내 생략
+                if (err.message !== "EMPTY_CART" && err.message !== "INVALID_DATE" && err.message !== "MISSING_ADDRESS") {
+                    showSystemModal("주문 처리 중 오류가 발생했습니다.\n다시 시도해 주세요.", 'alert');
+                }
+            }
         }
 
         // [신규] 배달 주문 전용 입금 안내 및 현금영수증 모달
@@ -4744,6 +4763,9 @@
         // 실질적인 주문 전송 로직 분리 (배달비 확인 후 실행을 위함)
         async function executeOrder(allItems, name, phone, shippingMethod, cashReceipt = "미발행", receiptPhone = "", cashReceiptType = "개인") {
             const submitBtn = document.getElementById('btn-submit-order');
+            
+            // 전송 시작 시 배송 마감 플래그 초기화
+            window.deliveryCutoffConfirmed = false;
 
             if (!name || !phone) {
                 showSystemModal("주문자명과 연락처를 입력해주세요.", 'alert', () => {
@@ -4938,7 +4960,7 @@
 
                 // 4. 로컬 상태 업데이트 및 완료 안내 (Firebase 기록 완료 시 바로 표시)
                 isHistoryProcessing = false;
-                
+
                 allItems.forEach(it => {
                     if (it.name === "배달비") return;
                     const p = productsData.find(pd => pd.matchKey === it.date && pd.name === it.name);
