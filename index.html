@@ -4454,7 +4454,10 @@
                         const mKey = pData.matchKey || "";
                         let finalDate = mKey;
 
-                        if (shippingMethod === '배달주문' && currentHour >= 11) {
+                        const isFV = /과일|야채|채소/.test(mKey) || /\[과일\]|\[야채\]|\[채소\]/.test(itemName);
+                        const isCutoffTarget = (shippingMethod === '배달주문') || (shippingMethod === '매장픽업' && isFV);
+
+                        if (isCutoffTarget && currentHour >= 11) {
                             const isDateItem = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(mKey);
                             const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
                             if (!isDateItem || mKey <= todayStr) {
@@ -4514,10 +4517,19 @@
                     }
                 }
 
-                // 3. [배달전용] 11시 이후 마감 안내
-                if (shippingMethod === '배달주문' && currentHour >= 11 && !cutoffConfirmed) {
+                // 3. 11시 이후 마감 안내 (배달 전체 또는 과채류 매장픽업)
+                const hasFVItem = allItems.some(it => /과일|야채|채소/.test(String(it.name)) || /과일|야채|채소/.test(String(it.date)));
+                const needsCutoffWarning = (shippingMethod === '배달주문') || (shippingMethod === '매장픽업' && hasFVItem);
+
+                if (needsCutoffWarning && currentHour >= 11 && !cutoffConfirmed) {
                     const timeStr = `${now.getHours()}시 ${String(now.getMinutes()).padStart(2, '0')}분`;
-                    const msg = `오전 11시 이후 주문건은 내일 배달됩니다.\n(현재시간: ${timeStr})\n\n배달주문 하시겠습니까?`;
+                    let msg = "";
+                    if (shippingMethod === '배달주문') {
+                        msg = `오전 11시 이후 주문건은 내일 배달됩니다.\n(현재시간: ${timeStr})\n\n배달주문 하시겠습니까?`;
+                    } else {
+                        msg = `오전 11시 이후 주문건은 내일 픽업예약됩니다.\n(현재시간: ${timeStr})\n\n주문하시겠습니까?`;
+                    }
+
                     showSystemModal(msg, 'confirm', () => {
                         completeOrder(shippingMethod, extraItems, true);
                         return true;
