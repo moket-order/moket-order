@@ -4527,7 +4527,7 @@
                     if (shippingMethod === '배달주문') {
                         msg = `오전 11시 이후 주문건은 내일 배달됩니다.\n(현재시간: ${timeStr})\n\n배달주문 하시겠습니까?`;
                     } else {
-                        msg = `오전 11시 이후 주문건은 내일 픽업예약됩니다.\n(현재시간: ${timeStr})\n\n주문하시겠습니까?`;
+                        msg = `오전 11시 이후 주문건은 내일 예약됩니다.\n(현재시간: ${timeStr})\n\n주문하시겠습니까?`;
                     }
 
                     showSystemModal(msg, 'confirm', () => {
