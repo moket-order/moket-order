@@ -1796,33 +1796,48 @@
         let isDeliveryEnabled = false;
 
         async function fetchDeliveryStatus() {
+            // 초기 UI 반영 (로딩 중이거나 값이 아직 안왔을 때 기본값으로)
+            updateDeliveryUI(); 
             try {
                 const res = await fetch(FIREBASE_DB_URL + "delivery_status.json?t=" + Date.now());
                 const status = await res.json();
                 isDeliveryEnabled = (status === true);
                 updateDeliveryUI();
-            } catch (e) { console.error("상태 로드 실패:", e); }
+            } catch (e) { 
+                console.error("상태 로드 실패:", e); 
+                updateDeliveryUI(); // 실패해도 현재 옵션 상태(기본값)는 보여줌
+            }
         }
 
         function updateDeliveryUI() {
             const onBtn = document.getElementById('ADMIN_DELIVERY_ON');
             const offBtn = document.getElementById('ADMIN_DELIVERY_OFF');
-            if (onBtn && offBtn) {
-                if (isDeliveryEnabled) {
-                    onBtn.innerHTML = '🚚 배달 기능 활성화 [현재 적용중]';
-                    onBtn.style.background = '#e8f5e9';
-                    offBtn.innerHTML = '🚫 배달 기능 끄기';
-                    offBtn.style.background = 'white';
-                    offBtn.style.opacity = '0.5';
-                    onBtn.style.opacity = '1';
-                } else {
-                    offBtn.innerHTML = '🚫 배달 기능 비활성화 [현재 적용중]';
-                    offBtn.style.background = '#ffebee';
-                    onBtn.innerHTML = '🚚 배달 기능 켜기';
-                    onBtn.style.background = 'white';
-                    onBtn.style.opacity = '0.5';
-                    offBtn.style.opacity = '1';
-                }
+            if (!onBtn || !offBtn) return;
+
+            if (isDeliveryEnabled) {
+                onBtn.innerHTML = '🚚 배달 기능 활성화 [현재 적용중]';
+                onBtn.style.background = '#e1f5fe'; // 다른 적용중 버튼들과 통일감 있는 색상
+                onBtn.style.border = '1.5px solid #2196F3';
+                onBtn.style.color = '#2196F3';
+                onBtn.style.opacity = '1';
+
+                offBtn.innerHTML = '🚫 배달 기능 끄기';
+                offBtn.style.background = 'white';
+                offBtn.style.border = '1.5px solid #ff4d4d';
+                offBtn.style.color = '#ff4d4d';
+                offBtn.style.opacity = '0.5';
+            } else {
+                offBtn.innerHTML = '🚫 배달 기능 비활성화 [현재 적용중]';
+                offBtn.style.background = '#eceff1'; // 비활성화 적용중 색상
+                offBtn.style.border = '1.5px solid #607D8B';
+                offBtn.style.color = '#607D8B';
+                offBtn.style.opacity = '1';
+
+                onBtn.innerHTML = '🚚 배달 기능 켜기';
+                onBtn.style.background = 'white';
+                onBtn.style.border = '1.5px solid var(--moket-green)';
+                onBtn.style.color = 'var(--moket-green)';
+                onBtn.style.opacity = '0.5';
             }
         }
 
