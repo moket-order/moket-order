@@ -4644,7 +4644,7 @@
                             ? `${now.getMonth() + 1}월 ${now.getDate()}일 (${days[now.getDay()]})`
                             : `${new Date(now.getTime() + 86400000).getMonth() + 1}월 ${new Date(now.getTime() + 86400000).getDate()}일 (${days[new Date(now.getTime() + 86400000).getDay()]})`;
 
-                        showSystemModal(`배달 가능일(${targetLabel})과 일치하지 않는 예약 상품이 포함되어 있습니다.\n주문 내용을 확인해 주세요.`, 'alert', () => {
+                        showSystemModal(`배달이 불가능한 상품이 있습니다.\n주문 내용을 확인해 주세요.`, 'alert', () => {
                             // window.deliveryCutoffConfirmed = false; // 파라미터 방식으로 변경되어 필요없음
                         });
                         throw new Error("INVALID_DATE");
