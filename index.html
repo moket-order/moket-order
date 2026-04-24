@@ -1797,47 +1797,63 @@
 
         async function fetchDeliveryStatus() {
             // 초기 UI 반영 (로딩 중이거나 값이 아직 안왔을 때 기본값으로)
-            updateDeliveryUI(); 
+            updateDeliveryUI();
             try {
                 const res = await fetch(FIREBASE_DB_URL + "delivery_status.json?t=" + Date.now());
                 const status = await res.json();
                 isDeliveryEnabled = (status === true);
                 updateDeliveryUI();
-            } catch (e) { 
-                console.error("상태 로드 실패:", e); 
+            } catch (e) {
+                console.error("상태 로드 실패:", e);
                 updateDeliveryUI(); // 실패해도 현재 옵션 상태(기본값)는 보여줌
             }
         }
 
         function updateDeliveryUI() {
+            // 1. 관리자용 버튼 업데이트 (id: ADMIN_DELIVERY_ON, ADMIN_DELIVERY_OFF)
             const onBtn = document.getElementById('ADMIN_DELIVERY_ON');
             const offBtn = document.getElementById('ADMIN_DELIVERY_OFF');
-            if (!onBtn || !offBtn) return;
 
-            if (isDeliveryEnabled) {
-                onBtn.innerHTML = '🚚 배달 기능 활성화 [현재 적용중]';
-                onBtn.style.background = '#e1f5fe'; // 다른 적용중 버튼들과 통일감 있는 색상
-                onBtn.style.border = '1.5px solid #2196F3';
-                onBtn.style.color = '#2196F3';
-                onBtn.style.opacity = '1';
+            if (onBtn && offBtn) {
+                if (isDeliveryEnabled) {
+                    onBtn.innerHTML = '🚚 배달 기능 활성화 [현재 적용중]';
+                    onBtn.style.background = '#e1f5fe'; // 다른 적용중 버튼들과 통일감 있는 색상
+                    onBtn.style.border = '1.5px solid #2196F3';
+                    onBtn.style.color = '#2196F3';
+                    onBtn.style.opacity = '1';
 
-                offBtn.innerHTML = '🚫 배달 기능 끄기';
-                offBtn.style.background = 'white';
-                offBtn.style.border = '1.5px solid #ff4d4d';
-                offBtn.style.color = '#ff4d4d';
-                offBtn.style.opacity = '0.5';
-            } else {
-                offBtn.innerHTML = '🚫 배달 기능 비활성화 [현재 적용중]';
-                offBtn.style.background = '#eceff1'; // 비활성화 적용중 색상
-                offBtn.style.border = '1.5px solid #607D8B';
-                offBtn.style.color = '#607D8B';
-                offBtn.style.opacity = '1';
+                    offBtn.innerHTML = '🚫 배달 기능 끄기';
+                    offBtn.style.background = 'white';
+                    offBtn.style.border = '1.5px solid #ff4d4d';
+                    offBtn.style.color = '#ff4d4d';
+                    offBtn.style.opacity = '0.5';
+                } else {
+                    offBtn.innerHTML = '🚫 배달 기능 비활성화 [현재 적용중]';
+                    offBtn.style.background = '#eceff1'; // 비활성화 적용중 색상
+                    offBtn.style.border = '1.5px solid #607D8B';
+                    offBtn.style.color = '#607D8B';
+                    offBtn.style.opacity = '1';
 
-                onBtn.innerHTML = '🚚 배달 기능 켜기';
-                onBtn.style.background = 'white';
-                onBtn.style.border = '1.5px solid var(--moket-green)';
-                onBtn.style.color = 'var(--moket-green)';
-                onBtn.style.opacity = '0.5';
+                    onBtn.innerHTML = '🚚 배달 기능 켜기';
+                    onBtn.style.background = 'white';
+                    onBtn.style.border = '1.5px solid var(--moket-green)';
+                    onBtn.style.color = 'var(--moket-green)';
+                    onBtn.style.opacity = '0.5';
+                }
+            }
+
+            // 2. 사용자용 주문하기 내 배달 버튼 업데이트
+            const btn = document.getElementById('btn-delivery-order');
+            if (btn) {
+                if (isDeliveryEnabled) {
+                    btn.style.background = "var(--moket-green)";
+                    btn.style.color = "white";
+                    btn.style.cursor = "pointer";
+                } else {
+                    btn.style.background = "#e0e0e0";
+                    btn.style.color = "#999";
+                    btn.style.cursor = "not-allowed";
+                }
             }
         }
 
@@ -1969,19 +1985,6 @@
         setInterval(fetchProductListStatus, 10000);
         fetchProductListStatus();
 
-        function updateDeliveryUI() {
-            const btn = document.getElementById('btn-delivery-order');
-            if (!btn) return;
-            if (isDeliveryEnabled) {
-                btn.style.background = "var(--moket-green)";
-                btn.style.color = "white";
-                btn.style.cursor = "pointer";
-            } else {
-                btn.style.background = "#e0e0e0";
-                btn.style.color = "#999";
-                btn.style.cursor = "not-allowed";
-            }
-        }
 
         function handleDeliveryOrderClick() {
             if (!isDeliveryEnabled) {
@@ -4524,7 +4527,7 @@
                         if (shippingMethod === '배달주문' && currentHour >= 11) {
                             const isDateItem = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(mKey);
                             const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-                            
+
                             if (!isDateItem || mKey <= todayStr) {
                                 const nextDay = new Date(now);
                                 nextDay.setDate(now.getDate() + 1);
@@ -4618,7 +4621,7 @@
 
                     const hasInvalidDate = allItems.some(it => {
                         if (it.isCategorized) return false;
-                        const d = it.date || ""; 
+                        const d = it.date || "";
                         if (d.includes("상시판매") || d.includes("현장판매")) return false;
 
                         let dStr = String(d).replace(/\./g, '-').trim();
@@ -4631,7 +4634,7 @@
 
                     if (hasInvalidDate) {
                         const days = ['일', '월', '화', '수', '목', '금', '토'];
-                        const targetLabel = currentHour < 11 
+                        const targetLabel = currentHour < 11
                             ? `${now.getMonth() + 1}월 ${now.getDate()}일 (${days[now.getDay()]})`
                             : `${new Date(now.getTime() + 86400000).getMonth() + 1}월 ${new Date(now.getTime() + 86400000).getDate()}일 (${days[new Date(now.getTime() + 86400000).getDay()]})`;
 
@@ -4665,7 +4668,7 @@
                         const feeMsg = `배달주문 금액이 30,000원 미만일 경우 3,000원의 배달비가 발생합니다.\n\n배달비를 추가하여 주문 하시겠습니까?`;
                         showSystemModal(feeMsg, 'confirm', () => {
                             allItems.push({
-                                name: "배달비", qty: 1, price: 3000, subtotal: 3000, 
+                                name: "배달비", qty: 1, price: 3000, subtotal: 3000,
                                 date: allItems[0]?.date || "", isCategorized: false
                             });
                             showPaymentGuide(allItems, name, phone, shippingMethod);
@@ -4784,7 +4787,7 @@
         // 실질적인 주문 전송 로직 분리 (배달비 확인 후 실행을 위함)
         async function executeOrder(allItems, name, phone, shippingMethod, cashReceipt = "미발행", receiptPhone = "", cashReceiptType = "개인") {
             const submitBtn = document.getElementById('btn-submit-order');
-            
+
             // 전송 시작 시 배송 마감 플래그 초기화
             window.deliveryCutoffConfirmed = false;
 
