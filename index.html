@@ -4476,7 +4476,7 @@
                         let currentPrice = parseInt(pData.price || 0);
                         if (/과일|야채|채소/.test(mKey) || /\[과일\]|\[야채\]|\[채소\]/.test(itemName)) { currentPrice = Math.floor(currentPrice * 0.95); }
 
-                        allItems.push({ name: itemName, qty: q, price: currentPrice, subtotal: q * currentPrice, date: finalDate, isCategorized: isCategorized });
+                        allItems.push({ name: itemName, qty: q, price: currentPrice, subtotal: q * currentPrice, date: finalDate, isCategorized: isCategorized, isFV: isFV });
                     }
                 }
 
@@ -4518,7 +4518,7 @@
                 }
 
                 // 3. 11시 이후 마감 안내 (배달 전체 또는 과채류 매장픽업)
-                const hasFVItem = allItems.some(it => /과일|야채|채소/.test(String(it.name)) || /과일|야채|채소/.test(String(it.date)));
+                const hasFVItem = allItems.some(it => it.isFV);
                 const needsCutoffWarning = (shippingMethod === '배달주문') || (shippingMethod === '매장픽업' && hasFVItem);
 
                 if (needsCutoffWarning && currentHour >= 11 && !cutoffConfirmed) {
