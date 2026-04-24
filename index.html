@@ -1994,7 +1994,14 @@
             const addr = document.getElementById('input-address').value;
             if (!addr || addr.trim() === "") {
                 showSystemModal("배달 받으실 주소를 먼저 입력해 주세요.", "alert", () => {
-                    openSideModal('profile-modal');
+                    const pm = document.getElementById('profile-modal');
+                    document.getElementById('profile-modal-title').innerText = "매장 배달 주소 입력";
+                    const sbt = document.getElementById('profile-submit-btn');
+                    if (sbt) sbt.innerText = "저장하기";
+                    
+                    pm.style.zIndex = "8000"; 
+                    pm.style.display = 'flex'; 
+                    checkScrollLock();
                 });
                 return;
             }
@@ -4654,7 +4661,10 @@
                     if (!addr.trim() || !detail.trim() || !ent.trim()) {
                         showSystemModal("배달 주소 정보를 모두 입력해 주세요.", 'alert', () => {
                             const pm = document.getElementById('profile-modal');
-                            document.getElementById('profile-modal-title').innerText = "데이터 입력";
+                            document.getElementById('profile-modal-title').innerText = "배달 상세 주소 입력";
+                            const sbt = document.getElementById('profile-submit-btn');
+                            if (sbt) sbt.innerText = "저장하기";
+
                             pm.style.zIndex = "8000"; pm.style.display = 'flex'; checkScrollLock();
                         });
                         throw new Error("MISSING_ADDRESS");
