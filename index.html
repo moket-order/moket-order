@@ -4557,7 +4557,7 @@
                 if (shippingMethod === '배달주문') {
                     const currentTotal = allItems.reduce((acc, it) => acc + it.subtotal, 0);
                     if (currentTotal < 30000) {
-                        showSystemModal(`배달주문 금액이 30,000원 미만일 경우 3,000원의 배달비가 발생합니다.\n\n배달비를 추가하여 주문 하시겠습니까?`, 'confirm', () => {
+                        showSystemModal(`배달주문 금액이 30,000원 미만일 경우 3,000원의 배달비가 발생합니다.\n(현재 주문금액: ${currentTotal.toLocaleString()}원)\n\n배달비를 추가하여 주문 하시겠습니까?`, 'confirm', () => {
                             allItems.push({ name: "배달비", qty: 1, price: 3000, subtotal: 3000, date: allItems[0]?.date || "", isCategorized: false });
                             showPaymentGuide(allItems, name, phone, shippingMethod);
                             return true;
