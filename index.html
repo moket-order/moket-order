@@ -4442,7 +4442,7 @@
 
             // [신규] 배달주문 11시 이후 안내 및 날짜 보정 로직
             if (shippingMethod === '배달주문' && currentHour >= 11 && !window.deliveryCutoffConfirmed) {
-                const msg = "오전 11시 이후 주문건은 다음날 배달됩니다.\n주문하시겠습니까?";
+                const msg = "오전 11시 이후 주문은 내일 배달됩니다.\n주문하시겠습니까?";
                 showSystemModal(msg, 'confirm', () => {
                     window.deliveryCutoffConfirmed = true;
                     // 처리 중 플래그 잠시 해제하여 재진입 허용
@@ -4450,6 +4450,7 @@
                     const sb = document.getElementById('btn-submit-order');
                     if (sb) { sb.disabled = false; sb.innerText = "주문확정"; sb.style.opacity = "1"; }
                     completeOrder(shippingMethod, extraItems);
+                    return true; // 중요: 수동으로 재진입하므로 현재 모달 자동 닫기 방지(또는 재사용)
                 }, () => {
                     isHistoryProcessing = false;
                     const sb = document.getElementById('btn-submit-order');
@@ -4649,6 +4650,7 @@
                                 date: allItems[0]?.date || "", isCategorized: false
                             });
                             showPaymentGuide(allItems, name, phone, shippingMethod);
+                            return true;
                         }, () => {
                             isHistoryProcessing = false;
                             if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = "주문확정"; submitBtn.style.opacity = "1"; }
