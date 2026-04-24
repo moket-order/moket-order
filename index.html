@@ -1371,10 +1371,10 @@
                 로그아웃</button>
             <button id="ADMIN_DELIVERY_ON" onclick="adminToggleDelivery(true)"
                 style="display:none; margin-top:15px; background:white; border:1.5px solid var(--moket-green); color:var(--moket-green); font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">🚚
-                배달 버튼 켜기</button>
+                배달 기능 활성화</button>
             <button id="ADMIN_DELIVERY_OFF" onclick="adminToggleDelivery(false)"
                 style="display:none; margin-top:8px; background:white; border:1.5px solid #ff4d4d; color:#ff4d4d; font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">🚫
-                배달 버튼 끄기</button>
+                배달 기능 비활성화</button>
 
             <button id="ADMIN_LOGIN_ON" onclick="adminToggleLoginEntry(true)"
                 style="display:none; margin-top:15px; background:white; border:1.5px solid var(--moket-green); color:var(--moket-green); font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">🔒
@@ -2252,6 +2252,10 @@
             if (id === 'profile-modal') {
                 document.getElementById('profile-modal-title').innerText = "주문자 변경";
                 document.getElementById('profile-submit-btn').innerText = "변경하기";
+                // 관리자 모드인 경우 상태 UI 즉시 업데이트 강제
+                if (typeof updateDeliveryUI === 'function') updateDeliveryUI();
+                if (typeof updateLoginEntryUI === 'function') updateLoginEntryUI();
+                if (typeof updateProductListUI === 'function') updateProductListUI();
             }
             document.getElementById(id).style.display = 'flex';
             checkScrollLock();
