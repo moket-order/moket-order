@@ -1371,10 +1371,10 @@
                 로그아웃</button>
             <button id="ADMIN_DELIVERY_ON" onclick="adminToggleDelivery(true)"
                 style="display:none; margin-top:15px; background:white; border:1.5px solid var(--moket-green); color:var(--moket-green); font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">🚚
-                배달 버튼 켜기 (활성화)</button>
+                배달 버튼 켜기</button>
             <button id="ADMIN_DELIVERY_OFF" onclick="adminToggleDelivery(false)"
                 style="display:none; margin-top:8px; background:white; border:1.5px solid #ff4d4d; color:#ff4d4d; font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">🚫
-                배달 버튼 끄기 (비활성화)</button>
+                배달 버튼 끄기</button>
 
             <button id="ADMIN_LOGIN_ON" onclick="adminToggleLoginEntry(true)"
                 style="display:none; margin-top:15px; background:white; border:1.5px solid var(--moket-green); color:var(--moket-green); font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">🔒
@@ -1809,16 +1809,16 @@
             const offBtn = document.getElementById('ADMIN_DELIVERY_OFF');
             if (onBtn && offBtn) {
                 if (isDeliveryEnabled) {
-                    onBtn.innerHTML = '🚚 배달 버튼 켜짐 [현재 적용중]';
+                    onBtn.innerHTML = '🚚 배달 기능 활성화 [현재 적용중]';
                     onBtn.style.background = '#e8f5e9';
-                    offBtn.innerHTML = '🚫 배달 버튼 끄기';
+                    offBtn.innerHTML = '🚫 배달 기능 끄기';
                     offBtn.style.background = 'white';
                     offBtn.style.opacity = '0.5';
                     onBtn.style.opacity = '1';
                 } else {
-                    offBtn.innerHTML = '🚫 배달 버튼 꺼짐 [현재 적용중]';
+                    offBtn.innerHTML = '🚫 배달 기능 비활성화 [현재 적용중]';
                     offBtn.style.background = '#ffebee';
-                    onBtn.innerHTML = '🚚 배달 버튼 켜기';
+                    onBtn.innerHTML = '🚚 배달 기능 켜기';
                     onBtn.style.background = 'white';
                     onBtn.style.opacity = '0.5';
                     offBtn.style.opacity = '1';
