@@ -3956,6 +3956,9 @@
                     const rpB = getReservePriority(b);
                     if (rpA !== rpB) return rpA - rpB;
 
+                    // [수정] 업로드 순서(originalIndex)를 날짜보다 우선하여 정렬
+                    if (a.originalIndex !== b.originalIndex) return b.originalIndex - a.originalIndex;
+
                     const dateRegex = /(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/;
                     const isDateA = dateRegex.test(String(a.matchKey));
                     const isDateB = dateRegex.test(String(b.matchKey));
@@ -3963,12 +3966,8 @@
                     if (isDateA && isDateB) {
                         const dateA = new Date(String(a.matchKey).replace(/\./g, '-')).getTime() || 0;
                         const dateB = new Date(String(b.matchKey).replace(/\./g, '-')).getTime() || 0;
-                        // 날짜 기준 내림차순 (최신 날짜부터)
                         if (dateA !== dateB) return dateB - dateA;
                     }
-
-                    // 동일 그룹 내에서는 등록 순서 내림차순 (최근 등록 상품부터)
-                    if (a.originalIndex !== b.originalIndex) return b.originalIndex - a.originalIndex;
                 }
                 return a.name.localeCompare(b.name, 'ko', { numeric: true, sensitivity: 'base' });
             });
