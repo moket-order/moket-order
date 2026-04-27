@@ -4456,6 +4456,7 @@
                         const isFV = /과일|야채|채소/.test(mKey) || /\[과일\]|\[야채\]|\[채소\]/.test(itemName);
                         const isCutoffTarget = (shippingMethod === '배달주문') || (shippingMethod === '매장픽업' && isFV);
 
+                        // 1. [공통] 11시 이후 내일로 보정 (배달/과채 전용)
                         if (isCutoffTarget && currentHour >= 11) {
                             const isDateItem = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(mKey);
                             const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -4465,9 +4466,27 @@
                             }
                         }
 
-                        const isDailyCategory = ['과일', '야채', '기타', '냉장', '냉동', '상온', '실온', '현장판매'].includes(mKey);
-                        if (isWeekendAfterCutoff && isDailyCategory) {
-                            const nextMonday = new Date(now); nextMonday.setDate(now.getDate() + (currentDay === 0 ? 1 : 2));
+                        // 2. [주말] 카테고리별 월요일 보정 (토요일 차별화 / 일요일 전체)
+                        const isDateItem = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(mKey);
+                        const isDaily = ['과일', '야채', '기타'].includes(mKey) || isFV;
+                        const isOnSite = ['냉장', '냉동', '상온', '실온', '현장판매', '상시판매'].includes(mKey) || (!isDateItem && !isDaily);
+
+                        // 보정된 날짜 기준으로 요일 재계산 (11시 보정으로 일요일이 된 경우 대비)
+                        const checkDate = new Date(finalDate.includes('-') ? finalDate : now);
+                        const checkDay = checkDate.getDay();
+
+                        let isWeekendPush = false;
+                        if (checkDay === 0) { // 일요일인 경우 (보정되어 일요일이 된 경우 포함)
+                            isWeekendPush = true;
+                        } else if (checkDay === 6) { // 토요일인 경우
+                            if (isDaily && currentHour >= 11) isWeekendPush = true;
+                            else if (isOnSite && currentHour >= 18) isWeekendPush = true;
+                        }
+
+                        if (isWeekendPush && (isDaily || isOnSite)) {
+                            const nextMonday = new Date(checkDate);
+                            const daysToMonday = (checkDay === 0) ? 1 : 2;
+                            nextMonday.setDate(checkDate.getDate() + daysToMonday);
                             finalDate = `${nextMonday.getFullYear()}-${String(nextMonday.getMonth() + 1).padStart(2, '0')}-${String(nextMonday.getDate()).padStart(2, '0')}`;
                         }
 
