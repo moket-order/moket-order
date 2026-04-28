@@ -4471,14 +4471,24 @@
                         const isDaily = ['과일', '야채', '기타'].includes(mKey) || isFV;
                         const isOnSite = ['냉장', '냉동', '상온', '실온', '현장판매', '상시판매'].includes(mKey) || (!isDateItem && !isDaily);
 
-                        // 보정된 날짜 기준으로 요일 재계산 (11시 보정으로 일요일이 된 경우 대비)
+                        // 1-2. [신규] 현장판매: 20시(토요일은 18시) 이후 내일로 보정
+                        const isOnSiteThreshold = (now.getDay() === 6) ? 18 : 20;
+                        if (isOnSite && currentHour >= isOnSiteThreshold) {
+                            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                            if (!isDateItem || mKey <= todayStr) {
+                                const nextDay = new Date(now); nextDay.setDate(now.getDate() + 1);
+                                finalDate = `${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, '0')}-${String(nextDay.getDate()).padStart(2, '0')}`;
+                            }
+                        }
+
+                        // 보정된 날짜 기준으로 요일 재계산 (11시/20시 보정으로 일요일이 된 경우 대비)
                         const checkDate = new Date(finalDate.includes('-') ? finalDate : now);
                         const checkDay = checkDate.getDay();
 
                         let isWeekendPush = false;
                         if (checkDay === 0) { // 일요일인 경우 (보정되어 일요일이 된 경우 포함)
                             isWeekendPush = true;
-                        } else if (checkDay === 6) { // 토요일인 경우
+                        } else if (checkDay === 6 && now.getDay() === 6) { // 주문일이 토요일이고 픽업일도 토요일인 경우
                             if (isDaily && currentHour >= 11) isWeekendPush = true;
                             else if (isOnSite && currentHour >= 18) isWeekendPush = true;
                         }
@@ -4494,7 +4504,7 @@
                         let currentPrice = parseInt(pData.price || 0);
                         if (/과일|야채|채소/.test(mKey) || /\[과일\]|\[야채\]|\[채소\]/.test(itemName)) { currentPrice = Math.floor(currentPrice * 0.95); }
 
-                        allItems.push({ name: itemName, qty: q, price: currentPrice, subtotal: q * currentPrice, date: finalDate, isCategorized: isCategorized, isFV: isFV });
+                        allItems.push({ name: itemName, qty: q, price: currentPrice, subtotal: q * currentPrice, date: finalDate, isCategorized: isCategorized, isFV: isFV, isOnSite: isOnSite });
                     }
                 }
 
