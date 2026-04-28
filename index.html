@@ -1708,8 +1708,13 @@
             // 2. 제목 변경
             const title = document.getElementById('main-section-title');
             if (title) {
-                if (type === 'reserve' || type === 'on-site') {
+                if (type === 'reserve') {
                     title.style.display = 'none';
+                } else if (type === 'on-site') {
+                    title.style.display = 'block';
+                    title.innerHTML = `
+                        <div style="font-size: 15px; font-weight: 800; color: #ff4d4d; letter-spacing: -0.5px; line-height: 1.4;">매장 판매로 품절될 경우 제공되지 못할 수 있습니다.</div>
+                    `;
                 } else if (type === 'fruit-veg') {
                     title.style.display = 'block';
                     title.innerHTML = `
