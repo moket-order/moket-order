@@ -1718,7 +1718,7 @@
                 } else if (type === 'fruit-veg') {
                     title.style.display = 'block';
                     title.innerHTML = `
-                        <div style="font-size: 18px; font-weight: 900; color: var(--nego-orange); margin-bottom: 6px;">[과일, 채소한정] 예약구매시 5% 할인!!</div>
+                        <div style="font-size: 18px; font-weight: 900; color: var(--nego-orange); margin-bottom: 6px;">[과일, 야채한정] 예약구매시 5% 할인!!</div>
                         <div style="font-size: 14px; font-weight: 600; color: #666; letter-spacing: -0.5px;">(00시~11시 : 오늘 픽업 예약, 11시~24시 : 내일 픽업 예약)</div>
                     `;
                 }
@@ -2003,9 +2003,9 @@
                     document.getElementById('profile-modal-title').innerText = "매장 배달 주소 입력";
                     const sbt = document.getElementById('profile-submit-btn');
                     if (sbt) sbt.innerText = "저장하기";
-                    
-                    pm.style.zIndex = "8000"; 
-                    pm.style.display = 'flex'; 
+
+                    pm.style.zIndex = "8000";
+                    pm.style.display = 'flex';
                     checkScrollLock();
                 });
                 return;
@@ -4785,13 +4785,24 @@
                     return `${y}년 ${m}월 ${day}일 (${w})`;
                 };
 
+                const getDisplayDate = (it) => {
+                    let d = it.date;
+                    if (it.isOnSite || it.isCategorized) {
+                        if (!/^(\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(String(d).trim())) {
+                            const today = new Date(tempTimestamp);
+                            d = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                        }
+                    }
+                    return d;
+                };
+
                 const newHistoryItems = allItems.map(it => ({
                     timestamp: jsFormatDate(new Date(tempTimestamp)),
                     item: it.name,
                     qty: it.qty,
                     price: it.price,
                     total: it.subtotal,
-                    pickupDate: it.name === "배달비" ? "" : jsFormatPickup(it.date),
+                    pickupDate: it.name === "배달비" ? "" : jsFormatPickup(getDisplayDate(it)),
                     received: false,
                     delivered: false,
                     cashReceipt: cashReceipt,
@@ -4860,7 +4871,7 @@
                         qty: it.qty,
                         price: it.price,
                         total: it.price * it.qty,
-                        pickupDate: it.name === "배달비" ? "" : jsFormatPickup(it.date),
+                        pickupDate: it.name === "배달비" ? "" : jsFormatPickup(getDisplayDate(it)),
                         cashReceipt: cashReceipt,
                         cashReceiptType: (cashReceipt === '발행') ? cashReceiptType : "",
                         cashReceiptPhone: (cashReceipt === '발행') ? receiptPhone : ""
