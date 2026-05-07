@@ -1334,7 +1334,7 @@
                 <div class="input-hint">정확한 주문 확인을 위해 연락처를 입력 해 주세요.</div>
             </div>
             <div class="input-group" style="margin-bottom: 20px;">
-                <strong>주소 (선택사항 - 배달 서비스 준비 중)</strong>
+                <strong>주소</strong>
                 <div style="display:flex; gap:8px; margin-top:8px;">
                     <input id="input-address" type="text" class="modal-input" placeholder="주소입력" readonly
                         style="margin-top:0; flex:1;">
@@ -4741,7 +4741,7 @@
                     const timeStr = `${now.getHours()}시 ${String(now.getMinutes()).padStart(2, '0')}분`;
                     let msg = "";
                     if (shippingMethod === '배달주문') {
-                        msg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--moket-green);">[배달 서비스 안내]</span>오전 11시 이후 주문건은 내일 배달됩니다.\n(현재시간: ${timeStr})\n\n배달주문 하시겠습니까?`;
+                        msg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--moket-green);">[배달 서비스 안내]</span>오전 11시 이후 주문건은 내일 배달됩니다.\n(현재시간: ${timeStr})\n(내일이 공휴일, 주말일 경우 그 다음날 배달)\n\n배달주문 하시겠습니까?`;
                     } else {
                         msg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--nego-orange);">[과일, 야채 한정]</span>오전 11시 이후 주문건은 내일 예약됩니다.\n(현재시간: ${timeStr})\n\n주문하시겠습니까?`;
                     }
