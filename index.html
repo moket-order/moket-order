@@ -1383,6 +1383,10 @@
                 style="display:none; margin-top:8px; background:white; border:1.5px solid #ff4d4d; color:#ff4d4d; font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">💸
                 배달비 부과 끄기 (무료배달)</button>
 
+            <button id="ADMIN_HOLIDAY_MANAGE" onclick="adminManageHolidays()"
+                style="display:none; margin-top:15px; background:white; border:1.5px solid #9C27B0; color:#9C27B0; font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">🗓️
+                임시 휴무일(공휴일) 관리</button>
+
             <button id="ADMIN_LOGIN_ON" onclick="adminToggleLoginEntry(true)"
                 style="display:none; margin-top:15px; background:white; border:1.5px solid var(--moket-green); color:var(--moket-green); font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">🔒
                 전체 로그인 화면 강제하기</button>
@@ -1773,6 +1777,7 @@
                     const adminElements = [
                         'ADMIN_DELIVERY_ON', 'ADMIN_DELIVERY_OFF',
                         'ADMIN_DELIVERY_FEE_ON', 'ADMIN_DELIVERY_FEE_OFF',
+                        'ADMIN_HOLIDAY_MANAGE',
                         'ADMIN_LOGIN_ON', 'ADMIN_LOGIN_OFF', 'btn-unlink-kakao',
                         'ADMIN_PRODUCT_LIST_ON', 'ADMIN_PRODUCT_LIST_OFF', 'ADMIN_HR'
                     ];
@@ -1798,6 +1803,8 @@
             if (isAdminMode) {
                 const adminElements = [
                     'ADMIN_DELIVERY_ON', 'ADMIN_DELIVERY_OFF',
+                    'ADMIN_DELIVERY_FEE_ON', 'ADMIN_DELIVERY_FEE_OFF',
+                    'ADMIN_HOLIDAY_MANAGE',
                     'ADMIN_LOGIN_ON', 'ADMIN_LOGIN_OFF', 'btn-unlink-kakao',
                     'ADMIN_PRODUCT_LIST_ON', 'ADMIN_PRODUCT_LIST_OFF', 'ADMIN_HR'
                 ];
@@ -2085,15 +2092,27 @@
                 return;
             }
 
-            // [신규] 장바구니 상품의 배달 기준일 계산
+            // [신규] 장바구니 상품의 배달 기준일 계산 (토요일/일요일/공휴일 휴무 건너뛰기)
             const now = new Date();
             const currentHour = now.getHours();
-            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-            let targetPickupDate = todayStr;
+            let targetDateObj = new Date(now);
             if (currentHour >= 11) {
-                const tm = new Date(now); tm.setDate(now.getDate() + 1);
-                targetPickupDate = `${tm.getFullYear()}-${String(tm.getMonth() + 1).padStart(2, '0')}-${String(tm.getDate()).padStart(2, '0')}`;
+                targetDateObj.setDate(targetDateObj.getDate() + 1);
             }
+            
+            while (true) {
+                const chkDay = targetDateObj.getDay();
+                const dStr = `${targetDateObj.getFullYear()}-${String(targetDateObj.getMonth() + 1).padStart(2, '0')}-${String(targetDateObj.getDate()).padStart(2, '0')}`;
+                let isOff = false;
+                if (chkDay === 0) isOff = true;
+                else if (chkDay === 6) isOff = true; // 배달은 토요일 무조건 휴무
+                else if (publicHolidays.includes(dStr)) isOff = true;
+                
+                if (isOff) targetDateObj.setDate(targetDateObj.getDate() + 1);
+                else break;
+            }
+            
+            const targetPickupDate = `${targetDateObj.getFullYear()}-${String(targetDateObj.getMonth() + 1).padStart(2, '0')}-${String(targetDateObj.getDate()).padStart(2, '0')}`;
 
             let deliveryDate = targetPickupDate;
             for (const itemName in cart) {
@@ -2178,11 +2197,41 @@
             } catch (e) { showSystemModal("실패: " + e.toString(), "alert"); }
         }
 
+        // [신규] 공휴일/휴무일 관리 로직
+        let publicHolidays = [];
+
+        async function fetchHolidays() {
+            try {
+                const res = await fetch(FIREBASE_DB_URL + "public_holidays.json?t=" + Date.now());
+                const data = await res.json();
+                if (data) publicHolidays = Array.isArray(data) ? data : data.split(',').map(s => s.trim());
+            } catch (e) { console.error("휴무일 로드 실패:", e); }
+        }
+
+        async function adminManageHolidays() {
+            const currentHolidays = publicHolidays.join(', ');
+            const input = prompt("휴무일(건너뛸 날짜)을 콤마(,)로 구분해서 입력하세요.\n형식: YYYY-MM-DD\n예시: 2026-05-05, 2026-05-15\n(모두 지우려면 빈 칸으로 두고 확인)", currentHolidays);
+            if (input !== null) {
+                const newHolidays = input.split(',').map(s => s.trim()).filter(s => /^\d{4}-\d{2}-\d{2}$/.test(s));
+                try {
+                    await fetch(FIREBASE_DB_URL + "public_holidays.json", {
+                        method: 'PUT',
+                        body: JSON.stringify(newHolidays)
+                    });
+                    publicHolidays = newHolidays;
+                    showSystemModal("휴무일이 성공적으로 업데이트되었습니다.", "alert");
+                } catch (e) {
+                    showSystemModal("실패: " + e.toString(), "alert");
+                }
+            }
+        }
+
         // 페이지 로드 시 상태 확인
         window.addEventListener('load', () => {
             fetchDeliveryStatus();
             fetchDeliveryFeeStatus();
             fetchLoginEntryStatus();
+            fetchHolidays();
         });
 
         // [추가] Firebase 키에 사용할 수 없는 문자 세척 함수 (. # $ [ ] / 등 제거)
@@ -4593,23 +4642,32 @@
                             }
                         }
 
-                        // 보정된 날짜 기준으로 요일 재계산 (11시/20시 보정으로 일요일이 된 경우 대비)
-                        const checkDate = new Date(finalDate.includes('-') ? finalDate : now);
-                        const checkDay = checkDate.getDay();
-
-                        let isWeekendPush = false;
-                        if (checkDay === 0) { // 일요일인 경우 (보정되어 일요일이 된 경우 포함)
-                            isWeekendPush = true;
-                        } else if (checkDay === 6 && now.getDay() === 6) { // 주문일이 토요일이고 픽업일도 토요일인 경우
-                            if (isDaily && currentHour >= 11) isWeekendPush = true;
-                            else if (isOnSite && currentHour >= 18) isWeekendPush = true;
-                        }
-
-                        if (isWeekendPush && (isDaily || isOnSite)) {
-                            const nextMonday = new Date(checkDate);
-                            const daysToMonday = (checkDay === 0) ? 1 : 2;
-                            nextMonday.setDate(checkDate.getDate() + daysToMonday);
-                            finalDate = `${nextMonday.getFullYear()}-${String(nextMonday.getMonth() + 1).padStart(2, '0')}-${String(nextMonday.getDate()).padStart(2, '0')}`;
+                        // [신규] 휴일/주말 연속 건너뛰기 (while 루프 적용)
+                        if (isDaily || isOnSite) {
+                            let dObj = new Date(finalDate.includes('-') ? finalDate : now);
+                            while (true) {
+                                const checkDay = dObj.getDay();
+                                const dStr = `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${String(dObj.getDate()).padStart(2, '0')}`;
+                                
+                                let isOff = false;
+                                if (checkDay === 0) isOff = true; // 일요일 무조건 휴무
+                                else if (checkDay === 6) { // 토요일 휴무 조건
+                                    if (shippingMethod === '배달주문') isOff = true; // 배달은 토요일 휴무
+                                    else if (now.getDay() === 6) { // 매장픽업 토요일 당일 주문인 경우
+                                        if (isDaily && currentHour >= 11) isOff = true;
+                                        else if (isOnSite && currentHour >= 18) isOff = true;
+                                    }
+                                } else if (publicHolidays.includes(dStr)) {
+                                    isOff = true; // 공휴일 휴무
+                                }
+                                
+                                if (isOff) {
+                                    dObj.setDate(dObj.getDate() + 1);
+                                } else {
+                                    break;
+                                }
+                            }
+                            finalDate = `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${String(dObj.getDate()).padStart(2, '0')}`;
                         }
 
                         const isCategorized = !/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(finalDate);
@@ -4634,14 +4692,26 @@
 
                 if (allItems.length === 0) { showSystemModal("주문할 상품이 없습니다.", 'alert'); throw new Error("EMPTY_CART"); }
 
-                // 2. [배달전용] 날짜 검증 (USER 요청: 배달 날짜가 다른 상품 혼합 방지)
+                // 2. [배달전용] 날짜 검증 (USER 요청: 배달 날짜가 다른 상품 혼합 방지, 공휴일 스킵 적용)
                 if (shippingMethod === '배달주문') {
-                    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-                    let targetPickupDate = todayStr;
+                    let targetDateObj = new Date(now);
                     if (currentHour >= 11) {
-                        const tm = new Date(now); tm.setDate(now.getDate() + 1);
-                        targetPickupDate = `${tm.getFullYear()}-${String(tm.getMonth() + 1).padStart(2, '0')}-${String(tm.getDate()).padStart(2, '0')}`;
+                        targetDateObj.setDate(targetDateObj.getDate() + 1);
                     }
+                    
+                    while (true) {
+                        const chkDay = targetDateObj.getDay();
+                        const dStr = `${targetDateObj.getFullYear()}-${String(targetDateObj.getMonth() + 1).padStart(2, '0')}-${String(targetDateObj.getDate()).padStart(2, '0')}`;
+                        let isOff = false;
+                        if (chkDay === 0) isOff = true;
+                        else if (chkDay === 6) isOff = true; // 배달은 토요일 휴무
+                        else if (publicHolidays.includes(dStr)) isOff = true;
+                        
+                        if (isOff) targetDateObj.setDate(targetDateObj.getDate() + 1);
+                        else break;
+                    }
+                    
+                    const targetPickupDate = `${targetDateObj.getFullYear()}-${String(targetDateObj.getMonth() + 1).padStart(2, '0')}-${String(targetDateObj.getDate()).padStart(2, '0')}`;
 
                     const uniqueDates = new Set();
                     allItems.forEach(it => {
