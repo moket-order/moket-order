@@ -1376,6 +1376,13 @@
                 style="display:none; margin-top:8px; background:white; border:1.5px solid #ff4d4d; color:#ff4d4d; font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">🚫
                 배달 기능 비활성화</button>
 
+            <button id="ADMIN_DELIVERY_FEE_ON" onclick="adminToggleDeliveryFee(true)"
+                style="display:none; margin-top:15px; background:white; border:1.5px solid var(--moket-green); color:var(--moket-green); font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">💰
+                배달비(3000원) 부과 활성화</button>
+            <button id="ADMIN_DELIVERY_FEE_OFF" onclick="adminToggleDeliveryFee(false)"
+                style="display:none; margin-top:8px; background:white; border:1.5px solid #ff4d4d; color:#ff4d4d; font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">💸
+                배달비 부과 끄기 (무료배달)</button>
+
             <button id="ADMIN_LOGIN_ON" onclick="adminToggleLoginEntry(true)"
                 style="display:none; margin-top:15px; background:white; border:1.5px solid var(--moket-green); color:var(--moket-green); font-size:14px; padding:12px; border-radius:var(--btn-radius); font-weight:900; cursor:pointer; width:100%;">🔒
                 전체 로그인 화면 강제하기</button>
@@ -1762,6 +1769,7 @@
                     // 관리자 설정 버튼들 표시
                     const adminElements = [
                         'ADMIN_DELIVERY_ON', 'ADMIN_DELIVERY_OFF',
+                        'ADMIN_DELIVERY_FEE_ON', 'ADMIN_DELIVERY_FEE_OFF',
                         'ADMIN_LOGIN_ON', 'ADMIN_LOGIN_OFF', 'btn-unlink-kakao',
                         'ADMIN_PRODUCT_LIST_ON', 'ADMIN_PRODUCT_LIST_OFF', 'ADMIN_HR'
                     ];
@@ -1859,6 +1867,68 @@
                     btn.style.color = "#999";
                     btn.style.cursor = "not-allowed";
                 }
+            }
+        }
+
+        // [신규] 배달비 부과 끄기/켜기 로직
+        let isDeliveryFeeEnabled = true;
+
+        async function fetchDeliveryFeeStatus() {
+            try {
+                const res = await fetch(FIREBASE_DB_URL + "delivery_fee_enabled.json?t=" + Date.now());
+                const status = await res.json();
+                if (status !== null) isDeliveryFeeEnabled = (status === true);
+                updateDeliveryFeeUI();
+            } catch (e) {
+                console.error("배달비 설정 로드 실패:", e);
+                updateDeliveryFeeUI();
+            }
+        }
+
+        function updateDeliveryFeeUI() {
+            const onBtn = document.getElementById('ADMIN_DELIVERY_FEE_ON');
+            const offBtn = document.getElementById('ADMIN_DELIVERY_FEE_OFF');
+
+            if (onBtn && offBtn) {
+                if (isDeliveryFeeEnabled) {
+                    onBtn.innerHTML = '💰 배달비(3천원) 부과 활성화 [현재 적용중]';
+                    onBtn.style.background = '#e1f5fe';
+                    onBtn.style.border = '1.5px solid #2196F3';
+                    onBtn.style.color = '#2196F3';
+                    onBtn.style.opacity = '1';
+
+                    offBtn.innerHTML = '💸 배달비 부과 비활성화 (무료배달)';
+                    offBtn.style.background = 'white';
+                    offBtn.style.border = '1.5px solid #ff4d4d';
+                    offBtn.style.color = '#ff4d4d';
+                    offBtn.style.opacity = '0.5';
+                } else {
+                    offBtn.innerHTML = '💸 배달비 부과 비활성화 [무료배달 적용중]';
+                    offBtn.style.background = '#eceff1';
+                    offBtn.style.border = '1.5px solid #607D8B';
+                    offBtn.style.color = '#607D8B';
+                    offBtn.style.opacity = '1';
+
+                    onBtn.innerHTML = '💰 배달비(3천원) 부과 활성화';
+                    onBtn.style.background = 'white';
+                    onBtn.style.border = '1.5px solid var(--moket-green)';
+                    onBtn.style.color = 'var(--moket-green)';
+                    onBtn.style.opacity = '0.5';
+                }
+            }
+        }
+
+        async function adminToggleDeliveryFee(status) {
+            try {
+                await fetch(FIREBASE_DB_URL + "delivery_fee_enabled.json", {
+                    method: 'PUT',
+                    body: JSON.stringify(status)
+                });
+                isDeliveryFeeEnabled = status;
+                updateDeliveryFeeUI();
+                showSystemModal(`배달비 부과가 ${status ? '활성화' : '비활성화'}되었습니다.`, "alert");
+            } catch (e) {
+                showSystemModal("배달비 설정 변경 실패.", "alert");
             }
         }
 
@@ -2011,15 +2081,43 @@
                 return;
             }
 
-            // [신규] 오늘 픽업 예정 상품 체크
-            const todayPickupItems = getTodayPickupItems();
-            if (todayPickupItems.length > 0) {
-                let itemNames = todayPickupItems.map(it => `• ${it.item} (${it.qty}개)`).join('<br>');
-                let msg = `오늘 픽업예약된 상품이 있습니다.<br><div style="background:#f5f5f5; padding:10px; border-radius:8px; margin:10px 0; text-align:left; font-size:14px; font-weight:700; color:var(--item-black);">${itemNames}</div>같이 배달주문 하시겠습니까?`;
+            // [신규] 장바구니 상품의 배달 기준일 계산
+            const now = new Date();
+            const currentHour = now.getHours();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            let targetPickupDate = todayStr;
+            if (currentHour >= 11) {
+                const tm = new Date(now); tm.setDate(now.getDate() + 1);
+                targetPickupDate = `${tm.getFullYear()}-${String(tm.getMonth() + 1).padStart(2, '0')}-${String(tm.getDate()).padStart(2, '0')}`;
+            }
+
+            let deliveryDate = targetPickupDate;
+            for (const itemName in cart) {
+                if (cart[itemName] > 0) {
+                    const pData = productsData.find(p => p.name === itemName);
+                    if (pData && pData.matchKey) {
+                        const mKey = pData.matchKey;
+                        const isDateItem = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(mKey);
+                        if (isDateItem) {
+                            let dStr = String(mKey).replace(/\./g, '-').trim(); 
+                            if (dStr.match(/^\d{2}-\d{1,2}-\d{1,2}$/)) dStr = "20" + dStr;
+                            const pt = dStr.split('-'); 
+                            if (pt.length === 3) dStr = `${pt[0]}-${pt[1].padStart(2, '0')}-${pt[2].padStart(2, '0')}`;
+                            if (dStr > targetPickupDate) deliveryDate = dStr;
+                        }
+                    }
+                }
+            }
+
+            // [수정] 해당 배달일에 예약/픽업 예정인 상품 합산 체크
+            const pendingItems = getPendingItemsByDate(deliveryDate);
+            if (pendingItems.length > 0) {
+                let itemNames = pendingItems.map(it => `• ${it.item} (${it.qty}개)`).join('<br>');
+                let msg = `해당 배달일(${deliveryDate})에 예약된 상품이 있습니다.<br><div style="background:#f5f5f5; padding:10px; border-radius:8px; margin:10px 0; text-align:left; font-size:14px; font-weight:700; color:var(--item-black);">${itemNames}</div>같이 배달합산 하시겠습니까?`;
 
                 showSystemModal(msg, 'confirm', () => {
-                    completeOrder('배달주문', todayPickupItems);
-                    return true; // completeOrder에서 새 모달을 띄우므로 현재 모달을 즉시 닫지 않음
+                    completeOrder('배달주문', pendingItems);
+                    return true;
                 }, () => {
                     completeOrder('배달주문', []);
                     return true;
@@ -2029,21 +2127,21 @@
             }
         }
 
-        // [신규] 오늘 픽업 예정 상품 필터링 유틸
-        function getTodayPickupItems() {
+        // [수정] 특정 날짜의 픽업/예약 예정 상품 필터링 유틸
+        function getPendingItemsByDate(targetDate) {
             if (!fullHistoryData || fullHistoryData.length === 0) return [];
 
             const now = new Date();
             const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
             return fullHistoryData.filter(item => {
-                // [수정] 배달비 항목도 당일 주문이면 합산 목록에 포함시킴
                 const isDeliveryFee = (item.item === "배달비");
 
-                // 날짜 정규화 (2026-04-06 (월) -> 2026-04-06)
                 let itemDate = item.pickupDate ? String(item.pickupDate).split(' ')[0].replace(/\./g, '-') : "";
+                if (itemDate.match(/^\d{2}-\d{1,2}-\d{1,2}$/)) itemDate = "20" + itemDate;
+                const pt = itemDate.split('-'); 
+                if (pt.length === 3) itemDate = `${pt[0]}-${pt[1].padStart(2, '0')}-${pt[2].padStart(2, '0')}`;
 
-                // 주문일자 확인 (배달비는 픽업일이 없을 수 있으므로 주문시간 기준)
                 const orderDateFull = item.timestamp || "";
                 const isTodayOrder = orderDateFull.includes(todayStr) || orderDateFull.includes(todayStr.replace(/-/g, '.'));
 
@@ -2057,8 +2155,9 @@
                 const isDelivered = (item.delivered === true || String(item.delivered).toUpperCase() === "TRUE");
                 const isOnSite = (item.onSite === true || String(item.onSite).toUpperCase() === "TRUE");
 
-                // 오늘 픽업 예정이거나, 오늘 주문한 배달비이거나, 현장판매 상품이면서 제외 조건에 해당하지 않는 경우
-                return ((itemDate === todayStr || isRegularSale) || (isDeliveryFee && isTodayOrder)) &&
+                const matchDate = (itemDate === targetDate) || (targetDate === todayStr && isRegularSale);
+
+                return (matchDate || (isDeliveryFee && isTodayOrder)) &&
                     !isCancelled && !isReceived && !isDelivered && !isOnSite;
             });
         }
@@ -2078,6 +2177,7 @@
         // 페이지 로드 시 상태 확인
         window.addEventListener('load', () => {
             fetchDeliveryStatus();
+            fetchDeliveryFeeStatus();
             fetchLoginEntryStatus();
         });
 
@@ -4527,7 +4627,7 @@
 
                 if (allItems.length === 0) { showSystemModal("주문할 상품이 없습니다.", 'alert'); throw new Error("EMPTY_CART"); }
 
-                // 2. [배달전용] 날짜 검증 (USER 요청: 11시 안내보다 선행)
+                // 2. [배달전용] 날짜 검증 (USER 요청: 배달 날짜가 다른 상품 혼합 방지)
                 if (shippingMethod === '배달주문') {
                     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
                     let targetPickupDate = todayStr;
@@ -4536,17 +4636,23 @@
                         targetPickupDate = `${tm.getFullYear()}-${String(tm.getMonth() + 1).padStart(2, '0')}-${String(tm.getDate()).padStart(2, '0')}`;
                     }
 
-                    const hasInvalidDate = allItems.some(it => {
-                        if (it.isCategorized) return false;
-                        const d = it.date || ""; if (d.includes("상시판매") || d.includes("현장판매")) return false;
-                        let dStr = String(d).replace(/\./g, '-').trim(); if (dStr.match(/^\d{2}-\d{1,2}-\d{1,2}$/)) dStr = "20" + dStr;
-                        const pt = dStr.split('-'); if (pt.length === 3) dStr = `${pt[0]}-${pt[1].padStart(2, '0')}-${pt[2].padStart(2, '0')}`;
-                        return dStr !== targetPickupDate;
+                    const uniqueDates = new Set();
+                    allItems.forEach(it => {
+                        let d = it.date || ""; 
+                        if (it.isCategorized || d.includes("상시판매") || d.includes("현장판매")) {
+                            uniqueDates.add(targetPickupDate);
+                        } else {
+                            let dStr = String(d).replace(/\./g, '-').trim(); 
+                            if (dStr.match(/^\d{2}-\d{1,2}-\d{1,2}$/)) dStr = "20" + dStr;
+                            const pt = dStr.split('-'); 
+                            if (pt.length === 3) dStr = `${pt[0]}-${pt[1].padStart(2, '0')}-${pt[2].padStart(2, '0')}`;
+                            uniqueDates.add(dStr);
+                        }
                     });
 
-                    if (hasInvalidDate) {
-                        showSystemModal(`배달이 불가능한 상품이 있습니다.\n주문 내용을 확인해 주세요.`, 'alert');
-                        throw new Error("INVALID_DATE");
+                    if (isDeliveryFeeEnabled && uniqueDates.size > 1) {
+                        showSystemModal(`배달 날짜가 서로 다른 상품들은 함께 배달할 수 없습니다.\n같은 날짜의 상품끼리 묶어서 따로 주문해 주세요.`, 'alert');
+                        throw new Error("MIXED_DELIVERY_DATES");
                     }
                 }
 
@@ -4601,7 +4707,7 @@
                 // 6. 배달 주문 흐름
                 if (shippingMethod === '배달주문') {
                     const currentTotal = allItems.reduce((acc, it) => acc + it.subtotal, 0);
-                    if (currentTotal < 30000) {
+                    if (isDeliveryFeeEnabled && currentTotal < 30000) {
                         showSystemModal(`배달주문 금액이 30,000원 미만일 경우 3,000원의 배달비가 발생합니다.\n(현재 주문금액: ${currentTotal.toLocaleString()}원)\n\n배달비를 추가하여 주문 하시겠습니까?`, 'confirm', () => {
                             allItems.push({ name: "배달비", qty: 1, price: 3000, subtotal: 3000, date: allItems[0]?.date || "", isCategorized: false });
                             showPaymentGuide(allItems, name, phone, shippingMethod);
@@ -4992,6 +5098,7 @@
 
             // 설정 상태 동기화 및 UI 반영
             fetchDeliveryStatus();
+            fetchDeliveryFeeStatus();
             fetchLoginEntryStatus();
             fetchProductListStatus();
 
