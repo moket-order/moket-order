@@ -1590,7 +1590,7 @@
     </div>
     <div class="footer" id="main-footer">
         <div id="free-delivery-notice" style="display:none; justify-content:center; align-items:center; padding-bottom:8px; font-weight:900; font-size:17px; color:var(--nego-orange);">
-            10,000원 이상 주문시 무료배송
+            15,000원 이상 주문시 무료배송
         </div>
         <div
             style="display:flex; justify-content:center; align-items:center; padding-bottom:12px; font-weight:800; font-size: 17px;">
@@ -4714,8 +4714,8 @@
                 // 6. 배달 주문 흐름
                 if (shippingMethod === '배달주문') {
                     const currentTotal = allItems.reduce((acc, it) => acc + it.subtotal, 0);
-                    if (isDeliveryFeeEnabled && currentTotal < 10000) {
-                        showSystemModal(`배달주문 금액이 10,000원 미만일 경우 3,000원의 배달비가 발생합니다.\n(현재 주문금액: ${currentTotal.toLocaleString()}원)\n\n배달비를 추가하여 주문 하시겠습니까?`, 'confirm', () => {
+                    if (isDeliveryFeeEnabled && currentTotal < 15000) {
+                        showSystemModal(`배달주문 금액이 15,000원 미만일 경우 3,000원의 배달비가 발생합니다.\n(현재 주문금액: ${currentTotal.toLocaleString()}원)\n\n배달비를 추가하여 주문 하시겠습니까?`, 'confirm', () => {
                             allItems.push({ name: "배달비", qty: 1, price: 3000, subtotal: 3000, date: allItems[0]?.date || "", isCategorized: false });
                             showPaymentGuide(allItems, name, phone, shippingMethod);
                             return true;
