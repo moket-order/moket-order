@@ -4617,6 +4617,8 @@
                         const isFV = /과일|야채|채소/.test(mKey) || /\[과일\]|\[야채\]|\[채소\]/.test(itemName);
                         const isCutoffTarget = (shippingMethod === '배달주문') || (shippingMethod === '매장픽업' && isFV);
 
+                        let isPushedByCutoff = false;
+
                         // 1. [공통] 11시 이후 내일로 보정 (배달/과채 전용)
                         if (isCutoffTarget && currentHour >= 11) {
                             const isDateItem = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(mKey);
@@ -4624,6 +4626,7 @@
                             if (!isDateItem || mKey <= todayStr) {
                                 const nextDay = new Date(now); nextDay.setDate(now.getDate() + 1);
                                 finalDate = `${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, '0')}-${String(nextDay.getDate()).padStart(2, '0')}`;
+                                isPushedByCutoff = true;
                             }
                         }
 
@@ -4674,7 +4677,7 @@
                         let currentPrice = parseInt(pData.price || 0);
                         if (/과일|야채|채소/.test(mKey) || /\[과일\]|\[야채\]|\[채소\]/.test(itemName)) { currentPrice = Math.floor(currentPrice * 0.95); }
 
-                        allItems.push({ name: itemName, qty: q, price: currentPrice, subtotal: q * currentPrice, date: finalDate, isCategorized: isCategorized, isFV: isFV, isOnSite: isOnSite });
+                        allItems.push({ name: itemName, qty: q, price: currentPrice, subtotal: q * currentPrice, date: finalDate, isCategorized: isCategorized, isFV: isFV, isOnSite: isOnSite, isPushedByCutoff: isPushedByCutoff });
                     }
                 }
 
@@ -4686,7 +4689,7 @@
                         let baseName = it.item + " (배달합산)", displayName = baseName;
                         if (usedNames[baseName]) { displayName = `${it.item} (배달합산-${++usedNames[baseName]})`; }
                         else { usedNames[baseName] = 1; }
-                        allItems.push({ name: displayName, qty: it.qty, price: parseInt(it.price || 0), subtotal: parseInt(it.total || 0), date: mKey, isCategorized: isCategorized, isExtra: true, originalData: { timestamp: it.timestamp, name: it.name, item: it.item, phone: it.phone || phone } });
+                        allItems.push({ name: displayName, qty: it.qty, price: parseInt(it.price || 0), subtotal: parseInt(it.total || 0), date: mKey, isCategorized: isCategorized, isExtra: true, isPushedByCutoff: false, originalData: { timestamp: it.timestamp, name: it.name, item: it.item, phone: it.phone || phone } });
                     });
                 }
 
@@ -4733,9 +4736,8 @@
                     }
                 }
 
-                // 3. 11시 이후 마감 안내 (배달 전체 또는 과채류 매장픽업)
-                const hasFVItem = allItems.some(it => it.isFV);
-                const needsCutoffWarning = (shippingMethod === '배달주문') || (shippingMethod === '매장픽업' && hasFVItem);
+                // 3. 11시 이후 마감 안내 (실제로 날짜가 보정된 상품이 있는 경우만)
+                const needsCutoffWarning = allItems.some(it => it.isPushedByCutoff);
 
                 if (needsCutoffWarning && currentHour >= 11 && !cutoffConfirmed) {
                     const timeStr = `${now.getHours()}시 ${String(now.getMinutes()).padStart(2, '0')}분`;
