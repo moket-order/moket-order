@@ -1301,7 +1301,7 @@
             <li onclick="openSideModal('location-modal')">매장위치</li>
             <li onclick="openSideModal('hours-modal')">영업시간</li>
             <li onclick="openSideModal('bank-modal')">계좌번호</li>
-            <li onclick="window.open('https://open.kakao.com/o/s01HVpgi')">카카오톡 문의하기</li>
+            <li onclick="window.open('https://open.kakao.com/me/moketstore')">카카오톡 문의하기</li>
 
         </ul>
     </div>
@@ -1563,7 +1563,7 @@
                         onclick="document.getElementById('confirm-notice-check').checked = false; closeModal('confirm-overlay')"
                         style="margin-top: 0; flex: 1;">취소</button>
                     <button id="btn-submit-order" class="btn-common btn-primary" onclick="openShippingSelection()"
-                        style="margin-top: 0; flex: 1;">주문확정</button>
+                        style="margin-top: 0; flex: 1;">확인</button>
                 </div>
             </div>
         </div>
@@ -1593,7 +1593,8 @@
         </div>
     </div>
     <div class="footer" id="main-footer">
-        <div id="free-delivery-notice" style="display:none; justify-content:center; align-items:center; padding-bottom:8px; font-weight:900; font-size:17px; color:var(--nego-orange);">
+        <div id="free-delivery-notice"
+            style="display:none; justify-content:center; align-items:center; padding-bottom:8px; font-weight:900; font-size:17px; color:var(--nego-orange);">
             15,000원 이상 주문시 무료배송
         </div>
         <div
@@ -2099,7 +2100,7 @@
             if (currentHour >= 11) {
                 targetDateObj.setDate(targetDateObj.getDate() + 1);
             }
-            
+
             while (true) {
                 const chkDay = targetDateObj.getDay();
                 const dStr = `${targetDateObj.getFullYear()}-${String(targetDateObj.getMonth() + 1).padStart(2, '0')}-${String(targetDateObj.getDate()).padStart(2, '0')}`;
@@ -2107,11 +2108,11 @@
                 if (chkDay === 0) isOff = true;
                 else if (chkDay === 6) isOff = true; // 배달은 토요일 무조건 휴무
                 else if (publicHolidays.includes(dStr)) isOff = true;
-                
+
                 if (isOff) targetDateObj.setDate(targetDateObj.getDate() + 1);
                 else break;
             }
-            
+
             const targetPickupDate = `${targetDateObj.getFullYear()}-${String(targetDateObj.getMonth() + 1).padStart(2, '0')}-${String(targetDateObj.getDate()).padStart(2, '0')}`;
 
             let deliveryDate = targetPickupDate;
@@ -2122,9 +2123,9 @@
                         const mKey = pData.matchKey;
                         const isDateItem = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(mKey);
                         if (isDateItem) {
-                            let dStr = String(mKey).replace(/\./g, '-').trim(); 
+                            let dStr = String(mKey).replace(/\./g, '-').trim();
                             if (dStr.match(/^\d{2}-\d{1,2}-\d{1,2}$/)) dStr = "20" + dStr;
-                            const pt = dStr.split('-'); 
+                            const pt = dStr.split('-');
                             if (pt.length === 3) dStr = `${pt[0]}-${pt[1].padStart(2, '0')}-${pt[2].padStart(2, '0')}`;
                             if (dStr > targetPickupDate) deliveryDate = dStr;
                         }
@@ -2162,7 +2163,7 @@
 
                 let itemDate = item.pickupDate ? String(item.pickupDate).split(' ')[0].replace(/\./g, '-') : "";
                 if (itemDate.match(/^\d{2}-\d{1,2}-\d{1,2}$/)) itemDate = "20" + itemDate;
-                const pt = itemDate.split('-'); 
+                const pt = itemDate.split('-');
                 if (pt.length === 3) itemDate = `${pt[0]}-${pt[1].padStart(2, '0')}-${pt[2].padStart(2, '0')}`;
 
                 const orderDateFull = item.timestamp || "";
@@ -4651,7 +4652,7 @@
                             while (true) {
                                 const checkDay = dObj.getDay();
                                 const dStr = `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${String(dObj.getDate()).padStart(2, '0')}`;
-                                
+
                                 let isOff = false;
                                 if (checkDay === 0) isOff = true; // 일요일 무조건 휴무
                                 else if (checkDay === 6) { // 토요일 휴무 조건
@@ -4663,7 +4664,7 @@
                                 } else if (publicHolidays.includes(dStr)) {
                                     isOff = true; // 공휴일 휴무
                                 }
-                                
+
                                 if (isOff) {
                                     dObj.setDate(dObj.getDate() + 1);
                                 } else {
@@ -4701,7 +4702,7 @@
                     if (currentHour >= 11) {
                         targetDateObj.setDate(targetDateObj.getDate() + 1);
                     }
-                    
+
                     while (true) {
                         const chkDay = targetDateObj.getDay();
                         const dStr = `${targetDateObj.getFullYear()}-${String(targetDateObj.getMonth() + 1).padStart(2, '0')}-${String(targetDateObj.getDate()).padStart(2, '0')}`;
@@ -4709,22 +4710,22 @@
                         if (chkDay === 0) isOff = true;
                         else if (chkDay === 6) isOff = true; // 배달은 토요일 휴무
                         else if (publicHolidays.includes(dStr)) isOff = true;
-                        
+
                         if (isOff) targetDateObj.setDate(targetDateObj.getDate() + 1);
                         else break;
                     }
-                    
+
                     const targetPickupDate = `${targetDateObj.getFullYear()}-${String(targetDateObj.getMonth() + 1).padStart(2, '0')}-${String(targetDateObj.getDate()).padStart(2, '0')}`;
 
                     const uniqueDates = new Set();
                     allItems.forEach(it => {
-                        let d = it.date || ""; 
+                        let d = it.date || "";
                         if (it.isCategorized || d.includes("상시판매") || d.includes("현장판매")) {
                             uniqueDates.add(targetPickupDate);
                         } else {
-                            let dStr = String(d).replace(/\./g, '-').trim(); 
+                            let dStr = String(d).replace(/\./g, '-').trim();
                             if (dStr.match(/^\d{2}-\d{1,2}-\d{1,2}$/)) dStr = "20" + dStr;
-                            const pt = dStr.split('-'); 
+                            const pt = dStr.split('-');
                             if (pt.length === 3) dStr = `${pt[0]}-${pt[1].padStart(2, '0')}-${pt[2].padStart(2, '0')}`;
                             uniqueDates.add(dStr);
                         }
