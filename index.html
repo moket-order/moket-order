@@ -4107,8 +4107,8 @@
                     let s = parseInt(p.stock);
                     const sKey = String(p.matchKey || "").trim();
                     // 과채류 특정 시간 무제한 로직 (단, 원래 재고가 0보다 클 때만 적용하거나 전체 적용할지 판단)
-                    // 사장님 요청에 따라 11시~05시 사이 과채류는 품절되지 않게 함 (공동구매 연동)
-                    if ((nowHour >= 11 || nowHour < 5) && (sKey === "과일" || sKey === "야채" || sKey === "과일구매" || sKey === "야채구매")) return Infinity;
+                    // 사장님 요청에 따라 11시~06시 사이 과채류는 품절되지 않게 함 (공동구매 연동)
+                    if ((nowHour >= 11 || nowHour < 6) && (sKey === "과일" || sKey === "야채" || sKey === "과일구매" || sKey === "야채구매")) return Infinity;
                     return s;
                 };
 
@@ -4225,11 +4225,11 @@
                 const currentQty = cart[p.name] || 0;
                 let stock = p.stock !== undefined && p.stock !== "" ? parseInt(p.stock) : Infinity;
 
-                // [신규] 과채 예약구매 수량 제한 해제 로직 (매일 13시 ~ 익일 05시)
+                // [신규] 과채 예약구매 수량 제한 해제 로직 (매일 11시 ~ 익일 06시)
                 const sKey = String(p.matchKey || "").trim();
                 const nowHour = new Date().getHours();
                 const matchesFV = (sKey === "과일" || sKey === "야채" || sKey === "과일구매" || sKey === "야채구매");
-                if ((nowHour >= 13 || nowHour < 5) && matchesFV) {
+                if ((nowHour >= 11 || nowHour < 6) && matchesFV) {
                     stock = Infinity;
                 }
 
