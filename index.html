@@ -1259,6 +1259,36 @@
             cursor: pointer;
             color: var(--white);
         }
+
+        /* [추가] 토스트 메시지 스타일 */
+        .toast-container {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10000;
+            pointer-events: none;
+        }
+
+        .toast-msg {
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 10px 22px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 800;
+            margin-bottom: 10px;
+            animation: toast-in-out 2s forwards;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            white-space: nowrap;
+        }
+
+        @keyframes toast-in-out {
+            0% { opacity: 0; transform: translateY(20px); }
+            15% { opacity: 1; transform: translateY(0); }
+            85% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
     </style>
 </head>
 
@@ -2239,10 +2269,10 @@
             return String(s || "").replace(/[\.\-\$#\[\]\/]/g, "_").trim();
         }
 
-        // [추가] 클립보드 복사 유틸리티
+        // [추가] 클립보드 복사 유틸리티 (토스트 사용으로 모달 충돌 방지)
         function copyToClipboard(text, msg) {
             navigator.clipboard.writeText(text).then(() => {
-                showSystemModal(msg || "복사되었습니다.", 'alert');
+                showToast(msg || "복사되었습니다.");
             }).catch(err => {
                 const textArea = document.createElement("textarea");
                 textArea.value = text;
@@ -2250,8 +2280,27 @@
                 textArea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
-                showSystemModal(msg || "복사되었습니다.", 'alert');
+                showToast(msg || "복사되었습니다.");
             });
+        }
+
+        // [추가] 상단 토스트 메시지 함수
+        function showToast(msg) {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'toast-container';
+                document.body.appendChild(container);
+            }
+            const toast = document.createElement('div');
+            toast.className = 'toast-msg';
+            toast.innerText = msg;
+            container.appendChild(toast);
+            setTimeout(() => {
+                if (toast.parentNode) container.removeChild(toast);
+                if (container.childNodes.length === 0) document.body.removeChild(container);
+            }, 2100);
         }
 
         /**
