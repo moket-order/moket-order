@@ -1284,10 +1284,25 @@
         }
 
         @keyframes toast-in-out {
-            0% { opacity: 0; transform: translateY(20px); }
-            15% { opacity: 1; transform: translateY(0); }
-            85% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-20px); }
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            15% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            85% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
         }
     </style>
 </head>
@@ -2267,6 +2282,21 @@
         // [추가] Firebase 키에 사용할 수 없는 문자 세척 함수 (. # $ [ ] / 등 제거)
         function fSafeKey(s) {
             return String(s || "").replace(/[\.\-\$#\[\]\/]/g, "_").trim();
+        }
+
+        // [추가] 6시 기준 재고 초기화를 위한 사이클 키 생성 함수
+        function fGetAdjKey(mKey, name) {
+            const s = String(mKey || "").trim();
+            const isDate = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(s);
+            let prefix = "";
+            if (!isDate && s !== "" && s !== "no-date") {
+                const now = new Date();
+                // 6시 마감 기준 사이클 날짜 (6시 이전은 전날 주문 사이클로 간주)
+                let cycleDate = new Date(now);
+                if (now.getHours() < 6) cycleDate.setDate(cycleDate.getDate() - 1);
+                prefix = cycleDate.toISOString().split('T')[0] + "_";
+            }
+            return prefix + fSafeKey(s) + "_" + fSafeKey(name);
         }
 
         // [추가] 클립보드 복사 유틸리티 (토스트 사용으로 모달 충돌 방지)
@@ -3640,10 +3670,8 @@
                 let freshData = rawData
                     .filter(p => p && (p.name || "").trim() !== "") // [핵심] 이름 없는 행은 원천 차단
                     .map((p, idx) => {
-                        let mKey = (p.matchKey || p.date || "").trim();
-                        if (mKey === "no-date") mKey = "";
-
-                        const adjKey = fSafeKey(mKey) + "_" + fSafeKey(p.name);
+                        const mKey = (p.matchKey || p.date || "").trim();
+                        const adjKey = fGetAdjKey(mKey, p.name);
                         const adj = globalAdjustments[adjKey] || 0;
                         let currentStock = p.stock;
                         if (adj !== 0 && p.stock !== "") {
@@ -5125,7 +5153,7 @@
                 // 2. Firebase 재고 차감 (병렬 실행 및 대기)
                 const stockPromises = allItems.map(async it => {
                     if (it.name === "배달비") return;
-                    const adjKey = fSafeKey(it.date) + "_" + fSafeKey(it.name);
+                    const adjKey = fGetAdjKey(it.date, it.name);
                     const diff = -it.qty;
                     try {
                         const r = await fetch(`${FIREBASE_DB_URL}global_stock/${adjKey}.json?t=${Date.now()}`);
