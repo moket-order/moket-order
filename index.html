@@ -4866,14 +4866,16 @@
                     if (isDeliveryFeeEnabled && currentTotal < 10000) {
                         showSystemModal(`배달주문 금액이 10,000원 미만일 경우 3,000원의 배달비가 발생합니다.\n(현재 주문금액: ${currentTotal.toLocaleString()}원)\n\n배달비를 추가하여 주문 하시겠습니까?`, 'confirm', () => {
                             allItems.push({ name: "배달비", qty: 1, price: 3000, subtotal: 3000, date: allItems[0]?.date || "", isCategorized: false });
-                            showPaymentGuide(allItems, name, phone, shippingMethod);
+                            // [수정] 현금영수증 단계 건너뛰고 바로 주문 처리
+                            executeOrder(allItems, name, phone, shippingMethod, "미발행", "", "개인");
                             return true;
                         }, () => {
                             isHistoryProcessing = false;
                             if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = "주문확정"; submitBtn.style.opacity = "1"; }
                         });
                     } else {
-                        showPaymentGuide(allItems, name, phone, shippingMethod);
+                        // [수정] 현금영수증 단계 건너뛰고 바로 주문 처리
+                        executeOrder(allItems, name, phone, shippingMethod, "미발행", "", "개인");
                     }
                 } else {
                     // 방문픽업은 기존처럼 바로 주문 처리
