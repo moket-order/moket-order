@@ -1521,8 +1521,8 @@
         <!-- [신규] 대분류 탭 영역 -->
         <div class="main-tabs">
             <button class="main-tab-btn active" data-tab="reserve" onclick="switchMainTab('reserve')">공동구매</button>
-            <button class="main-tab-btn" data-tab="on-site" onclick="switchMainTab('on-site')">현장판매</button>
-            <button class="main-tab-btn" data-tab="fruit-veg" onclick="switchMainTab('fruit-veg')">과채 예약구매</button>
+            <button class="main-tab-btn" data-tab="on-site" onclick="switchMainTab('on-site')">상시판매</button>
+            <button class="main-tab-btn" data-tab="fruit-veg" onclick="switchMainTab('fruit-veg')">과일 / 야채</button>
         </div>
         <!-- [통합] 필터 영역 (하위 카테고리/날짜 표시) -->
         <div class="date-filter-container" id="date-filters"></div>
@@ -1591,7 +1591,7 @@
                     <div>✅ 주문 후 주문서에서 상품이 내려가면 취소가 어렵습니다.</div>
                     <div>✅ 픽업기간의 경우 과일, 야채 등 신선식품은 입고 당일까지이며,</div>
                     <div style="padding-left: 20px;">이외에는 입고일 포함 3일(휴무일 제외) 가능합니다.</div>
-                    <div>✅ 픽업기간 이후에는 현장판매로 전환되어 픽업이 불가능합니다.</div>
+                    <div>✅ 픽업기간 이후에는 상시판매로 전환되어 픽업이 불가능합니다.</div>
                     <div>✅ 픽업기간 이후 픽업을 원하시면 카톡 1:1 문의 부탁드립니다.</div>
                     <div>✅ 잦은 취소 및 노쇼는 이벤트와 혜택 대상에서 제외될 수 있습니다.</div>
                     <div>✅ 업체 및 물류 상황에 따라 일정이 변경 또는 취소될 수 있습니다.</div>
@@ -1752,7 +1752,7 @@
         let cachedProducts = []; // [추가] 원본 데이터 보관용 (공개/비공개 전환용)
         let cart = {}; // { 상품명: 수량 } 저장용 장바구니 상태
         let isHistoryProcessing = false; // 주문내역 처리 중 플래그 추가
-        let currentMainTab = 'reserve'; // [공동구매(reserve), 현장판매(on-site), 야채구매(vegetable)]
+        let currentMainTab = 'reserve'; // [공동구매(reserve), 상시판매(on-site), 야채구매(vegetable)]
         let today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -1772,7 +1772,7 @@
                 } else if (type === 'on-site') {
                     title.style.display = 'block';
                     title.innerHTML = `
-                        <div style="font-size: 15px; font-weight: 800; color: #ff4d4d; letter-spacing: -0.5px; line-height: 1.4;">매장 판매로 품절될 경우 제공되지 못할 수 있습니다.</div>
+                        <div style="font-size: 18px; font-weight: 800; color: #ff4d4d; letter-spacing: -0.5px; line-height: 1.4;">매장 판매로 품절될 경우 제공되지 못할 수 있습니다.</div>
                     `;
                 } else if (type === 'fruit-veg') {
                     title.style.display = 'block';
@@ -3389,7 +3389,7 @@
                                         </div>
                                     </div>
                                     <div style="text-align:right; min-width:80px;">
-                                        <div style="font-size:13px; font-weight:800; color:${statusColor}; margin-bottom:4px;">${order.onSite ? '현장판매' : statusText}</div>
+                                        <div style="font-size:13px; font-weight:800; color:${statusColor}; margin-bottom:4px;">${order.onSite ? '상시판매' : statusText}</div>
                                         ${canDelete ? `<button onclick="deleteOrderServer('${safeTime}', '${safeName}', '${safeItem}', '${safePickup}', '${safeMatch}')" 
                                              style="width:70px; height:26px; background:#eff2f5; color:#666; border:none; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;">취소</button>` : ''}
                                         ${isProcessing ? `<div style="width:70px; height:26px; display:flex; align-items:center; justify-content:center; background:#f5f5f5; color:#999; border-radius:4px; font-size:12px; font-weight:700;">대기중</div>` : ''}
@@ -4712,7 +4712,7 @@
                         const isDaily = ['과일', '야채', '기타'].includes(mKey) || isFV;
                         const isOnSite = ['냉장', '냉동', '상온', '실온', '현장판매', '상시판매'].includes(mKey) || (!isDateItem && !isDaily);
 
-                        // 1-2. [신규] 현장판매: 20시(토요일은 18시) 이후 내일로 보정
+                        // 1-2. [신규] 상시판매: 20시(토요일은 18시) 이후 내일로 보정
                         const isOnSiteThreshold = (now.getDay() === 6) ? 18 : 20;
                         if (isOnSite && currentHour >= isOnSiteThreshold) {
                             const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -4820,7 +4820,7 @@
                     const timeStr = `${now.getHours()}시 ${String(now.getMinutes()).padStart(2, '0')}분`;
                     let msg = "";
                     if (shippingMethod === '배달주문') {
-                        msg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--moket-green);">[배달 서비스 안내]</span>오전 11시 이후 주문건은 내일 배달됩니다.\n(현재시간: ${timeStr})\n(내일이 공휴일, 주말일 경우 그 다음날 배달)\n\n배달주문 하시겠습니까?`;
+                        msg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--moket-green);">[배달 서비스 안내]</span>오전 11시 이후 주문건은 내일 배달됩니다.\n(현재시간: ${timeStr})\n(공휴일, 주말일 경우 그 다음날 배달)\n\n배달주문 하시겠습니까?`;
                     } else {
                         msg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--nego-orange);">[과일, 야채 한정]</span>오전 11시 이후 주문건은 내일 예약됩니다.\n(현재시간: ${timeStr})\n\n주문하시겠습니까?`;
                     }
@@ -4860,7 +4860,7 @@
                     }
                 }
 
-                // 6. 배달 주문 흐름
+                // 6. 주문 확인 및 결제 안내 흐름
                 if (shippingMethod === '배달주문') {
                     const currentTotal = allItems.reduce((acc, it) => acc + it.subtotal, 0);
                     if (isDeliveryFeeEnabled && currentTotal < 10000) {
@@ -4876,6 +4876,7 @@
                         showPaymentGuide(allItems, name, phone, shippingMethod);
                     }
                 } else {
+                    // 방문픽업은 기존처럼 바로 주문 처리
                     executeOrder(allItems, name, phone, shippingMethod);
                 }
 
@@ -4894,10 +4895,19 @@
         }
 
 
-        // [신규] 배달 주문 전용 입금 안내 및 현금영수증 모달
-        function showPaymentGuide(allItems, name, phone, shippingMethod) {
+        // [수정] 결제 단계별 모달 (1단계: 현금영수증 선택, 2단계: 최종 입금 안내)
+        function showPaymentGuide(allItems, name, phone, shippingMethod, isFinal = false, finalReceiptData = null) {
             const total = allItems.reduce((acc, it) => acc + it.subtotal, 0);
-            const msg = `
+            const isDelivery = (shippingMethod === '배달주문');
+            
+            let receiptOpt = "미발행", receiptType = "개인", receiptPhone = phone;
+            if (isFinal && finalReceiptData) {
+                receiptOpt = finalReceiptData.opt;
+                receiptType = finalReceiptData.type;
+                receiptPhone = finalReceiptData.phone;
+            }
+
+            let msg = `
                 <style>
                     .receipt-radio {
                         appearance: none; -webkit-appearance: none;
@@ -4912,65 +4922,95 @@
                     .receipt-radio:checked::after {
                         content: '✔'; color: #fff; font-size: 13px; font-weight: bold;
                     }
+                    .final-success-badge {
+                        background: var(--moket-green); color: #fff; padding: 4px 12px; border-radius: 20px;
+                        font-size: 14px; font-weight: 800; margin-bottom: 8px; display: inline-block;
+                    }
                 </style>
                 <div style="text-align:center; display:flex; flex-direction:column; gap:20px; padding-top:10px;">
+            `;
+
+            if (isFinal) {
+                // [4번 단계] 주문 완료 후 입금 안내 (계좌 + 금액만)
+                msg += `
+                    <div><div class="final-success-badge">주문 완료</div><div style="font-size:18px; font-weight:800; color:var(--item-black);">주문이 정상적으로 접수되었습니다!</div></div>
+                    
                     <div style="background:#fff9f2; padding:12px 6px; border-radius:10px; border:1px solid #ffe8cc; display:flex; flex-direction:column; gap:8px;">
                         <div style="font-size:18px; font-weight:800; line-height:1.2;">
                             <span style="color:var(--item-black);">카카오뱅크</span><br>
                             <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-top:4px;">
-                                <span style="color:var(--nego-orange); font-size:20px;">3333-37-3410268</span>
-                                <button onclick="copyToClipboard('3333373410268', '계좌번호가 복사되었습니다.')" style="background:#fff; border:1px solid #ddd; border-radius:6px; padding:4px 8px; font-size:12px; font-weight:800; color:#666; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,0.05);">복사</button>
+                                <span style="font-size:24px; font-weight:900; color:var(--nego-orange);" id="bank-acc-num">3333-37-3410268</span>
+                                <button onclick="copyToClipboard('3333373410268', '계좌번호가 복사되었습니다.')" style="padding:2px 8px; border:1px solid #ddd; border-radius:4px; font-size:12px; background:#fff; color:#666; cursor:pointer;">복사</button>
                             </div>
                         </div>
-                        <div style="font-size:17px; color:#999; font-weight:700;">예금주 : 강*민(모켓(MOKET))</div>
-                        <div style="font-size:34px; color:var(--item-black); font-weight:900; line-height:1; margin:12px 0 6px 0;">${total.toLocaleString()}원</div>
-                        <div style="font-size:17px; color:var(--nego-orange); font-weight:800;">오전 11시까지 입금해 주세요.</div>
-                        <div style="font-size:13px; font-weight:700; color:#455464; letter-spacing:-0.04em; white-space:nowrap;">
-                            (<span style="color:var(--nego-orange);">오전 11시</span>까지 입금건에 한하여 <span style="color:var(--nego-orange);">배달</span>이 가능합니다.)
+                        <div style="font-size:15px; font-weight:600; color:#888;">예금주 : 강*민(모켓(MOKET))</div>
+                        
+                        <div style="font-size:32px; font-weight:900; color:var(--item-black); margin:8px 0;">
+                            ${total.toLocaleString()}원
+                        </div>
+                        
+                        <div style="font-size:15px; font-weight:800; color:var(--nego-orange);">오전 11시까지 입금해 주세요.</div>
+                        <div style="font-size:12px; font-weight:600; color:#666;">
+                            ${isDelivery ? '(오전 11시까지 입금건에 한하여 <span style="color:var(--nego-orange);">배달</span>이 가능합니다.)' : '(오전 11시까지 입금건에 한하여 <span style="color:var(--moket-green);">상품 준비</span>가 시작됩니다.)'}
                         </div>
                     </div>
-                    <div style="background:#fdfdfd; border:1.5px solid #eee; border-radius:12px; padding:15px 12px; display:flex; flex-direction:column; gap:16px; text-align:center;">
-                        <div>
-                            <div style="font-weight:900; font-size:17px; margin-bottom:10px; color:var(--item-black); line-height:1.2;">현금영수증 발행 여부</div>
-                            <div style="display:flex; gap:12px; margin-top:0;">
-                                <label style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px; background:#f8f9fa; padding:10px 0; border-radius:8px; cursor:pointer; border:1.5px solid #eee;">
-                                    <input type="radio" class="receipt-radio" name="receipt-opt" value="발행" onchange="document.getElementById('receipt-phone-area').style.display = 'flex'"> 
-                                    <span style="font-weight:800; color:#555; font-size:15px;">발행</span>
-                                </label>
-                                <label style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px; background:#f8f9fa; padding:10px 0; border-radius:8px; cursor:pointer; border:1.5px solid #eee;">
-                                    <input type="radio" class="receipt-radio" name="receipt-opt" value="미발행" checked onchange="document.getElementById('receipt-phone-area').style.display = 'none'"> 
-                                    <span style="font-weight:800; color:#555; font-size:15px;">미발행</span>
-                                </label>
-                            </div>
+                `;
+            } else {
+                // [2번 단계] 주문 전 현금영수증 확인
+                msg += `
+                    <div style="background:#fff; border:1px solid #eee; border-radius:12px; padding:15px; text-align:left;">
+                        <div style="font-size:18px; font-weight:800; color:var(--item-black); margin-bottom:15px; text-align:center;">현금영수증 발행 여부</div>
+                        <div style="display:flex; gap:10px; margin-bottom:15px;">
+                            <label style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; border:1.5px solid #eee; border-radius:10px; cursor:pointer;">
+                                <input type="radio" name="receipt-opt" value="발행" class="receipt-radio" onchange="document.getElementById('receipt-phone-area').style.display=this.checked?'flex':'none'">
+                                <span style="font-size:16px; font-weight:700;">발행</span>
+                            </label>
+                            <label style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; border:1.5px solid #eee; border-radius:10px; cursor:pointer;">
+                                <input type="radio" name="receipt-opt" value="미발행" class="receipt-radio" checked onchange="document.getElementById('receipt-phone-area').style.display=this.checked?'none':'flex'">
+                                <span style="font-size:16px; font-weight:700;">미발행</span>
+                            </label>
                         </div>
 
                         <div id="receipt-phone-area" style="display:none; flex-direction:column; gap:12px; border-top:1px dashed #eee; padding-top:15px;">
-                            <div style="display:flex; gap:8px;">
-                                <label style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; background:#fff; padding:8px 0; border-radius:6px; cursor:pointer; border:1px solid #eee;">
-                                    <input type="radio" class="receipt-radio" name="receipt-type" value="개인" checked onchange="window.updateReceiptLabel('휴대폰번호', '010-0000-0000', '${phone}')">
-                                    <span style="font-size:13px; font-weight:800; color:#555;">개인(소득)</span>
+                            <div style="display:flex; gap:10px; margin-bottom:12px;">
+                                <label style="flex:1; display:flex; align-items:center; gap:6px; cursor:pointer;">
+                                    <input type="radio" name="receipt-type" value="개인" class="receipt-radio" checked onchange="window.updateReceiptLabel('휴대폰번호', '010-0000-0000', '${phone}')">
+                                    <span style="font-size:14px; font-weight:600;">개인(소득공제)</span>
                                 </label>
-                                <label style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; background:#fff; padding:8px 0; border-radius:6px; cursor:pointer; border:1px solid #eee;">
-                                    <input type="radio" class="receipt-radio" name="receipt-type" value="사업자" onchange="window.updateReceiptLabel('사업자번호', '000-00-00000', '${phone}')">
-                                    <span style="font-size:13px; font-weight:800; color:#555;">사업자(지출)</span>
+                                <label style="flex:1; display:flex; align-items:center; gap:6px; cursor:pointer;">
+                                    <input type="radio" name="receipt-type" value="사업자" class="receipt-radio" onchange="window.updateReceiptLabel('사업자번호', '000-00-00000', '${phone}')">
+                                    <span style="font-size:14px; font-weight:600;">사업자(지출증빙)</span>
                                 </label>
                             </div>
-                            <div style="text-align:left;">
+                            <div style="position:relative;">
                                 <div id="receipt-input-label" style="font-size:13px; color:#455464; font-weight:800; margin-bottom:4px; padding-left:4px;">휴대폰번호</div>
                                 <input type="tel" id="receipt-phone-input" value="${phone}" class="modal-input" oninput="window.formatPhoneNumber(this)" placeholder="010-0000-0000" style="width:100%; box-sizing:border-box; margin:0; height:42px; font-size:16px; font-weight:700; text-align:center; border: 1.5px solid #eee; border-radius:8px;">
                             </div>
                         </div>
+                        <div style="margin-top:15px; font-size:13px; color:#888; text-align:center; line-height:1.4;">
+                            확인을 누르시면 주문이 최종 완료됩니다.
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+            }
+
+            msg += `</div>`;
 
             showSystemModal(msg, 'confirm', async () => {
-                const receiptOpt = document.querySelector('input[name="receipt-opt"]:checked')?.value || "미발행";
-                const receiptType = document.querySelector('input[name="receipt-type"]:checked')?.value || "개인";
-                const receiptPhone = document.getElementById('receipt-phone-input')?.value || "";
-                await executeOrder(allItems, name, phone, shippingMethod, receiptOpt, receiptPhone, receiptType);
+                if (isFinal) {
+                    location.reload();
+                    return true;
+                }
+                const opt = document.querySelector('input[name="receipt-opt"]:checked')?.value || "미발행";
+                const type = document.querySelector('input[name="receipt-type"]:checked')?.value || "개인";
+                const phoneVal = document.getElementById('receipt-phone-input')?.value || "";
+                await executeOrder(allItems, name, phone, shippingMethod, opt, phoneVal, type);
                 return true;
             }, () => {
+                if (isFinal) {
+                    location.reload();
+                    return;
+                }
                 isHistoryProcessing = false;
                 const submitBtn = document.getElementById('btn-submit-order');
                 if (submitBtn) {
@@ -5221,7 +5261,11 @@
                         document.getElementById('bank-modal').style.display = 'flex';
                         checkScrollLock();
                     });
+                } else if (shippingMethod === '배달주문') {
+                    // [수정] 배달 주문일 때만 완료 후 입금 안내 모달 표시
+                    showPaymentGuide(allItems, name, phone, shippingMethod, true, { opt: cashReceipt, phone: receiptPhone, type: cashReceiptType });
                 } else {
+                    // 방문픽업 등은 기존처럼 완료 알림만 표시
                     showSystemModal("주문이 완료되었습니다!", 'alert', () => { location.reload(); });
                 }
 
