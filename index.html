@@ -1749,6 +1749,7 @@
         let isHistoryProcessing = false; // 주문내역 처리 중 플래그 추가
         let selectedShippingMethod = '매장픽업';
         let combinedDeliveryItems = [];
+        let cutoffConfirmedStatus = false; // [추가] 11시 마감 안내 확인 여부
         let currentMainTab = 'reserve'; // [공동구매(reserve), 상시판매(on-site), 야채구매(vegetable)]
         let today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -2148,78 +2149,110 @@
                 return;
             }
 
-            // [신규] 장바구니 상품의 배달 기준일 계산 (토요일/일요일/공휴일 휴무 건너뛰기)
+            // 1. 11시 마감 안내 체크 (배달은 전체 해당)
             const now = new Date();
             const currentHour = now.getHours();
-            let targetDateObj = new Date(now);
             if (currentHour >= 11) {
-                targetDateObj.setDate(targetDateObj.getDate() + 1);
+                const timeStr = `${now.getHours()}시 ${String(now.getMinutes()).padStart(2, '0')}분`;
+                const msg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--moket-green);">[배달 서비스 안내]</span>오전 11시 이후 주문건은 내일 배달됩니다.\n(현재시간: ${timeStr})\n(공휴일, 주말일 경우 그 다음날 배달)\n\n배달주문 하시겠습니까?`;
+                
+                showSystemModal(msg, 'confirm', () => {
+                    cutoffConfirmedStatus = true;
+                    checkCombinedDelivery();
+                });
+            } else {
+                cutoffConfirmedStatus = false;
+                checkCombinedDelivery();
             }
 
-            while (true) {
-                const chkDay = targetDateObj.getDay();
-                const dStr = `${targetDateObj.getFullYear()}-${String(targetDateObj.getMonth() + 1).padStart(2, '0')}-${String(targetDateObj.getDate()).padStart(2, '0')}`;
-                let isOff = false;
-                if (chkDay === 0) isOff = true;
-                else if (chkDay === 6) isOff = true; // 배달은 토요일 무조건 휴무
-                else if (publicHolidays.includes(dStr)) isOff = true;
+            function checkCombinedDelivery() {
+                // [신규] 장바구니 상품의 배달 기준일 계산
+                let targetDateObj = new Date(now);
+                if (currentHour >= 11) targetDateObj.setDate(targetDateObj.getDate() + 1);
 
-                if (isOff) targetDateObj.setDate(targetDateObj.getDate() + 1);
-                else break;
-            }
+                while (true) {
+                    const chkDay = targetDateObj.getDay();
+                    const dStr = `${targetDateObj.getFullYear()}-${String(targetDateObj.getMonth() + 1).padStart(2, '0')}-${String(targetDateObj.getDate()).padStart(2, '0')}`;
+                    let isOff = (chkDay === 0 || chkDay === 6 || publicHolidays.includes(dStr));
+                    if (isOff) targetDateObj.setDate(targetDateObj.getDate() + 1);
+                    else break;
+                }
 
-            const targetPickupDate = `${targetDateObj.getFullYear()}-${String(targetDateObj.getMonth() + 1).padStart(2, '0')}-${String(targetDateObj.getDate()).padStart(2, '0')}`;
-
-            let deliveryDate = targetPickupDate;
-            for (const itemName in cart) {
-                if (cart[itemName] > 0) {
-                    const pData = productsData.find(p => p.name === itemName);
-                    if (pData && pData.matchKey) {
-                        const mKey = pData.matchKey;
-                        const isDateItem = /^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(mKey);
-                        if (isDateItem) {
-                            let dStr = String(mKey).replace(/\./g, '-').trim();
-                            if (dStr.match(/^\d{2}-\d{1,2}-\d{1,2}$/)) dStr = "20" + dStr;
-                            const pt = dStr.split('-');
-                            if (pt.length === 3) dStr = `${pt[0]}-${pt[1].padStart(2, '0')}-${pt[2].padStart(2, '0')}`;
-                            if (dStr > targetPickupDate) deliveryDate = dStr;
+                const targetPickupDate = `${targetDateObj.getFullYear()}-${String(targetDateObj.getMonth() + 1).padStart(2, '0')}-${String(targetDateObj.getDate()).padStart(2, '0')}`;
+                let deliveryDate = targetPickupDate;
+                
+                for (const itemName in cart) {
+                    if (cart[itemName] > 0) {
+                        const pData = productsData.find(p => p.name === itemName);
+                        if (pData && pData.matchKey) {
+                            const mKey = pData.matchKey;
+                            if (/^(?:\d{4}|\d{2})[.-]\d{1,2}[.-]\d{1,2}$/.test(mKey)) {
+                                let dStr = String(mKey).replace(/\./g, '-').trim();
+                                if (dStr.match(/^\d{2}-\d{1,2}-\d{1,2}$/)) dStr = "20" + dStr;
+                                const pt = dStr.split('-');
+                                if (pt.length === 3) dStr = `${pt[0]}-${pt[1].padStart(2, '0')}-${pt[2].padStart(2, '0')}`;
+                                if (dStr > targetPickupDate) deliveryDate = dStr;
+                            }
                         }
                     }
                 }
-            }
 
-            // [수정] 해당 배달일에 예약/픽업 예정인 상품 합산 체크
-            const pendingItems = getPendingItemsByDate(deliveryDate);
-            if (pendingItems.length > 0) {
-                let itemNames = pendingItems.map(it => `• ${it.item} (${it.qty}개)`).join('<br>');
-                let msg = `해당 배달일(${deliveryDate})에 예약된 상품이 있습니다.<br><div style="background:#f5f5f5; padding:10px; border-radius:8px; margin:10px 0; text-align:left; font-size:14px; font-weight:700; color:var(--item-black);">${itemNames}</div>같이 배달합산 하시겠습니까?`;
+                const pendingItems = getPendingItemsByDate(deliveryDate);
+                if (pendingItems.length > 0) {
+                    let itemNames = pendingItems.map(it => `• ${it.item} (${it.qty}개)`).join('<br>');
+                    let msg = `해당 배달일(${deliveryDate})에 예약된 상품이 있습니다.<br><div style="background:#f5f5f5; padding:10px; border-radius:8px; margin:10px 0; text-align:left; font-size:14px; font-weight:700; color:var(--item-black);">${itemNames}</div>같이 배달합산 하시겠습니까?`;
 
-                showSystemModal(msg, 'confirm', () => {
-                    selectedShippingMethod = '배달주문';
-                    combinedDeliveryItems = pendingItems;
-                    closeModal('shipping-overlay');
-                    openConfirm();
-                    return true;
-                }, () => {
+                    showSystemModal(msg, 'confirm', () => {
+                        selectedShippingMethod = '배달주문';
+                        combinedDeliveryItems = pendingItems;
+                        closeModal('shipping-overlay');
+                        openConfirm();
+                    }, () => {
+                        selectedShippingMethod = '배달주문';
+                        combinedDeliveryItems = [];
+                        closeModal('shipping-overlay');
+                        openConfirm();
+                    });
+                } else {
                     selectedShippingMethod = '배달주문';
                     combinedDeliveryItems = [];
                     closeModal('shipping-overlay');
                     openConfirm();
-                    return true;
-                });
-            } else {
-                selectedShippingMethod = '배달주문';
-                combinedDeliveryItems = [];
-                closeModal('shipping-overlay');
-                openConfirm();
+                }
             }
         }
 
         function selectPickup() {
-            selectedShippingMethod = '매장픽업';
-            combinedDeliveryItems = [];
-            closeModal('shipping-overlay');
-            openConfirm();
+            const now = new Date();
+            const currentHour = now.getHours();
+            
+            // 과일/야채 상품이 있는지 체크
+            const hasFV = Object.keys(cart).some(name => {
+                if (cart[name] <= 0) return false;
+                const p = productsData.find(p => p.name === name);
+                const mKey = p ? (p.matchKey || "") : "";
+                return /과일|야채|채소/.test(mKey) || /\[과일\]|\[야채\]|\[채소\]/.test(name);
+            });
+
+            if (hasFV && currentHour >= 11) {
+                const timeStr = `${now.getHours()}시 ${String(now.getMinutes()).padStart(2, '0')}분`;
+                const msg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--nego-orange);">[과일, 야채 한정]</span>오전 11시 이후 주문건은 내일 예약됩니다.\n(현재시간: ${timeStr})\n\n주문하시겠습니까?`;
+                
+                showSystemModal(msg, 'confirm', () => {
+                    cutoffConfirmedStatus = true;
+                    proceedToConfirm();
+                });
+            } else {
+                cutoffConfirmedStatus = false;
+                proceedToConfirm();
+            }
+
+            function proceedToConfirm() {
+                selectedShippingMethod = '매장픽업';
+                combinedDeliveryItems = [];
+                closeModal('shipping-overlay');
+                openConfirm();
+            }
         }
 
         function startFinalOrderProcess() {
@@ -2228,7 +2261,8 @@
                 showSystemModal("안내 내용을 확인하신 후 동의해주세요.", 'alert');
                 return;
             }
-            completeOrder(selectedShippingMethod, combinedDeliveryItems);
+            // 전역 변수 cutoffConfirmedStatus를 전달
+            completeOrder(selectedShippingMethod, combinedDeliveryItems, cutoffConfirmedStatus);
         }
 
         // [수정] 특정 날짜의 픽업/예약 예정 상품 필터링 유틸
@@ -4754,6 +4788,7 @@
         }
 
         function openShippingSelection() {
+            cutoffConfirmedStatus = false; // [추가] 주문 시작 시 마감 확인 상태 초기화
             if (Object.keys(cart).length === 0) {
                 showSystemModal("상품이 없습니다. 상품을 선택해 주세요.", 'alert');
                 return;
