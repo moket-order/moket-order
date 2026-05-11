@@ -2135,7 +2135,7 @@
             // [추가] 사다드림 상품 포함 여부 체크
             const sadaItems = Object.keys(cart).filter(name => name.includes("[사다드림]") && cart[name] > 0);
             if (sadaItems.length > 0) {
-                showSystemModal("<span style='color:var(--nego-orange); font-weight:800;'>[사다드림]</span> 상품은 매장 방문 픽업만 가능합니다.<br><br>배달 주문을 원하시면 해당 상품을 장바구니에서 제외해 주세요.", "alert");
+                showSystemModal("<span style='color:var(--nego-orange); font-weight:800;'>[사다드림]</span> 상품은 현재 위생상의 이유로 매장픽업만 가능합니다.<br><br>배달 주문을 원하시면 해당 상품을 장바구니에서 제외해 주세요.", "alert");
                 return;
             }
 
