@@ -1521,8 +1521,9 @@
         <!-- [신규] 대분류 탭 영역 -->
         <div class="main-tabs">
             <button class="main-tab-btn active" data-tab="reserve" onclick="switchMainTab('reserve')">공동구매</button>
-            <button class="main-tab-btn" data-tab="on-site" onclick="switchMainTab('on-site')">상시판매</button>
             <button class="main-tab-btn" data-tab="fruit-veg" onclick="switchMainTab('fruit-veg')">과일 / 야채</button>
+            <button class="main-tab-btn" data-tab="on-site" onclick="switchMainTab('on-site')">상시판매</button>
+            <button class="main-tab-btn" data-tab="costco" onclick="switchMainTab('costco')">코스트코</button>
         </div>
         <!-- [통합] 필터 영역 (하위 카테고리/날짜 표시) -->
         <div class="date-filter-container" id="date-filters"></div>
@@ -1606,8 +1607,8 @@
                     <button class="btn-common btn-close"
                         onclick="document.getElementById('confirm-notice-check').checked = false; closeModal('confirm-overlay')"
                         style="margin-top: 0; flex: 1;">취소</button>
-                    <button id="btn-submit-order" class="btn-common btn-primary" onclick="openShippingSelection()"
-                        style="margin-top: 0; flex: 1;">확인</button>
+                    <button id="btn-submit-order" class="btn-common btn-primary" onclick="startFinalOrderProcess()"
+                        style="margin-top: 0; flex: 1;">주문확정</button>
                 </div>
             </div>
         </div>
@@ -1627,7 +1628,7 @@
                         배달주문
                     </button>
                     <button class="btn-common btn-primary" style="flex: 1; margin: 0; font-size:16px;"
-                        onclick="completeOrder('매장픽업')">
+                        onclick="selectPickup()">
                         매장픽업
                     </button>
                 </div>
@@ -1647,7 +1648,7 @@
         </div>
         <div style="display:flex; gap:10px;">
             <button class="main-reset-btn" onclick="resetCart()">초기화</button>
-            <button class="main-submit-btn" onclick="openConfirm()">주문하기</button>
+            <button class="main-submit-btn" onclick="openShippingSelection()">주문하기</button>
         </div>
     </div>
     <div id="system-modal" class="modal-overlay" style="z-index: 9999;">
@@ -1752,6 +1753,8 @@
         let cachedProducts = []; // [추가] 원본 데이터 보관용 (공개/비공개 전환용)
         let cart = {}; // { 상품명: 수량 } 저장용 장바구니 상태
         let isHistoryProcessing = false; // 주문내역 처리 중 플래그 추가
+        let selectedShippingMethod = '매장픽업';
+        let combinedDeliveryItems = [];
         let currentMainTab = 'reserve'; // [공동구매(reserve), 상시판매(on-site), 야채구매(vegetable)]
         let today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -1779,6 +1782,12 @@
                     title.innerHTML = `
                         <div style="font-size: 18px; font-weight: 900; color: var(--nego-orange); margin-bottom: 6px;">[과일, 야채한정] 예약구매시 5% 할인!!</div>
                         <div style="font-size: 14px; font-weight: 600; color: #666; letter-spacing: -0.5px;">(00시~11시 : 오늘 픽업 예약, 11시~24시 : 내일 픽업 예약)</div>
+                    `;
+                } else if (type === 'costco') {
+                    title.style.display = 'block';
+                    title.innerHTML = `
+                        <div style="font-size: 18px; font-weight: 900; color: #ff4d4d; margin-bottom: 6px;">코스트코 구매대행</div>
+                        <div style="font-size: 14px; font-weight: 600; color: #666; letter-spacing: -0.5px;">상품 가격에 수수료가 포함되어있습니다.</div>
                     `;
                 }
             }
@@ -2122,6 +2131,14 @@
                 showSystemModal("배달주문은 추후 제공 예정입니다.", "alert");
                 return;
             }
+
+            // [추가] 사다드림 상품 포함 여부 체크
+            const sadaItems = Object.keys(cart).filter(name => name.includes("[사다드림]") && cart[name] > 0);
+            if (sadaItems.length > 0) {
+                showSystemModal("<span style='color:var(--nego-orange); font-weight:800;'>[사다드림]</span> 상품은 매장 방문 픽업만 가능합니다.<br><br>배달 주문을 원하시면 해당 상품을 장바구니에서 제외해 주세요.", "alert");
+                return;
+            }
+
             const addr = document.getElementById('input-address').value;
             if (!addr || addr.trim() === "") {
                 showSystemModal("배달 받으실 주소를 먼저 입력해 주세요.", "alert", () => {
@@ -2184,15 +2201,40 @@
                 let msg = `해당 배달일(${deliveryDate})에 예약된 상품이 있습니다.<br><div style="background:#f5f5f5; padding:10px; border-radius:8px; margin:10px 0; text-align:left; font-size:14px; font-weight:700; color:var(--item-black);">${itemNames}</div>같이 배달합산 하시겠습니까?`;
 
                 showSystemModal(msg, 'confirm', () => {
-                    completeOrder('배달주문', pendingItems);
+                    selectedShippingMethod = '배달주문';
+                    combinedDeliveryItems = pendingItems;
+                    closeModal('shipping-overlay');
+                    openConfirm();
                     return true;
                 }, () => {
-                    completeOrder('배달주문', []);
+                    selectedShippingMethod = '배달주문';
+                    combinedDeliveryItems = [];
+                    closeModal('shipping-overlay');
+                    openConfirm();
                     return true;
                 });
             } else {
-                completeOrder('배달주문', []);
+                selectedShippingMethod = '배달주문';
+                combinedDeliveryItems = [];
+                closeModal('shipping-overlay');
+                openConfirm();
             }
+        }
+
+        function selectPickup() {
+            selectedShippingMethod = '매장픽업';
+            combinedDeliveryItems = [];
+            closeModal('shipping-overlay');
+            openConfirm();
+        }
+
+        function startFinalOrderProcess() {
+            const noticeCheck = document.getElementById('confirm-notice-check');
+            if (noticeCheck && !noticeCheck.checked) {
+                showSystemModal("안내 내용을 확인하신 후 동의해주세요.", 'alert');
+                return;
+            }
+            completeOrder(selectedShippingMethod, combinedDeliveryItems);
         }
 
         // [수정] 특정 날짜의 픽업/예약 예정 상품 필터링 유틸
@@ -3894,10 +3936,11 @@
             // 온사이트 및 과채류 키워드 정의
             const onSiteKeywords = ["냉동", "냉장", "상온", "실온", "현장판매", "상시판매"];
             const fvKeywords = ["야채", "과일", "기타"];
+            const costcoKeywords = ["코스트코"];
 
             const dateFilters = uniqueFilters.filter(f => {
                 const s = String(f).trim();
-                return dateRegex.test(s) && !s.includes("상시판매") && !s.includes("현장판매");
+                return dateRegex.test(s) && !s.includes("상시판매") && !s.includes("현장판매") && !s.includes("코스트코");
             });
 
             // [추가] 날짜가 아니면서 온사이트/과채류도 아닌 "공동구매 특수 카테고리" 추출
@@ -3907,7 +3950,13 @@
                 if (isDate) return false;
                 const isOnSite = onSiteKeywords.some(k => s.includes(k));
                 const isFV = fvKeywords.some(k => s.includes(k));
-                return !isOnSite && !isFV && s !== "";
+                const isCostco = costcoKeywords.some(k => s.includes(k));
+                return !isOnSite && !isFV && !isCostco && s !== "";
+            });
+
+            const costcoFilters = uniqueFilters.filter(f => {
+                const s = String(f).trim();
+                return costcoKeywords.some(k => s.includes(k));
             });
 
             const categoryFilters = uniqueFilters.filter(f => {
@@ -4011,6 +4060,45 @@
                     filterAreaCategories.appendChild(btn);
                 });
                 activeFilter = '과일_예약';
+            } else if (currentMainTab === 'costco') {
+                filterAreaCategories.style.display = 'flex';
+                if (costcoFilters.length <= 3) filterAreaCategories.classList.add('compact-view');
+                else filterAreaCategories.classList.remove('compact-view');
+
+                // [수정] 코스트코 소분류 정렬 및 이름 간소화 (냉동 > 냉장 > 상온 순)
+                const sortedCostco = [...costcoFilters].sort((a, b) => {
+                    const getP = (s) => {
+                        if (s.includes("냉동")) return 1;
+                        if (s.includes("냉장")) return 2;
+                        if (s.includes("상온") || s.includes("실온")) return 3;
+                        return 4;
+                    };
+                    return getP(a) - getP(b);
+                });
+
+                const finalCostco = ['전체상품_코스트코', ...sortedCostco];
+                finalCostco.forEach((cat, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'date-btn' + (idx === 0 ? ' active' : '');
+                    btn.dataset.date = cat;
+                    if (cat === '전체상품_코스트코') btn.innerText = '전체상품';
+                    else {
+                        // [수정] 코스트코 보관방법별 이모티콘 추가 (유저 요청 이미지 기준)
+                        let cleanName = cat.replace(/코스트코\s*/, '').trim();
+                        if (cleanName.includes("냉동")) cleanName = "🧊 " + cleanName;
+                        else if (cleanName.includes("냉장")) cleanName = "❄️ " + cleanName;
+                        else if (cleanName.includes("상온") || cleanName.includes("실온")) cleanName = "🌡️ " + cleanName;
+                        btn.innerText = cleanName;
+                    }
+                    btn.onclick = () => {
+                        document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        renderList(cat);
+                        if (isUserAction) btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                    };
+                    filterAreaCategories.appendChild(btn);
+                });
+                activeFilter = '전체상품_코스트코';
             }
 
             // 4. 리스트 렌더링 호출
@@ -4109,6 +4197,8 @@
                             return /\[야채\]|\[야채구매\]|\[채소\]|\[채소구매\]/.test(p.name) || /야채|야채구매|채소|채소구매/.test(s);
                         })
                         : targetKey === '기타_예약' ? productsData.filter(p => String(p.matchKey).trim() === "기타")
+                        : targetKey === '전체상품_코스트코'
+                            ? productsData.filter(p => String(p.matchKey).trim().includes("코스트코"))
                             : targetKey === '전체상품_현장'
                                 ? productsData.filter(p => {
                                     const s = String(p.matchKey).trim();
@@ -4555,6 +4645,7 @@
                 <div style="font-size:18px; font-weight:900; color:var(--item-black); margin-bottom:10px;">주문 내용을 확인해 주세요</div>
                 <div style="text-align:left; background:#edf2f7; padding: 12px; border-radius:var(--common-radius); margin-bottom:10px; font-size:14px; line-height:1.6;">
                     <div style="font-size:15px; font-weight:800; color:var(--item-black); margin-bottom:4px;">주문자 정보</div>
+                    <div>수령방법 : <span style="font-weight:700; color:var(--nego-orange);">${selectedShippingMethod}</span></div>
                     <div>주문자명 : <span style="font-weight:700; color:var(--nego-orange);">${name}</span></div>
                     <div>연락처 : <span style="font-weight:700; color:var(--nego-orange);">${phone}</span></div>
                     <div style="word-break: keep-all;">주소 : <span style="font-weight:700; color:var(--nego-orange);">${displayAddress}</span></div>
@@ -4646,13 +4737,12 @@
         }
 
         function openShippingSelection() {
-            const noticeCheck = document.getElementById('confirm-notice-check');
-            if (noticeCheck && !noticeCheck.checked) {
-                showSystemModal("안내 내용을 확인하신 후 동의해주세요.", 'alert');
+            if (Object.keys(cart).length === 0) {
+                showSystemModal("상품이 없습니다. 상품을 선택해 주세요.", 'alert');
                 return;
             }
             if (!isDeliveryEnabled) {
-                completeOrder('매장픽업');
+                selectPickup();
                 return;
             }
             document.getElementById('shipping-overlay').style.display = 'flex';
