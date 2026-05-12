@@ -1782,7 +1782,7 @@
                     title.style.display = 'block';
                     title.innerHTML = `
                         <div style="font-size: 18px; font-weight: 900; color: #ff4d4d; margin-bottom: 6px;">코스트코 구매대행 상품입니다.</div>
-                        <div style="font-size: 14px; font-weight: 600; color: #666; letter-spacing: -0.5px;">상품 가격에 수수료가 포함되어있습니다.</div>
+                        <div style="font-size: 14px; font-weight: 600; color: #666; letter-spacing: -0.5px;">상품 가격에 수수료가 포함되어있으며 품절시 제공되지 못할 수 있습니다.</div>
                     `;
                 }
             }
@@ -4293,7 +4293,12 @@
                                 : targetKey === '전체상품_현장'
                                     ? productsData.filter(p => {
                                         const s = String(p.matchKey).trim();
+                                        // 날짜 예약건 제외
                                         if (/(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/.test(s) && !s.includes("상시판매") && !s.includes("현장판매")) return false;
+                                        
+                                        // 코스트코 카테고리 제외
+                                        if (s.includes("코스트코")) return false;
+
                                         const isVeg = p.name.includes('[야채]') || p.name.includes('[야채구매]') || s === "야채구매" || s === "야채";
                                         const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
                                         return !(isVeg || isFruit || s === "기타");
