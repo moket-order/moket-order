@@ -1782,7 +1782,7 @@
                     title.style.display = 'block';
                     title.innerHTML = `
                         <div style="font-size: 18px; font-weight: 900; color: #ff4d4d; margin-bottom: 6px;">코스트코 구매대행 상품입니다.</div>
-                        <div style="font-size: 14px; font-weight: 600; color: #666; letter-spacing: -0.5px;">상품 가격에 수수료가 포함되어있으며 품절시 제공되지 못할 수 있습니다.</div>
+                        <div style="font-size: 14px; font-weight: 600; color: #666; letter-spacing: -0.5px;">가격에 수수료가 포함되어있으며 품절시 제공되지 못할 수 있습니다.</div>
                     `;
                 }
             }
@@ -4055,8 +4055,9 @@
                 const isDate = dateRegex.test(s);
                 const isOnSite = onSiteKeywords.some(k => s.includes(k));
                 const isFV = fvKeywords.some(k => s.includes(k));
-                // 온사이트이거나 (날짜인데 상시/현장판매인 경우) 현장판매 탭으로 분류
-                return (isOnSite || (isDate && (s.includes("상시판매") || s.includes("현장판매")))) && !isFV;
+                const isCostco = s.includes("코스트코");
+                // 온사이트이거나 (날짜인데 상시/현장판매인 경우) 현장판매 탭으로 분류 (코스트코 제외)
+                return (isOnSite || (isDate && (s.includes("상시판매") || s.includes("현장판매")))) && !isFV && !isCostco;
             }).sort((a, b) => {
                 const getCatPriority = (s) => {
                     const str = String(s).trim();
