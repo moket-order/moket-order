@@ -4233,12 +4233,14 @@
                     // [수정] 온사이트 및 과채류를 명확히 제외하고 나머지는 모두 공동구매 전체보기에 포함
                     const onSiteKeywords = ["냉동", "냉장", "상온", "실온", "현장판매", "상시판매"];
                     const fvKeywords = ["야채", "과일", "기타"];
+                    const costcoKeywords = ["코스트코"];
 
                     const isOnSite = onSiteKeywords.some(k => s.includes(k));
                     const isFV = fvKeywords.some(k => s.includes(k));
+                    const isCostco = costcoKeywords.some(k => s.includes(k));
                     const isDate = /(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/.test(s);
 
-                    if (isOnSite || isFV) return false;
+                    if (isOnSite || isFV || isCostco) return false;
 
                     // 날짜인 경우 오늘 이전 날짜는 제외
                     if (isDate && !s.includes("상시판매") && !s.includes("현장판매")) {
