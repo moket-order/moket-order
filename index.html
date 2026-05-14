@@ -4175,8 +4175,8 @@
                     btn.dataset.date = cat;
                     if (cat === '전체상품_코스트코') btn.innerText = '전체상품';
                     else {
-                        // [수정] 코스트코 이름 및 이모지 자동 변환 로직 제거 (유저가 직접 입력한 값 사용)
-                        btn.innerText = cat;
+                        // [수정] '코스트코' 글자는 자동으로 제거하되, 이모지 자동 삽입 로직만 제거 (유저가 직접 입력한 이모지 사용)
+                        btn.innerText = cat.replace(/코스트코\s*/, '').trim();
                     }
                     btn.onclick = () => {
                         document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
