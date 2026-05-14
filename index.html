@@ -3843,12 +3843,17 @@
                 }
 
                 if (freshData.length > 0) {
-                    // [핵심 수정] 기존에 이미 로드해둔 상세 이미지 정보 보존
+                    // [핵심 수정] 기존에 이미 로드해둔 상세 이미지 정보 보존 (단, 폴더ID나 대표이미지가 바뀌지 않았을 때만)
                     freshData.forEach(fItem => {
                         const existing = productsData.find(p => p.name === fItem.name && p.matchKey === fItem.matchKey);
                         if (existing && existing.isFullLoaded) {
-                            fItem.images = existing.images;
-                            fItem.isFullLoaded = true;
+                            const isFolderChanged = (existing.folderId !== fItem.folderId);
+                            const isMainImgChanged = (JSON.stringify(existing.images) !== JSON.stringify(fItem.images));
+                            
+                            if (!isFolderChanged && !isMainImgChanged) {
+                                fItem.images = existing.images;
+                                fItem.isFullLoaded = true;
+                            }
                         }
                     });
 
