@@ -4175,12 +4175,8 @@
                     btn.dataset.date = cat;
                     if (cat === '전체상품_코스트코') btn.innerText = '전체상품';
                     else {
-                        // [수정] 코스트코 보관방법별 이모티콘 추가 (유저 요청 이미지 기준)
-                        let cleanName = cat.replace(/코스트코\s*/, '').trim();
-                        if (cleanName.includes("냉동")) cleanName = "🧊 " + cleanName;
-                        else if (cleanName.includes("냉장")) cleanName = "❄️ " + cleanName;
-                        else if (cleanName.includes("상온") || cleanName.includes("실온")) cleanName = "🌡️ " + cleanName;
-                        btn.innerText = cleanName;
+                        // [수정] 코스트코 이름 및 이모지 자동 변환 로직 제거 (유저가 직접 입력한 값 사용)
+                        btn.innerText = cat;
                     }
                     btn.onclick = () => {
                         document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
