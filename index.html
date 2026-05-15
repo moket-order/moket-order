@@ -2159,7 +2159,7 @@
 
             // [추가] 주말 및 공휴일 안내 모달 (배달 선택 시 즉시 안내)
             if (isHoliday) {
-                const holidayMsg = "주말 및 공휴일에 주문하신 상품은 다음 평일에 배달됩니다.\n\n배달주문 하시겠습니까?";
+                const holidayMsg = "주말 및 공휴일에 주문하신 상품은\n다음 평일에 배달됩니다.\n\n배달주문 하시겠습니까?";
                 showSystemModal(holidayMsg, 'confirm', () => {
                     holidayConfirmedStatus = true;
                     cutoffConfirmedStatus = true;
