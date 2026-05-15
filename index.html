@@ -4872,7 +4872,7 @@
             checkScrollLock();
         }
 
-        async function completeOrder(shippingMethod, extraItems = [], cutoffConfirmed = false) {
+        async function completeOrder(shippingMethod, extraItems = [], cutoffConfirmed = false, holidayConfirmed = false) {
             const now = new Date();
             const currentHour = now.getHours();
 
@@ -4891,6 +4891,26 @@
                 const name = nameNode.value;
                 const phone = phoneNode.value;
                 const currentDay = now.getDay();
+
+                // [추가] 주말 및 공휴일 안내 모달 (USER 요청)
+                const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                const isHoliday = (currentDay === 0 || currentDay === 6 || publicHolidays.includes(todayStr));
+
+                if (isHoliday && !holidayConfirmed) {
+                    const holidayMsg = "주말 및 공휴일에 주문하신 상품은 다음 평일에 배달됩니다.\n\n주문하시겠습니까?";
+                    showSystemModal(holidayMsg, 'confirm', () => {
+                        completeOrder(shippingMethod, extraItems, cutoffConfirmed, true);
+                        return true;
+                    }, () => {
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerText = "주문확정";
+                            submitBtn.style.opacity = "1";
+                        }
+                    });
+                    return;
+                }
+
                 const isWeekendAfterCutoff = (currentDay === 6 && currentHour >= 11) || currentDay === 0;
 
                 const allItems = [];
@@ -5027,9 +5047,10 @@
                 }
 
                 // 3. 11시 이후 마감 안내 (실제로 날짜가 보정된 상품이 있는 경우만)
+                // [수정] 주말/공휴일 안내를 이미 받았다면(isHoliday) 11시 마감 안내는 중복이므로 생략함
                 const needsCutoffWarning = allItems.some(it => it.isPushedByCutoff);
 
-                if (needsCutoffWarning && currentHour >= 11 && !cutoffConfirmed) {
+                if (needsCutoffWarning && currentHour >= 11 && !cutoffConfirmed && !isHoliday) {
                     const timeStr = `${now.getHours()}시 ${String(now.getMinutes()).padStart(2, '0')}분`;
                     let msg = "";
                     if (shippingMethod === '배달주문') {
@@ -5039,7 +5060,7 @@
                     }
 
                     showSystemModal(msg, 'confirm', () => {
-                        completeOrder(shippingMethod, extraItems, true);
+                        completeOrder(shippingMethod, extraItems, true, holidayConfirmed);
                         return true;
                     }, () => {
                         if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = "주문확정"; submitBtn.style.opacity = "1"; }
