@@ -2197,7 +2197,7 @@
                 if (hasReserve) {
                     holidayMsg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--moket-green);">[배달 서비스 안내]</span>주말 및 공휴일에 주문하신 일반 상품은 <span style="color:var(--nego-orange);">다음 평일</span>에 배달되고, 예약 상품은 각 <span style="color:var(--nego-orange);">입고일</span>에 배송됩니다.\n(입고일이 주말 및 공휴일인 경우 다음 평일에 배달)`;
                 } else {
-                    holidayMsg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--moket-green);">[배달 서비스 안내]</span>주말 및 공휴일에 주문하신 상품은 <span style="color:var(--nego-orange);">다음 평일</span>에 배달됩니다.`;
+                    holidayMsg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--moket-green);">[배달 서비스 안내]</span>주말 및 공휴일에 주문하신 상품은 <span style="color:var(--nego-orange);">\n다음 평일</span>에 배달됩니다.`;
                 }
 
                 showSystemModal(holidayMsg + "<br><br>배달주문 하시겠습니까?", 'confirm', () => {
@@ -4939,7 +4939,7 @@
                 const isHoliday = (currentDay === 0 || currentDay === 6 || publicHolidays.includes(todayStr));
 
                 if (isHoliday && !holidayConfirmed) {
-                    const holidayMsg = "주말 및 공휴일에 주문하신 상품은\n다음 평일에 배달됩니다.\n\n주문하시겠습니까?";
+                    const holidayMsg = "주말 및 공휴일에 주문하신 상품은\n다음 평일</span>에 배달됩니다.\n\n주문하시겠습니까?";
                     showSystemModal(holidayMsg, 'confirm', () => {
                         completeOrder(shippingMethod, extraItems, cutoffConfirmed, true);
                         return true;
