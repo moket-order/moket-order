@@ -4967,7 +4967,8 @@
                         let finalDate = mKey;
 
                         const isFV = /과일|야채|채소/.test(mKey) || /\[과일\]|\[야채\]|\[채소\]/.test(itemName);
-                        const isCutoffTarget = (shippingMethod === '배달주문') || (shippingMethod === '매장픽업' && isFV);
+                        const isCostco = mKey.includes("코스트코");
+                        const isCutoffTarget = (shippingMethod === '배달주문') || (shippingMethod === '매장픽업' && (isFV || isCostco));
 
                         let isPushedByCutoff = false;
 
