@@ -2182,6 +2182,15 @@
                 }
             }
 
+            // [수정] 변수 선언 위치 이동 (ReferenceError 해결)
+            // 일반 상품 명칭 조합 (과일/야채, 상시판매, 코스트코 분리)
+            let regLabelParts = [];
+            if (hasFV) regLabelParts.push("과일/야채");
+            if (hasOnSite) regLabelParts.push("상시판매");
+            if (hasCostco) regLabelParts.push("코스트코");
+            const combinedRegLabel = regLabelParts.join(" 및 ");
+            const hasAnyRegular = (hasFV || hasOnSite || hasCostco);
+
             // [추가] 주말 및 공휴일 안내 모달 (USER 요청: 일반 상품이 포함된 경우에만 주말 안내 표시)
             if (isHoliday && hasAnyRegular) {
                 let holidayMsg = "";
@@ -2201,14 +2210,6 @@
 
             let showModal = false;
             let msg = "";
-
-            // 일반 상품 명칭 조합 (과일/야채, 상시판매, 코스트코 분리)
-            let regLabelParts = [];
-            if (hasFV) regLabelParts.push("과일/야채");
-            if (hasOnSite) regLabelParts.push("상시판매");
-            if (hasCostco) regLabelParts.push("코스트코");
-            const combinedRegLabel = regLabelParts.join(" 및 ");
-            const hasAnyRegular = (hasFV || hasOnSite || hasCostco);
 
             if (currentHour >= 11) {
                 if (hasAnyRegular) {
