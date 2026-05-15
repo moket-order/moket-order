@@ -3285,9 +3285,8 @@
                 } else if (currentStatusFilter === 'cancel') {
                     if (!isCancelled) return false;
                 } else if (currentStatusFilter === 'stocked') {
-                    // [수정] '미입고' 상품을 제외하고 '입고완료'된 항목만 정확히 표시함
-                    const isStocked = (item.isStocked === true || String(item.isStocked).toUpperCase() === "TRUE");
-                    if (!isStocked || isCancelled || isReceived || isDelivered) return false;
+                    // [수정] '입고완료' 뿐만 아니라 '미입고' 상태의 상품들도 입고 탭에서 함께 볼 수 있도록 함
+                    if (isCancelled || isReceived || isDelivered) return false;
                 } else if (currentStatusFilter === 'pickup') {
                     // [수정] 매장픽업 또는 배달완료인 경우 모두 표시
                     if ((!isReceived && !isDelivered) || isCancelled) return false;
