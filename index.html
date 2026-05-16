@@ -4129,13 +4129,20 @@
 
             if (currentMainTab === 'reserve') {
                 filterAreaDates.style.display = 'flex';
-                // [수정] 날짜 리스트 앞에 특수 카테고리들을 배치
-                const finalDates = ['전체상품_예약', ...reserveCategories, ...dateFilters];
+                // [수정] 상품명에 '사다드림'이 포함된 상품이 있는지 확인
+                const hasSadaItems = futureData.some(p => p.name.includes("사다드림"));
+                
+                // [수정] 날짜 리스트 앞에 사다드림 및 특수 카테고리들을 배치
+                const finalDates = ['전체상품_예약'];
+                if (hasSadaItems) finalDates.push('사다드림');
+                finalDates.push(...reserveCategories, ...dateFilters);
+                
                 finalDates.forEach((date, idx) => {
                     const btn = document.createElement('button');
                     btn.className = 'date-btn' + (idx === 0 ? ' active' : '');
                     btn.dataset.date = date;
                     if (date === '전체상품_예약') btn.innerText = '전체상품';
+                    else if (date === '사다드림') btn.innerText = '사다드림';
                     else {
                         const found = futureData.find(p => p.matchKey === date);
                         btn.innerText = found ? found.displayDate : date;
@@ -4272,7 +4279,12 @@
                 return 2;
             };
 
-            let filteredData = targetKey === '전체상품_예약'
+            let filteredData = [];
+
+            if (targetKey === '사다드림') {
+                filteredData = productsData.filter(p => p.name.includes("사다드림"));
+            } else {
+                filteredData = targetKey === '전체상품_예약'
                 ? productsData.filter(p => {
                     const s = String(p.matchKey).trim();
                     // [수정] 온사이트 및 과채류를 명확히 제외하고 나머지는 모두 공동구매 전체보기에 포함
@@ -4280,10 +4292,11 @@
                     const fvKeywords = ["야채", "과일", "기타"];
                     const costcoKeywords = ["코스트코"];
 
+                    const isDate = /(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/.test(s);
+                    
                     const isOnSite = onSiteKeywords.some(k => s.includes(k));
                     const isFV = fvKeywords.some(k => s.includes(k));
                     const isCostco = costcoKeywords.some(k => s.includes(k));
-                    const isDate = /(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/.test(s);
 
                     if (isOnSite || isFV || isCostco) return false;
 
@@ -4354,6 +4367,7 @@
                                         const isFruit = p.name.includes('[과일]') || p.name.includes('[과일구매]') || s === "과일구매" || s === "과일";
                                         return !((currentMainTab === 'reserve' || currentMainTab === 'on-site') && (isVeg || isFruit || s === "기타"));
                                     });
+            }
 
             const nowHour = new Date().getHours();
 
