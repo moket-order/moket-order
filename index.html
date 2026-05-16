@@ -2329,7 +2329,7 @@
 
             // [추가] 코스트코 상품 주말/공휴일 픽업 제한 안내
             if (isHoliday && hasCostco) {
-                const holidayMsg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--moket-green);">[코스트코 상품 안내]</span>코스트코 상품은 주말 및 공휴일에 픽업이 불가능하며, <span style="color:var(--nego-orange);">다음 평일</span>부터 수령 가능합니다.`;
+                const holidayMsg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--moket-green);">[코스트코 상품 안내]</span>코스트코 상품은 주말 및 공휴일에 픽업이 불가능하며, <span style="color:var(--nego-orange);">다음 평일</span>부터 픽업 가능합니다.`;
                 showSystemModal(holidayMsg + "<br><br>주문하시겠습니까?", 'confirm', () => {
                     holidayConfirmedStatus = true;
                     cutoffConfirmedStatus = true;
@@ -2340,7 +2340,7 @@
 
             if (hasFV && currentHour >= 11) {
                 const timeStr = `${now.getHours()}시 ${String(now.getMinutes()).padStart(2, '0')}분`;
-                const msg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--nego-orange);">[과일, 야채 한정]</span>오전 11시 이후 주문건은 내일 예약됩니다.\n(현재시간: ${timeStr})\n\n주문하시겠습니까?`;
+                const msg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--nego-orange);">[과일, 야채 한정]</span>오전 11시 이후 주문건은 <span style="color:var(--nego-orange);">내일</span> 예약됩니다.\n(주말 및 공휴일인경우 다음 평일에 픽업예약)\n\n주문하시겠습니까?`;
                 
                 showSystemModal(msg, 'confirm', () => {
                     cutoffConfirmedStatus = true;
