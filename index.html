@@ -2340,7 +2340,7 @@
 
             if (hasFV && currentHour >= 11) {
                 const timeStr = `${now.getHours()}시 ${String(now.getMinutes()).padStart(2, '0')}분`;
-                const msg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--nego-orange);">[과일, 야채 한정]</span>오전 11시 이후 주문건은 <span style="color:var(--nego-orange);">내일</span> 예약됩니다.\n(주말 및 공휴일인경우 다음 평일에 픽업예약)\n\n주문하시겠습니까?`;
+                const msg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--nego-orange);">[과일, 야채 한정]</span>오전 11시 이후 주문건은 <span style="color:var(--nego-orange);">내일</span> 예약됩니다.\n(주말, 공휴일인경우 다음 평일에 픽업예약)\n\n주문하시겠습니까?`;
                 
                 showSystemModal(msg, 'confirm', () => {
                     cutoffConfirmedStatus = true;
@@ -5243,7 +5243,7 @@
                             ${total.toLocaleString()}원
                         </div>
                         
-                        <div style="font-size:15px; font-weight:800; color:var(--nego-orange);">오전 11시까지 입금해 주세요.</div>
+                        <div style="font-size:15px; font-weight:800; color:var(--nego-orange);">오전 11시까지 입금해 주세요.</div>(주말 및 공휴일인 경우 다음 평일 오전 11시까지)</div>
                         <div style="font-size:12px; font-weight:600; color:#666;">
                             ${isDelivery ? '(오전 11시까지 입금건에 한하여 <span style="color:var(--nego-orange);">배달</span>이 가능합니다.)' : '(오전 11시까지 입금건에 한하여 <span style="color:var(--moket-green);">상품 준비</span>가 시작됩니다.)'}
                         </div>
