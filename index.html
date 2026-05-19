@@ -3510,7 +3510,7 @@
                         <div style="margin-bottom: 12px; background: #fbfbfc; border: 1px solid #edf2f7; border-radius: 8px; padding: 10px 12px;">
                             <div style="font-size: 15px; font-weight: 800; color: var(--nego-orange); margin-bottom: 8px; display: flex; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 6px;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px; opacity:0.6;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                <span style="font-size: 0.8em; opacity: 0.8; margin-right: 4px;">[입고예정일]</span> ${pDisp}
+                                <span style="font-size: 0.8em; opacity: 0.8; margin-right: 4px;">[픽업/배달 예정일]</span> ${pDisp}
                             </div>
                     `;
 
@@ -4465,8 +4465,8 @@
             }
 
             filteredData.forEach(p => {
-                // [추가] '전체보기'일 때 날짜별/카테고리별 박스 생성
-                if ((targetKey === '전체상품_예약' || targetKey === '전체상품_현장') && p.matchKey !== lastGroupKey) {
+                // [추가] '전체보기'일 때 날짜별/카테고리별 박스 생성 (특정 날짜 선택시에도 박스 생성)
+                if ((currentMainTab === 'reserve' || targetKey === '전체상품_현장') && p.matchKey !== lastGroupKey) {
                     // 새 그룹 박스 생성
                     currentGroupBox = document.createElement('div');
                     currentGroupBox.className = "product-group-box";
@@ -4475,11 +4475,16 @@
                     const header = document.createElement('div');
                     header.style = "padding:15px 18px; font-size:16px; font-weight:900; color:var(--item-black); border-bottom:1px solid #f0f0f0; background:#fcfdfe; display:flex; align-items:center;";
 
-                    const iconSvg = targetKey === '전체상품_예약'
+                    const iconSvg = currentMainTab === 'reserve'
                         ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px; color:var(--moket-green);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`
                         : ``;
 
-                    header.innerHTML = `${iconSvg}${p.displayDate || p.matchKey}`;
+                    let prefix = '';
+                    if (currentMainTab === 'reserve') {
+                        const isDate = /(\d{2,4})[./-]\d{1,2}[./-]\d{1,2}|(\d{1,2})[./-](\d{1,2})/.test(p.matchKey);
+                        if (isDate) prefix = '픽업/배달 예정일 : ';
+                    }
+                    header.innerHTML = `${iconSvg}${prefix}${p.displayDate || p.matchKey}`;
                     currentGroupBox.appendChild(header);
 
                     // 상품이 담길 내부 컨테이너 (여백 조정)
