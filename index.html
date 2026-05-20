@@ -1777,7 +1777,7 @@
                     title.style.display = 'block';
                     title.innerHTML = `
                         <div style="font-size: 18px; font-weight: 900; color: var(--nego-orange); margin-bottom: 6px;">[과일, 야채한정] 예약구매시 5% 할인!!</div>
-                        <div style="font-size: 14px; font-weight: 600; color: #666; letter-spacing: -0.5px;">(00시~11시 : 오늘 픽업 예약, 11시~24시 : 내일 픽업 예약)</div>
+                        <div style="font-size: 14px; font-weight: 600; color: #666; letter-spacing: -0.5px;">(00시~11시 : 오늘 예약, 11시~24시 : 내일 예약)</div>
                     `;
                 } else if (type === 'costco') {
                     title.style.display = 'block';
@@ -2338,9 +2338,10 @@
                 return;
             }
 
-            if (hasFV && currentHour >= 11) {
+            if ((hasFV || hasCostco) && currentHour >= 11) {
                 const timeStr = `${now.getHours()}시 ${String(now.getMinutes()).padStart(2, '0')}분`;
-                const msg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--nego-orange);">[과일, 야채 한정]</span>오전 11시 이후 주문건은 <span style="color:var(--nego-orange);">내일</span> 예약됩니다.\n(주말, 공휴일인경우 다음 평일에 픽업예약)\n\n주문하시겠습니까?`;
+                const labelStr = (hasFV && hasCostco) ? "과일, 야채, 코스트코 한정" : (hasCostco ? "코스트코 한정" : "과일, 야채 한정");
+                const msg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--nego-orange);">[${labelStr}]</span>오전 11시 이후 주문건은 <span style="color:var(--nego-orange);">내일</span> 예약됩니다.\n(주말, 공휴일인경우 다음 평일에 픽업예약)\n\n주문하시겠습니까?`;
                 
                 showSystemModal(msg, 'confirm', () => {
                     cutoffConfirmedStatus = true;
@@ -5119,7 +5120,7 @@
                     if (shippingMethod === '배달주문') {
                         msg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--moket-green);">[배달 서비스 안내]</span>오전 11시 이후 주문건은 내일 배달됩니다.\n(현재시간: ${timeStr})\n(공휴일, 주말일 경우 다음 평일에 배달)\n\n배달주문 하시겠습니까?`;
                     } else {
-                        msg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--nego-orange);">[과일, 야채 한정]</span>오전 11시 이후 주문건은 내일 예약됩니다.\n(현재시간: ${timeStr})\n\n주문하시겠습니까?`;
+                        msg = `<span style="display:block; margin-bottom:10px; font-weight:800; font-size:1.05em; color:var(--nego-orange);">[과일, 야채, 코스트코 한정]</span>오전 11시 이후 주문건은 내일 예약됩니다.\n(현재시간: ${timeStr})\n\n주문하시겠습니까?`;
                     }
 
                     showSystemModal(msg, 'confirm', () => {
