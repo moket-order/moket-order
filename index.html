@@ -1706,8 +1706,7 @@
                 </div>
                 <div id="sort-controls-row"
                     style="display: none; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 0; border-top: 1.5px solid #eee; padding-top: 8px;">
-                                      <div style="font-size: 15px; font-weight: 800; color: #455464; letter-spacing: -0.5px;">공동구매 예약상품 외 일반상품</div>
-                        <div style="font-size: 14px; font-weight: 600; color: #666; letter-spacing: -0.5px;">(00시~12시 : 내일 픽업 가능, 12시~24시 : 모레 픽업 가능)</div>
+                    <div style="grid-column: 1 / 4; display: flex; gap: 6px;">
                         <button class="date-btn active" id="btn-sort-order" onclick="changeSortMode('timestamp')"
                             style="height:32px; font-size:17px; flex:1; padding:0; font-weight:900;">주문일별 정렬</button>
                         <button class="date-btn" id="btn-sort-pickup" onclick="changeSortMode('pickupDate')"
